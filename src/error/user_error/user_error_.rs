@@ -26,7 +26,7 @@ impl std::fmt::Display for UserError {
             UserError::UserRoleIsNotExit => {
                 write!(f, "User's role is not exit, try other user role")
             }
-            UserError::EmailIsReadyExit => write!(f, "Email is ready to exit,try other email"),
+            UserError::EmailIsReadyExit => write!(f, "Email is ready to exit, try other email"),
         }
     }
 }

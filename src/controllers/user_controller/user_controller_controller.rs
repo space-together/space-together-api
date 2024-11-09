@@ -45,3 +45,14 @@ pub async fn controller_create_user(
         Err(err) => Err(err),
     }
 }
+
+pub async fn controller_get_user_by_id(
+    state: Arc<AppState>,
+    id: String,
+) -> UserResult<UserModelGet> {
+    let get = state.db.user.get_user_by_id(id).await;
+    match get {
+        Ok(res) => Ok(UserModelGet::format(res)),
+        Err(err) => Err(err),
+    }
+}
