@@ -1,3 +1,4 @@
+use futures::stream::StreamExt;
 use std::str::FromStr;
 
 use mongodb::{
@@ -9,7 +10,7 @@ use mongodb::{
 
 use crate::{
     error::user_error::user_error_::{UserError, UserResult},
-    models::user_model::user_model_model::{UserModel, UserModelNew},
+    models::user_model::user_model_model::{UserModel, UserModelGet, UserModelNew},
 };
 
 #[derive(Debug)]
@@ -68,6 +69,33 @@ impl UserDb {
             Err(err) => Err(UserError::CanNotFindUser {
                 err: err.to_string(),
             }),
+        }
+    }
+
+    pub async fn get_all_users(&self) -> UserResult<Vec<UserModelGet>> {
+        let cursor = self
+            .user
+            .find(doc! {})
+            .await
+            .map_err(|err| UserError::CanNotGetAllUsers {
+                err: err.to_string(),
+            });
+        let mut users: Vec<UserModelGet> = Vec::new();
+        match cursor {
+            Ok(mut res) => {
+                while let Some(result) = res.next().await {
+                    match result {
+                        Ok(doc) => users.push(UserModelGet::format(doc)),
+                        Err(err) => {
+                            return Err(UserError::CanNotGetAllUsers {
+                                err: err.to_string(),
+                            })
+                        }
+                    }
+                }
+                Ok(users)
+            }
+            Err(err) => Err(err),
         }
     }
 }

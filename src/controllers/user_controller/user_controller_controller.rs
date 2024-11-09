@@ -56,3 +56,11 @@ pub async fn controller_get_user_by_id(
         Err(err) => Err(err),
     }
 }
+
+pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<UserModelGet>> {
+    let get_all = state.db.user.get_all_users().await;
+    match get_all {
+        Ok(res) => Ok(res),
+        Err(err) => Err(err),
+    }
+}
