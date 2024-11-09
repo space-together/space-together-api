@@ -56,4 +56,15 @@ impl UserRoleDb {
             }),
         }
     }
+
+    pub async fn get_user_role_by_rl(&self, role: String) -> UserRoleResult<UserRoleModel> {
+        let get = self.role.find_one(doc! {"rl" : role}).await;
+        match get {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserRoleError::RoleNotFound),
+            Err(err) => Err(UserRoleError::CanNotFindUserRole {
+                err: err.to_string(),
+            }),
+        }
+    }
 }

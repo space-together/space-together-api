@@ -10,6 +10,16 @@ pub async fn controller_create_user_model(
     role: UserRoleModelNew,
     state: Arc<AppState>,
 ) -> UserRoleResult<UserRoleModelGet> {
+    let find_role = state
+        .db
+        .user_role
+        .get_user_role_by_rl(role.rl.clone())
+        .await;
+
+    if find_role.is_ok() {
+        return Err(UserRoleError::RoleIsReadyExit);
+    }
+
     let create = state.db.user_role.create_user_role(role).await;
 
     match create {

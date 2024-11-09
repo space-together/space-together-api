@@ -2,10 +2,7 @@ use crate::{
     controllers::user_controller::user_role_controller::{
         controller_create_user_model, controller_get_user_role,
     },
-    models::{
-        request_error_model::request_error_model::ReqErrModel,
-        user_model::user_role_model::UserRoleModelNew,
-    },
+    models::{request_error_model::ReqErrModel, user_model::user_role_model::UserRoleModelNew},
     AppState,
 };
 use actix_web::{web, HttpResponse, Responder};
@@ -16,7 +13,7 @@ pub async fn handle_create_user_role(
 ) -> impl Responder {
     let create = controller_create_user_model(role.into_inner(), state.into_inner()).await;
     match create {
-        Ok(res) => HttpResponse::Ok().json(res), // 200 OK with response data
+        Ok(res) => HttpResponse::Ok().json(res),
         Err(err) => {
             let error = ReqErrModel {
                 message: err.to_string(),
@@ -32,7 +29,7 @@ pub async fn handle_get_user_role(
 ) -> impl Responder {
     let get = controller_get_user_role(id.into_inner(), state.into_inner()).await;
     match get {
-        Ok(res) => HttpResponse::Ok().json(res), // 200 OK with response data
+        Ok(res) => HttpResponse::Ok().json(res),
         Err(err) => {
             let error = ReqErrModel {
                 message: err.to_string(),

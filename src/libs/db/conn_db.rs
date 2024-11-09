@@ -3,7 +3,7 @@ use std::env;
 use dotenv::dotenv;
 use mongodb::Client;
 
-use crate::error::db_error::db_error::{DbError, DbResult};
+use crate::error::db_error::{DbError, DbResult};
 
 use super::user_db::user_role_db::UserRoleDb;
 
