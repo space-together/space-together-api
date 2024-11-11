@@ -43,3 +43,8 @@ impl UserRoleModelGet {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserRoleModelUpdate {
+    pub rl: Option<String>,
+}

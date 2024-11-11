@@ -52,3 +52,13 @@ pub async fn controller_get_user_role(
         Err(err) => Err(err),
     }
 }
+
+pub async fn controller_get_all_user_roles(
+    state: Arc<AppState>,
+) -> UserRoleResult<Vec<UserRoleModelGet>> {
+    let get_all = state.db.user_role.get_all_user_roles().await;
+    match get_all {
+        Ok(roles) => Ok(roles),
+        Err(err) => Err(err),
+    }
+}

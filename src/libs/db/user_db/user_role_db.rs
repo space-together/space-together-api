@@ -1,3 +1,4 @@
+use futures::stream::StreamExt;
 use std::str::FromStr;
 
 use mongodb::{
@@ -9,7 +10,7 @@ use mongodb::{
 
 use crate::{
     error::user_error::user_role_error::{UserRoleError, UserRoleResult},
-    models::user_model::user_role_model::{UserRoleModel, UserRoleModelNew},
+    models::user_model::user_role_model::{UserRoleModel, UserRoleModelGet, UserRoleModelNew},
 };
 
 #[derive(Debug)]
@@ -65,6 +66,34 @@ impl UserRoleDb {
             Err(err) => Err(UserRoleError::CanNotFindUserRole {
                 err: err.to_string(),
             }),
+        }
+    }
+
+    pub async fn get_all_user_roles(&self) -> UserRoleResult<Vec<UserRoleModelGet>> {
+        let cursor =
+            self.role
+                .find(doc! {})
+                .await
+                .map_err(|err| UserRoleError::CanNotFoundAllUserRole {
+                    err: err.to_string(),
+                });
+        let mut roles: Vec<UserRoleModelGet> = Vec::new();
+
+        match cursor {
+            Ok(mut res) => {
+                while let Some(result) = res.next().await {
+                    match result {
+                        Ok(doc) => roles.push(UserRoleModelGet::format(doc)),
+                        Err(err) => {
+                            return Err(UserRoleError::CanNotFoundAllUserRole {
+                                err: err.to_string(),
+                            })
+                        }
+                    }
+                }
+                Ok(roles)
+            }
+            Err(err) => Err(err),
         }
     }
 }

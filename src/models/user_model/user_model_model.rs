@@ -6,6 +6,23 @@ use serde::{Deserialize, Serialize};
 use crate::error::user_error::user_error_::{UserError, UserResult};
 
 #[derive(Debug, Deserialize, Serialize)]
+pub enum Gender {
+    M,
+    F,
+    O,
+}
+
+impl Gender {
+    pub(crate) fn to_string(&self) -> String {
+        match self {
+            Gender::F => "Female".to_string(),
+            Gender::M => "Male".to_string(),
+            Gender::O => "Other".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UserModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
@@ -13,6 +30,7 @@ pub struct UserModel {
     pub nm: String,
     pub em: String,
     pub ph: Option<String>,
+    pub gd: Option<Gender>,
     pub pw: Option<String>,
     pub co: DateTime,
 }
@@ -24,6 +42,7 @@ pub struct UserModelNew {
     pub em: String,
     pub ph: Option<String>,
     pub pw: String,
+    pub gd: Gender,
 }
 
 impl UserModel {
@@ -35,6 +54,7 @@ impl UserModel {
                 rl: Some(res),
                 nm: user.nm,
                 em: user.em,
+                gd: Some(user.gd),
                 ph: user.ph,
                 pw: Some(user.pw),
                 co: DateTime::now(),
@@ -52,6 +72,7 @@ pub struct UserModelGet {
     pub em: String,
     pub ph: Option<String>,
     pub pw: Option<String>,
+    pub gd: Option<Gender>,
     pub co: String,
 }
 
@@ -62,6 +83,7 @@ impl UserModelGet {
             rl: user.rl.map_or("".to_string(), |rl| rl.to_string()),
             nm: user.nm,
             em: user.em,
+            gd: user.gd,
             ph: user.ph,
             pw: user.pw,
             co: user

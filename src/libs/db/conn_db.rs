@@ -36,7 +36,7 @@ impl ConnDb {
                     user: st_data_db.collection("users"),
                 };
 
-                println!("Database connected successfully ✅");
+                println!("Database connected successfully 🌼");
 
                 Ok(Self {
                     user_role: user_role_db,

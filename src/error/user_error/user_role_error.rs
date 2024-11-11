@@ -7,6 +7,8 @@ pub enum UserRoleError {
     RoleNotFound,
     CanNotFindUserRole { err: String },
     InvalidId,
+    CanNotFoundAllUserRole { err: String },
+    UserRoleIsRequired,
 }
 
 impl std::fmt::Display for UserRoleError {
@@ -24,6 +26,12 @@ impl std::fmt::Display for UserRoleError {
             UserRoleError::InvalidId => write!(f, "Invalid id"),
             UserRoleError::CanNotFindUserRole { err } => {
                 write!(f, "Can't find user role bcs {}", err)
+            }
+            UserRoleError::CanNotFoundAllUserRole { err } => {
+                write!(f, "Can't find all user role bcs 😡{} 😡", err)
+            }
+            UserRoleError::UserRoleIsRequired => {
+                write!(f, "User role is required, Enter user role")
             }
         }
     }
