@@ -13,7 +13,7 @@ pub async fn handle_create_user_role(
 ) -> impl Responder {
     let create = controller_create_user_model(role.into_inner(), state.into_inner()).await;
     match create {
-        Ok(res) => HttpResponse::Ok().json(res),
+        Ok(res) => HttpResponse::Created().json(res),
         Err(err) => {
             let error = ReqErrModel {
                 message: err.to_string(),

@@ -5,12 +5,16 @@ use mongodb::Client;
 
 use crate::error::db_error::{DbError, DbResult};
 
-use super::user_db::{user_db_db::UserDb, user_role_db::UserRoleDb};
+use super::{
+    class_db::class_db_db::ClassDb,
+    user_db::{user_db_db::UserDb, user_role_db::UserRoleDb},
+};
 
 #[derive(Debug)]
 pub struct ConnDb {
     pub user_role: UserRoleDb,
     pub user: UserDb,
+    pub class: ClassDb,
 }
 
 impl ConnDb {
@@ -35,12 +39,16 @@ impl ConnDb {
                 let user_db = UserDb {
                     user: st_data_db.collection("users"),
                 };
+                let class_db = ClassDb {
+                    class: st_data_db.collection("classes"),
+                };
 
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
                     user_role: user_role_db,
                     user: user_db,
+                    class: class_db,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {

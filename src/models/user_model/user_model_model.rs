@@ -12,15 +12,15 @@ pub enum Gender {
     O,
 }
 
-impl Gender {
-    pub(crate) fn to_string(&self) -> String {
-        match self {
-            Gender::F => "Female".to_string(),
-            Gender::M => "Male".to_string(),
-            Gender::O => "Other".to_string(),
-        }
-    }
-}
+// impl Gender {
+//     pub(crate) fn to_string(&self) -> String {
+//         match self {
+//             Gender::F => "Female".to_string(),
+//             Gender::M => "Male".to_string(),
+//             Gender::O => "Other".to_string(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserModel {
