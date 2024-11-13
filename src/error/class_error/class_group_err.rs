@@ -7,6 +7,7 @@ pub enum ClassGroupErr {
     CanNotGetClassById,
     ClassGroupNotFoundById,
     CanNotFindClassGroup { err: String },
+    CanNotGetAllClassGroups { err: String },
 }
 
 impl std::fmt::Display for ClassGroupErr {
@@ -24,6 +25,9 @@ impl std::fmt::Display for ClassGroupErr {
             }
             ClassGroupErr::CanNotFindClassGroup { err } => {
                 write!(f, "Can't find class group bcs 😡 {} 😡", err)
+            }
+            ClassGroupErr::CanNotGetAllClassGroups { err } => {
+                write!(f, "Can't get all class groups bcs 😡 {} 😡", err)
             }
         }
     }

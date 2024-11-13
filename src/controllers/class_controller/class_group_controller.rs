@@ -31,4 +31,23 @@ pub async fn controller_class_group_create(
     }
 }
 
-// pub
+pub async fn controller_class_group_get_all(
+    state: Arc<AppState>,
+) -> ClassGroupResult<Vec<ClassGroupModelGet>> {
+    let all = state.db.class_group.get_all_class_group().await;
+    match all {
+        Ok(res) => Ok(res),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_get_class_group_by_id(
+    state: Arc<AppState>,
+    id: String,
+) -> ClassGroupResult<ClassGroupModelGet> {
+    let get = state.db.class_group.get_class_group_by_id(id).await;
+    match get {
+        Ok(res) => Ok(ClassGroupModel::format(res)),
+        Err(err) => Err(err),
+    }
+}
