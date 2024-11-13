@@ -6,7 +6,7 @@ use mongodb::Client;
 use crate::error::db_error::{DbError, DbResult};
 
 use super::{
-    class_db::class_db_db::ClassDb,
+    class_db::{class_db_db::ClassDb, class_group_db::ClassGroupDb},
     user_db::{user_db_db::UserDb, user_role_db::UserRoleDb},
 };
 
@@ -15,6 +15,7 @@ pub struct ConnDb {
     pub user_role: UserRoleDb,
     pub user: UserDb,
     pub class: ClassDb,
+    pub class_group: ClassGroupDb,
 }
 
 impl ConnDb {
@@ -30,25 +31,29 @@ impl ConnDb {
         match client {
             Ok(res) => {
                 // database 🌼
-                let st_data_db = res.database("space-together-data");
+                let st_data = res.database("space-together-data");
 
                 // collection 🏂🏽
-                let user_role_db = UserRoleDb {
-                    role: st_data_db.collection("user_role"),
+                let user_role = UserRoleDb {
+                    role: st_data.collection("user_role"),
                 };
-                let user_db = UserDb {
-                    user: st_data_db.collection("users"),
+                let user = UserDb {
+                    user: st_data.collection("users"),
                 };
-                let class_db = ClassDb {
-                    class: st_data_db.collection("classes"),
+                let class = ClassDb {
+                    class: st_data.collection("classes"),
+                };
+                let class_group = ClassGroupDb {
+                    class_group: st_data.collection("class_groups"),
                 };
 
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
-                    user_role: user_role_db,
-                    user: user_db,
-                    class: class_db,
+                    user_role,
+                    user,
+                    class,
+                    class_group,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {

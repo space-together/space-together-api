@@ -13,6 +13,7 @@ pub struct ClassModel {
     pub cltea: ObjectId,
     pub st: Option<Vec<ObjectId>>,
     pub co: DateTime,
+    pub up: Option<DateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,6 +32,7 @@ impl ClassModel {
                 cltea: id,
                 st: None,
                 co: DateTime::now(),
+                up: None,
             }),
             Err(err) => Err(err),
         }
@@ -44,6 +46,7 @@ pub struct ClassModelGet {
     pub cltea: String,
     pub st: Option<Vec<String>>,
     pub co: String,
+    pub up: Option<String>,
 }
 
 impl ClassModelGet {
@@ -59,6 +62,9 @@ impl ClassModelGet {
                 .co
                 .try_to_rfc3339_string()
                 .unwrap_or_else(|_| "".to_string()),
+            up: Some(class.up.map_or("".to_string(), |date| {
+                date.try_to_rfc3339_string().unwrap_or("".to_string())
+            })),
         }
     }
 }
