@@ -3,7 +3,10 @@ use std::env;
 use dotenv::dotenv;
 use mongodb::Client;
 
-use crate::error::db_error::{DbError, DbResult};
+use crate::{
+    error::db_error::{DbError, DbResult},
+    libs::db::conversation_db::conversation_db_db::ConversationDb,
+};
 
 use super::{
     class_db::{class_db_db::ClassDb, class_group_db::ClassGroupDb},
@@ -16,6 +19,7 @@ pub struct ConnDb {
     pub user: UserDb,
     pub class: ClassDb,
     pub class_group: ClassGroupDb,
+    pub conversation: ConversationDb,
 }
 
 impl ConnDb {
@@ -47,6 +51,10 @@ impl ConnDb {
                     class_group: st_data.collection("class_groups"),
                 };
 
+                let conversation = ConversationDb {
+                    conversation: st_data.collection("conversations"),
+                };
+
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
@@ -54,6 +62,7 @@ impl ConnDb {
                     user,
                     class,
                     class_group,
+                    conversation,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {

@@ -14,10 +14,10 @@ pub fn routers_user_role(
     state: Arc<AppState>,
 ) -> &mut actix_web::web::ServiceConfig {
     cfg.service(
-        web::scope("/user_role")
+        web::scope("/role")
             .app_data(web::Data::new(state.clone()))
-            .route("/", post().to(handle_create_user_role))
-            .route("/", get().to(handle_get_all_user_roles))
+            .route("", post().to(handle_create_user_role))
+            .route("", get().to(handle_get_all_user_roles))
             .route("/{id}", get().to(handle_get_user_role)),
     )
 }

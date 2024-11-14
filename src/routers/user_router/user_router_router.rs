@@ -13,8 +13,8 @@ pub fn routers_user(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut Servi
     cfg.service(
         scope("/user")
             .app_data(Data::new(state.clone()))
-            .route("/", post().to(handle_create_user))
-            .route("/", get().to(handle_get_all_users))
+            .route("", post().to(handle_create_user))
+            .route("", get().to(handle_get_all_users))
             .route("/{id}", get().to(handle_get_user_by_id)),
     )
 }

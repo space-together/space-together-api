@@ -13,8 +13,8 @@ pub fn routers_class(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut Serv
     cfg.service(
         scope("/class")
             .app_data(Data::new(state.clone()))
-            .route("/", post().to(handle_create_class))
-            .route("/", get().to(handler_get_all_classes))
+            .route("", post().to(handle_create_class))
+            .route("", get().to(handler_get_all_classes))
             .route("/{id}", get().to(handle_get_class_by_id)),
     )
 }
