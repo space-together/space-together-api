@@ -10,6 +10,7 @@ use crate::{
 
 use super::{
     class_db::{class_db_db::ClassDb, class_group_db::ClassGroupDb},
+    conversation_db::message_db::MessageDb,
     user_db::{user_db_db::UserDb, user_role_db::UserRoleDb},
 };
 
@@ -20,6 +21,7 @@ pub struct ConnDb {
     pub class: ClassDb,
     pub class_group: ClassGroupDb,
     pub conversation: ConversationDb,
+    pub message: MessageDb,
 }
 
 impl ConnDb {
@@ -54,6 +56,9 @@ impl ConnDb {
                 let conversation = ConversationDb {
                     conversation: st_data.collection("conversations"),
                 };
+                let message = MessageDb {
+                    message: st_data.collection("messages"),
+                };
 
                 println!("Database connected successfully 🌼");
 
@@ -63,6 +68,7 @@ impl ConnDb {
                     class,
                     class_group,
                     conversation,
+                    message,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {

@@ -33,7 +33,6 @@ pub async fn controller_conversation_create(
         return Err(ConversationErr::ConversationMemberNotFound);
     }
 
-    // Proceed to create conversation
     let create = state
         .db
         .conversation
@@ -42,7 +41,6 @@ pub async fn controller_conversation_create(
 
     match create {
         Ok(res) => {
-            // Retrieve and convert the inserted ID to a string format
             let id = res
                 .inserted_id
                 .as_object_id()
