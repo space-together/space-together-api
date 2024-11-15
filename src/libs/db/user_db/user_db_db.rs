@@ -28,7 +28,7 @@ impl UserDb {
             .build();
 
         let one_index = self.user.create_index(index).await;
-        if one_index.is_err() {
+        if one_index.is_ok() {
             return Err(UserError::UserIsReadyExit);
         };
         let new = UserModel::new(user);
@@ -61,16 +61,16 @@ impl UserDb {
         }
     }
 
-    pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
-        let get = self.user.find_one(doc! {"em" : email}).await;
-        match get {
-            Ok(Some(res)) => Ok(res),
-            Ok(None) => Err(UserError::UserNotFound),
-            Err(err) => Err(UserError::CanNotFindUser {
-                err: err.to_string(),
-            }),
-        }
-    }
+    // pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
+    //     let get = self.user.find_one(doc! {"em" : email}).await;
+    //     match get {
+    //         Ok(Some(res)) => Ok(res),
+    //         Ok(None) => Err(UserError::UserNotFound),
+    //         Err(err) => Err(UserError::CanNotFindUser {
+    //             err: err.to_string(),
+    //         }),
+    //     }
+    // }
 
     pub async fn get_all_users(&self) -> UserResult<Vec<UserModelGet>> {
         let cursor = self

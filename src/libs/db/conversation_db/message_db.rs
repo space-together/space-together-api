@@ -1,9 +1,8 @@
-use core::sync;
 use std::str::FromStr;
 
 use futures::StreamExt;
 use mongodb::{
-    bson::{de, doc, oid::ObjectId},
+    bson::{doc, oid::ObjectId},
     results::InsertOneResult,
     Collection,
 };

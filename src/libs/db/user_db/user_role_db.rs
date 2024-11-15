@@ -31,7 +31,7 @@ impl UserRoleDb {
             .build();
 
         let one_index = self.role.create_index(index).await;
-        if one_index.is_err() {
+        if one_index.is_ok() {
             return Err(UserRoleError::RoleIsReadyExit);
         };
 
