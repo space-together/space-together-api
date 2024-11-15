@@ -29,3 +29,25 @@ pub async fn controller_message_create(
         Err(err) => Err(err),
     }
 }
+
+pub async fn controller_message_get_all_by_conversation(
+    state: Arc<AppState>,
+    id: String,
+) -> MessageResult<Vec<MessageModelGet>> {
+    let find = state.db.message.get_messages_by_conversation(id).await;
+    match find {
+        Ok(res) => Ok(res),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_message_delete_by_id(
+    state: Arc<AppState>,
+    id: String,
+) -> MessageResult<MessageModelGet> {
+    let delete = state.db.message.delete_message_by_id(id).await;
+    match delete {
+        Ok(res) => Ok(MessageModel::format(res)),
+        Err(err) => Err(err),
+    }
+}

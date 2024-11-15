@@ -8,6 +8,7 @@ pub enum MessageError {
     CanNotFindMessage { err: String },
     CanNotGetAllMessagesForConversation { err: String },
     CanNotGetMessageById { err: String },
+    CanNotDeleteMessage { err: String },
 }
 
 impl std::fmt::Display for MessageError {
@@ -28,6 +29,9 @@ impl std::fmt::Display for MessageError {
             MessageError::MessageNotFound => write!(f, "Message not found "),
             MessageError::CanNotGetMessageById { err } => {
                 write!(f, "Can not get message by id  😡 {} 😡", err)
+            }
+            MessageError::CanNotDeleteMessage { err } => {
+                write!(f, "Can not delete message bcs 😡 {} 😡 ", err)
             }
         }
     }

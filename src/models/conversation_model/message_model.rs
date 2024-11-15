@@ -10,7 +10,7 @@ pub struct MessageModel {
     pub ow: ObjectId,         // owen
     pub cont: Option<String>, // content
     pub cov: ObjectId,        // conversation
-    pub co: DateTime,
+    pub co: DateTime,         // created_at
 }
 
 #[derive(Debug, Deserialize, Serialize)]
