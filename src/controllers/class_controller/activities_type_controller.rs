@@ -12,6 +12,15 @@ pub async fn controller_activities_type_create(
     state: Arc<AppState>,
     ty: ActivitiesTypeModelNew,
 ) -> ActivitiesTypeResult<ActivitiesTypeModelGet> {
+    let find_by_ty = state
+        .db
+        .activities_type
+        .get_activities_type_by_ty(ty.ty.clone())
+        .await;
+    if find_by_ty.is_ok() {
+        return Err(ActivitiesTypeErr::ActivitiesTypeIsReadyExit);
+    };
+
     let create = state.db.activities_type.create_activity_type(ty).await;
     match create {
         Ok(res) => {

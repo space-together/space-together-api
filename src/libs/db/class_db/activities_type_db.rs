@@ -33,7 +33,7 @@ impl ActivitiesTypeDb {
             .build();
 
         let one_index = self.activities_type.create_index(index).await;
-        if one_index.is_ok() {
+        if one_index.is_err() {
             return Err(ActivitiesTypeErr::ActivitiesTypeIsReadyExit);
         };
 
@@ -92,6 +92,20 @@ impl ActivitiesTypeDb {
                 Ok(activities_types)
             }
             Err(err) => Err(err),
+        }
+    }
+
+    pub async fn get_activities_type_by_ty(
+        &self,
+        ty: String,
+    ) -> ActivitiesTypeResult<ActivitiesTypeModel> {
+        let get = self.activities_type.find_one(doc! {"ty" : &ty}).await;
+        match get {
+            Ok(Some(data)) => Ok(data),
+            Ok(None) => Err(ActivitiesTypeErr::ActivitiesTypeNotFound),
+            Err(er) => Err(ActivitiesTypeErr::CanNotFindActivitiesType {
+                err: er.to_string(),
+            }),
         }
     }
 }
