@@ -1,0 +1,23 @@
+use std::str::FromStr;
+
+use mongodb::{bson::oid::ObjectId, results::InsertOneResult};
+
+use crate::models::request_error_model::ReqErrModel;
+
+// pub fn change_insertoneresult_into_string(id: InsertOneResult) -> String {
+//     id.inserted_id
+//         .as_object_id()
+//         .map(|oid| oid.to_hex())
+//         .unwrap()
+// }
+
+pub fn change_insertoneresult_into_object_id(id: InsertOneResult) -> ObjectId {
+    id.inserted_id.as_object_id().unwrap()
+}
+
+pub fn change_string_into_object_id(id: String) -> core::result::Result<ObjectId, ReqErrModel> {
+    match ObjectId::from_str(&id) {
+        Err(_) => Err(ReqErrModel::id(id)),
+        Ok(res) => Ok(res),
+    }
+}

@@ -19,12 +19,14 @@ impl ActivityDb {
         &self,
         activity: ActivityModelNew,
     ) -> ActivitiesResult<InsertOneResult> {
-        self.activity
-            .insert_one(ActivityModel::new(activity))
-            .await
-            .map_err(|err| ActivitiesErr::CanCreateActivity {
-                error: err.to_string(),
-            })
+        match ActivityModel::new(activity) {
+            Ok(doc) => self.activity.insert_one(doc).await.map_err(|err| {
+                ActivitiesErr::CanCreateActivity {
+                    error: err.to_string(),
+                }
+            }),
+            Err(err) => Err(err),
+        }
     }
 
     async fn find_one_by_field(

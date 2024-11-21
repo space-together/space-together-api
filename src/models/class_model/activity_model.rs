@@ -3,6 +3,8 @@ use std::str::FromStr;
 use mongodb::bson::{oid::ObjectId, DateTime};
 use serde::{Deserialize, Serialize};
 
+use crate::error::class_error::activities_error::{ActivitiesErr, ActivitiesResult};
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ActivityModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -36,21 +38,33 @@ pub struct ActivityModelNew {
     pub ow: String,
     pub act: String,
     pub dl: String,
-    pub co: String,
 }
 
 impl ActivityModel {
-    pub fn new(activity: ActivityModelNew) -> Self {
-        ActivityModel {
+    pub fn new(activity: ActivityModelNew) -> ActivitiesResult<Self> {
+        let ty = ObjectId::from_str(&activity.ty).map_err(|_| ActivitiesErr::Invalid)?;
+        let ow = ObjectId::from_str(&activity.ow).map_err(|_| ActivitiesErr::Invalid)?;
+        let cl = match &activity.cl {
+            Some(cl) => Some(ObjectId::from_str(cl).map_err(|_| ActivitiesErr::Invalid)?),
+            None => None,
+        };
+        let gr = match &activity.gr {
+            Some(gr) => Some(ObjectId::from_str(gr).map_err(|_| ActivitiesErr::Invalid)?),
+            None => None,
+        };
+        let dl = DateTime::parse_rfc3339_str(&activity.dl)
+            .map_err(|_| ActivitiesErr::InvalidDateTime)?;
+
+        Ok(ActivityModel {
             id: None,
-            ow: ObjectId::from_str(&activity.ow).unwrap(),
-            ty: ObjectId::from_str(&activity.ty).unwrap(),
-            cl: Some(ObjectId::from_str(&activity.cl.unwrap()).unwrap()),
-            gr: Some(ObjectId::from_str(&activity.gr.unwrap()).unwrap()),
+            ow,
+            ty,
+            cl,
+            gr,
             act: activity.act,
-            dl: DateTime::parse_rfc3339_str(&activity.dl).unwrap(),
+            dl,
             co: DateTime::now(),
-        }
+        })
     }
 
     pub fn format(activity: ActivityModel) -> ActivityModelGet {
