@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use super::{
     class_router::{
-        activities_type_router::routers_activities_type, class_group_router::routers_class_group,
-        class_router_router::routers_class,
+        activities_type_router::routers_activities_type, activity_router::routers_activity,
+        class_group_router::routers_class_group, class_router_router::routers_class,
     },
     conversation_router::{
         conversation_router_router::routers_conversation, message_router::routers_message,
@@ -29,6 +29,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_class(user_cfg, state.clone());
                 routers_class_group(user_cfg, state.clone());
                 routers_activities_type(user_cfg, state.clone());
+                routers_activity(user_cfg, state.clone());
             }))
             .service(web::scope("/conversation").configure(|user_cfg| {
                 routers_conversation(user_cfg, state.clone());

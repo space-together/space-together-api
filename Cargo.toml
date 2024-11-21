@@ -3,7 +3,7 @@ name = "space-together-api"
 version = "0.0.1"
 edition = "2021"
 repository = "https://github.com/space-together/space-together-api"
-description = "space-together-api which implements all request from space-together application."
+description = "space-together-api which implements all request from space-together applications."
 authors = ["Rwanda Bruno Happyheart <brunorwanda4@gmail.com>"]
 
 [dependencies]
