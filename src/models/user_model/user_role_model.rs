@@ -1,4 +1,4 @@
-use mongodb::bson::{oid::ObjectId, DateTime};
+use mongodb::bson::{doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -7,11 +7,18 @@ pub struct UserRoleModel {
     pub id: Option<ObjectId>,
     pub rl: String,
     pub co: DateTime,
+    pub uo: Option<DateTime>,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
 pub struct UserRoleModelNew {
     pub rl: String,
+}
+
+#[derive(Deserialize, Debug, Serialize, Clone)]
+pub struct UserRoleModelPut {
+    pub rl: String,
+    pub uo: Option<DateTime>,
 }
 
 impl UserRoleModel {
@@ -20,6 +27,14 @@ impl UserRoleModel {
             id: None,
             rl: role.rl,
             co: DateTime::now(),
+            uo: None,
+        }
+    }
+
+    pub fn put(role: UserRoleModelNew) -> Document {
+        doc! {
+            "rl": role.rl,
+            "uo": DateTime::now(),
         }
     }
 }
@@ -29,6 +44,7 @@ pub struct UserRoleModelGet {
     pub id: String,
     pub rl: String,
     pub co: String,
+    pub uo: Option<String>,
 }
 
 impl UserRoleModelGet {
@@ -40,6 +56,10 @@ impl UserRoleModelGet {
                 .co
                 .try_to_rfc3339_string()
                 .unwrap_or_else(|_| "".to_string()),
+            uo: role.uo.map(|uo| {
+                uo.try_to_rfc3339_string()
+                    .unwrap_or_else(|_| "".to_string())
+            }),
         }
     }
 }

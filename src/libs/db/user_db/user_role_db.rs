@@ -19,30 +19,44 @@ pub struct UserRoleDb {
 }
 
 impl UserRoleDb {
+    pub async fn get_user_role_by_rl(&self, role: String) -> UserRoleResult<UserRoleModel> {
+        let get = self.role.find_one(doc! {"rl" : role}).await;
+        match get {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserRoleError::RoleNotFound),
+            Err(err) => Err(UserRoleError::CanNotFindUserRole {
+                err: err.to_string(),
+            }),
+        }
+    }
+
     pub async fn create_user_role(
         &self,
         role: UserRoleModelNew,
     ) -> UserRoleResult<InsertOneResult> {
         let index = IndexModel::builder()
-            .keys(doc! {
-                "rl" : 1,
-            })
+            .keys(doc! {"rl": 1})
             .options(IndexOptions::builder().unique(true).build())
             .build();
 
-        let one_index = self.role.create_index(index).await;
-        if one_index.is_ok() {
-            return Err(UserRoleError::RoleIsReadyExit);
-        };
+        if let Err(err) = self.role.create_index(index).await {
+            return Err(UserRoleError::CanNotCreateUserRole {
+                err: err.to_string(),
+            });
+        }
 
-        let create = self.role.insert_one(UserRoleModel::new(role)).await;
-        match create {
+        if self.get_user_role_by_rl(role.rl.clone()).await.is_ok() {
+            return Err(UserRoleError::RoleIsReadyExit);
+        }
+
+        match self.role.insert_one(UserRoleModel::new(role)).await {
             Ok(res) => Ok(res),
             Err(err) => Err(UserRoleError::CanNotCreateUserRole {
                 err: err.to_string(),
             }),
         }
     }
+
     pub async fn get_user_role_by_id(&self, id: String) -> UserRoleResult<UserRoleModel> {
         let obj_id = ObjectId::from_str(&id);
         if obj_id.is_err() {
@@ -58,14 +72,37 @@ impl UserRoleDb {
         }
     }
 
-    pub async fn get_user_role_by_rl(&self, role: String) -> UserRoleResult<UserRoleModel> {
-        let get = self.role.find_one(doc! {"rl" : role}).await;
-        match get {
-            Ok(Some(res)) => Ok(res),
-            Ok(None) => Err(UserRoleError::RoleNotFound),
-            Err(err) => Err(UserRoleError::CanNotFindUserRole {
-                err: err.to_string(),
-            }),
+    pub async fn update_user_role(
+        &self,
+        id: String,
+        role: UserRoleModelNew,
+    ) -> UserRoleResult<UserRoleModel> {
+        match ObjectId::from_str(&id) {
+            Err(_) => Err(UserRoleError::InvalidId),
+            Ok(_id) => match self
+                .role
+                .find_one_and_update(doc! {"_id" : _id}, doc! {"$set" : UserRoleModel::put(role)})
+                .await
+            {
+                Ok(Some(res)) => Ok(res),
+                Ok(None) => Err(UserRoleError::RoleNotFound),
+                Err(err) => Err(UserRoleError::CanNotUpdateUserRole {
+                    err: err.to_string(),
+                }),
+            },
+        }
+    }
+
+    pub async fn delete_user_role(&self, id: String) -> UserRoleResult<UserRoleModel> {
+        match ObjectId::from_str(&id) {
+            Err(_) => Err(UserRoleError::InvalidId),
+            Ok(_id) => match self.role.find_one_and_delete(doc! {"_id" : _id}).await {
+                Ok(Some(res)) => Ok(res),
+                Ok(None) => Err(UserRoleError::RoleNotFound),
+                Err(err) => Err(UserRoleError::CanNotUpdateUserRole {
+                    err: err.to_string(),
+                }),
+            },
         }
     }
 

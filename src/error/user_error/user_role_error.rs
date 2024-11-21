@@ -9,6 +9,8 @@ pub enum UserRoleError {
     InvalidId,
     CanNotFoundAllUserRole { err: String },
     UserRoleIsRequired,
+    CanNotUpdateUserRole { err: String },
+    CanNotDeleteUserRole { err: String },
 }
 
 impl std::fmt::Display for UserRoleError {
@@ -18,6 +20,20 @@ impl std::fmt::Display for UserRoleError {
                 write!(
                     f,
                     "Can't create user role bcs : 😡 {} 😡, try again later",
+                    err
+                )
+            }
+            UserRoleError::CanNotUpdateUserRole { err } => {
+                write!(
+                    f,
+                    "Can't update user role bcs : 😡 {} 😡, try again later",
+                    err
+                )
+            }
+            UserRoleError::CanNotDeleteUserRole { err } => {
+                write!(
+                    f,
+                    "Can't delete user role bcs : 😡 {} 😡, try again later",
                     err
                 )
             }
