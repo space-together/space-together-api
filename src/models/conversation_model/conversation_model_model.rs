@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct ConversationModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub mms: Vec<ObjectId>,
-    pub gr: Option<bool>,
+    pub mms: Vec<ObjectId>, // Members
+    pub gr: Option<bool>,   // Group
     pub co: DateTime,
 }
 

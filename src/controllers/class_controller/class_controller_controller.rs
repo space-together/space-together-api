@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
+
+use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::class_error::class_error_error::{ClassError, ClassResult},
@@ -10,12 +12,15 @@ pub async fn controller_create_class(
     state: Arc<AppState>,
     class: ClassModelNew,
 ) -> ClassResult<ClassModelGet> {
-    let find_user = state.db.user.get_user_by_id(class.cltea.clone()).await;
+    let find_user = state
+        .db
+        .user
+        .get_user_by_id(ObjectId::from_str(&class.cltea).unwrap())
+        .await;
     if find_user.is_err() {
         return Err(ClassError::ClassTeacherIsNotExit);
     }
-    let create = state.db.class.create_class(class).await;
-    match create {
+    match state.db.class.create_class(class).await {
         Ok(res) => {
             let id = res
                 .inserted_id

@@ -9,7 +9,9 @@ pub enum UserError {
     InvalidId,
     UserRoleIsNotExit,
     EmailIsReadyExit,
-    CanNotGetAllUsers { err: String },
+    CanNotGetAllUsers { err: String, field: String },
+    CanNotGetRole,
+    CanNotUpdateUser { err: String },
 }
 
 impl std::fmt::Display for UserError {
@@ -18,7 +20,13 @@ impl std::fmt::Display for UserError {
             UserError::CanNotCreateUser { err } => {
                 write!(f, "Can't create user bcs : 😡 {} 😡, try again later", err)
             }
-            UserError::UserIsReadyExit => write!(f, "User is ready to exit, try other user"),
+            UserError::CanNotGetRole => {
+                write!(f, "Can not get user role , please try other user role ")
+            }
+            UserError::CanNotUpdateUser { err } => {
+                write!(f, "Can not update user bcs : 😡 {} 😡", err)
+            }
+            UserError::UserIsReadyExit => write!(f, "user is ready to exit, try other user"),
             UserError::UserNotFound => write!(f, "User not found"),
             UserError::CanNotFindUser { err } => {
                 write!(f, "Can't find user bcs : 😡 {} 😡, try again later", err)
@@ -28,11 +36,11 @@ impl std::fmt::Display for UserError {
                 write!(f, "User's role is not exit, try other user role")
             }
             UserError::EmailIsReadyExit => write!(f, "Email is ready to exit, try other email"),
-            UserError::CanNotGetAllUsers { err } => {
+            UserError::CanNotGetAllUsers { err, field } => {
                 write!(
                     f,
-                    "Can't get all users bcs : 😡 {} 😡, try again later",
-                    err
+                    "Can't get users in {} bcs : 😡 {} 😡, try again later",
+                    field, err
                 )
             }
         }

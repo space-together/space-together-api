@@ -1,6 +1,7 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, str::FromStr, sync::Arc};
 
 use futures::future::try_join_all;
+use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::conversation_error::conversation_error_error::{ConversationErr, ConversationResult},
@@ -21,37 +22,37 @@ pub async fn controller_conversation_create(
         .into_iter()
         .collect();
 
-    let find_users = try_join_all(
-        conversation
-            .mms
-            .iter()
-            .map(|ids| state.db.user.get_user_by_id(ids.to_string())),
-    )
+    let find_users = try_join_all(conversation.mms.iter().map(|ids| async {
+        let obj_id = ObjectId::from_str(ids).map_err(|_| ConversationErr::InvalidId)?;
+        state
+            .db
+            .user
+            .get_user_by_id(obj_id)
+            .await
+            .map_err(|_| ConversationErr::ConversationMemberNotFound)
+    }))
     .await;
 
-    if find_users.is_err() {
-        return Err(ConversationErr::ConversationMemberNotFound);
-    }
+    find_users?;
 
-    let create = state
+    let create_result = state
         .db
         .conversation
         .create_conversation(conversation)
         .await;
 
-    match create {
+    match create_result {
         Ok(res) => {
             let id = res
                 .inserted_id
                 .as_object_id()
-                .map(|oid| oid.to_hex())
-                .ok_or(ConversationErr::InvalidId)?;
+                .ok_or(ConversationErr::InvalidId)?
+                .to_hex();
 
-            // Get the conversation by ID
-            let get = state.db.conversation.get_conversation_by_id(id).await;
-            match get {
+            // Fetch the newly created conversation
+            match state.db.conversation.get_conversation_by_id(id).await {
                 Ok(result) => Ok(ConversationModel::format(result)),
-                Err(err) => Err(err),
+                Err(_) => Err(ConversationErr::ConversationNotFound),
             }
         }
         Err(err) => Err(err),

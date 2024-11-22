@@ -1,5 +1,4 @@
 use futures::stream::StreamExt;
-use std::str::FromStr;
 
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -10,7 +9,7 @@ use mongodb::{
 
 use crate::{
     error::user_error::user_error_::{UserError, UserResult},
-    models::user_model::user_model_model::{UserModel, UserModelGet, UserModelNew},
+    models::user_model::user_model_model::{UserModel, UserModelGet, UserModelNew, UserModelPut},
 };
 
 #[derive(Debug)]
@@ -19,6 +18,17 @@ pub struct UserDb {
 }
 
 impl UserDb {
+    pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
+        let get = self.user.find_one(doc! {"em" : email}).await;
+        match get {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserError::UserNotFound),
+            Err(err) => Err(UserError::CanNotFindUser {
+                err: err.to_string(),
+            }),
+        }
+    }
+
     pub async fn create_user(&self, user: UserModelNew) -> UserResult<InsertOneResult> {
         let index = IndexModel::builder()
             .keys(doc! {
@@ -27,13 +37,17 @@ impl UserDb {
             .options(IndexOptions::builder().unique(true).build())
             .build();
 
-        let one_index = self.user.create_index(index).await;
-        if one_index.is_ok() {
-            return Err(UserError::UserIsReadyExit);
-        };
-        let new = UserModel::new(user);
+        if let Err(err) = self.user.create_index(index).await {
+            return Err(UserError::CanNotCreateUser {
+                err: err.to_string(),
+            });
+        }
 
-        match new {
+        if self.get_user_by_email(user.em.clone()).await.is_ok() {
+            return Err(UserError::EmailIsReadyExit);
+        }
+
+        match UserModel::new(user) {
             Ok(ok) => {
                 let create = self.user.insert_one(ok).await;
                 match create {
@@ -46,12 +60,8 @@ impl UserDb {
             Err(err) => Err(err),
         }
     }
-    pub async fn get_user_by_id(&self, id: String) -> UserResult<UserModel> {
-        let obj_id = ObjectId::from_str(&id);
-        if obj_id.is_err() {
-            return Err(UserError::InvalidId);
-        };
-        let get = self.user.find_one(doc! {"_id" : obj_id.unwrap()}).await;
+    pub async fn get_user_by_id(&self, id: ObjectId) -> UserResult<UserModel> {
+        let get = self.user.find_one(doc! {"_id" : id}).await;
         match get {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound),
@@ -61,23 +71,13 @@ impl UserDb {
         }
     }
 
-    // pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
-    //     let get = self.user.find_one(doc! {"em" : email}).await;
-    //     match get {
-    //         Ok(Some(res)) => Ok(res),
-    //         Ok(None) => Err(UserError::UserNotFound),
-    //         Err(err) => Err(UserError::CanNotFindUser {
-    //             err: err.to_string(),
-    //         }),
-    //     }
-    // }
-
     pub async fn get_all_users(&self) -> UserResult<Vec<UserModelGet>> {
         let cursor = self
             .user
             .find(doc! {})
             .await
             .map_err(|err| UserError::CanNotGetAllUsers {
+                field: "all".to_string(),
                 err: err.to_string(),
             });
         let mut users: Vec<UserModelGet> = Vec::new();
@@ -88,6 +88,7 @@ impl UserDb {
                         Ok(doc) => users.push(UserModelGet::format(doc)),
                         Err(err) => {
                             return Err(UserError::CanNotGetAllUsers {
+                                field: "all".to_string(),
                                 err: err.to_string(),
                             })
                         }
@@ -97,5 +98,50 @@ impl UserDb {
             }
             Err(err) => Err(err),
         }
+    }
+
+    async fn find_many_by_field(&self, field: &str, value: ObjectId) -> UserResult<Vec<UserModel>> {
+        let mut cursor = self.user.find(doc! { field: value }).await.map_err(|err| {
+            UserError::CanNotGetAllUsers {
+                err: err.to_string(),
+                field: field.to_string().clone(),
+            }
+        })?;
+
+        let mut users = Vec::new();
+        while let Some(data) = cursor.next().await {
+            match data {
+                Ok(doc) => users.push(doc),
+                Err(err) => {
+                    return Err(UserError::CanNotGetAllUsers {
+                        err: err.to_string(),
+                        field: field.to_string(),
+                    });
+                }
+            }
+        }
+        Ok(users)
+    }
+
+    pub async fn update_user_by_id(
+        &self,
+        user: UserModelPut,
+        id: ObjectId,
+    ) -> UserResult<UserModel> {
+        match self
+            .user
+            .find_one_and_update(doc! {"_id" : id}, doc! {"$set" : UserModel::put(user)})
+            .await
+        {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserError::UserNotFound),
+            Err(err) => Err(UserError::CanNotUpdateUser {
+                err: err.to_string(),
+            }),
+        }
+    }
+
+    pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModel>> {
+        self.find_many_by_field("rl", role).await
     }
 }

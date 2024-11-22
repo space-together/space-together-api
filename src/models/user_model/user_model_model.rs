@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use mongodb::bson::{oid::ObjectId, DateTime};
+use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 use crate::error::user_error::user_error_::{UserError, UserResult};
@@ -12,15 +12,15 @@ pub enum Gender {
     O,
 }
 
-// impl Gender {
-//     pub(crate) fn to_string(&self) -> String {
-//         match self {
-//             Gender::F => "Female".to_string(),
-//             Gender::M => "Male".to_string(),
-//             Gender::O => "Other".to_string(),
-//         }
-//     }
-// }
+impl Gender {
+    pub(crate) fn to_string(&self) -> String {
+        match self {
+            Gender::F => "F".to_string(),
+            Gender::M => "M".to_string(),
+            Gender::O => "O".to_string(),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserModel {
@@ -45,6 +45,16 @@ pub struct UserModelNew {
     pub gd: Gender,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UserModelPut {
+    pub rl: Option<String>,
+    pub nm: Option<String>,
+    pub em: Option<String>,
+    pub ph: Option<String>,
+    pub pw: Option<String>,
+    pub gd: Option<Gender>,
+}
+
 impl UserModel {
     pub fn new(user: UserModelNew) -> UserResult<UserModel> {
         let rl_id = ObjectId::from_str(&user.rl);
@@ -61,6 +71,37 @@ impl UserModel {
             }),
             Err(_) => Err(UserError::InvalidId),
         }
+    }
+
+    pub fn put(user: UserModelPut) -> Document {
+        let mut document = Document::new();
+        let mut is_updated = false;
+
+        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                document.insert(key, v);
+                is_updated = true;
+            }
+        };
+        insert_if_some(
+            "rl",
+            user.rl
+                .map(|rl| bson::Bson::ObjectId(ObjectId::from_str(&rl).unwrap())),
+        );
+        insert_if_some("nm", user.nm.map(bson::Bson::String));
+        insert_if_some("em", user.em.map(bson::Bson::String));
+        insert_if_some("ph", user.ph.map(bson::Bson::String));
+        insert_if_some("pw", user.pw.map(bson::Bson::String));
+        insert_if_some(
+            "gd",
+            user.gd.map(|gender| bson::Bson::String(gender.to_string())),
+        );
+
+        if is_updated {
+            document.insert("uo", bson::DateTime::now());
+        }
+
+        document
     }
 }
 
