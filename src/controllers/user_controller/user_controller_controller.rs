@@ -36,7 +36,9 @@ pub async fn controller_user_update_by_id(
 ) -> UserResult<UserModelGet> {
     if let Some(ref email) = user.em {
         if (state.db.user.get_user_by_email(email.to_string()).await).is_ok() {
-            return Err(UserError::EmailIsReadyExit);
+            return Err(UserError::EmailIsReadyExit {
+                email: email.to_string(),
+            });
         }
     }
     match state.db.user.update_user_by_id(user, id).await {

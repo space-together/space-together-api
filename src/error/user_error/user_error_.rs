@@ -8,7 +8,7 @@ pub enum UserError {
     CanNotFindUser { err: String },
     InvalidId,
     UserRoleIsNotExit,
-    EmailIsReadyExit,
+    EmailIsReadyExit { email: String },
     CanNotGetAllUsers { err: String, field: String },
     CanNotGetRole,
     CanNotUpdateUser { err: String },
@@ -35,7 +35,9 @@ impl std::fmt::Display for UserError {
             UserError::UserRoleIsNotExit => {
                 write!(f, "User's role is not exit, try other user role")
             }
-            UserError::EmailIsReadyExit => write!(f, "Email is ready to exit, try other email"),
+            UserError::EmailIsReadyExit { email } => {
+                write!(f, "Email is ready to exit {}, try other email", email)
+            }
             UserError::CanNotGetAllUsers { err, field } => {
                 write!(
                     f,

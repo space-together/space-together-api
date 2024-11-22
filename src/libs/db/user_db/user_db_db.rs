@@ -44,7 +44,9 @@ impl UserDb {
         }
 
         if self.get_user_by_email(user.em.clone()).await.is_ok() {
-            return Err(UserError::EmailIsReadyExit);
+            return Err(UserError::EmailIsReadyExit {
+                email: user.em.clone(),
+            });
         }
 
         match UserModel::new(user) {
