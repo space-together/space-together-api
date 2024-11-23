@@ -12,6 +12,7 @@ pub enum Gender {
     O,
 }
 
+#[allow(clippy::inherent_to_string)]
 impl Gender {
     pub(crate) fn to_string(&self) -> String {
         match self {

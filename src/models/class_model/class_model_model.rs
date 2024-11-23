@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use mongodb::bson::{oid::ObjectId, DateTime};
+use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 use crate::error::class_error::class_error_error::{ClassError, ClassResult};
@@ -9,17 +9,26 @@ use crate::error::class_error::class_error_error::{ClassError, ClassResult};
 pub struct ClassModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub nm: String,
-    pub cltea: ObjectId,
-    pub st: Option<Vec<ObjectId>>,
-    pub co: DateTime,
-    pub up: Option<DateTime>,
+    pub nm: String,                  // name
+    pub cltea: ObjectId,             // teacher id
+    pub st: Option<Vec<ObjectId>>,   // Student
+    pub teas: Option<Vec<ObjectId>>, //teachers
+    pub co: DateTime,                // create on
+    pub uo: Option<DateTime>,        // update on
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelNew {
     pub nm: String,
     pub cltea: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClassModelPut {
+    pub nm: Option<String>,
+    pub cltea: Option<String>,     // teacher id
+    pub st: Option<Vec<String>>,   // student id
+    pub teas: Option<Vec<String>>, // teachers id
 }
 
 impl ClassModel {
@@ -30,12 +39,58 @@ impl ClassModel {
                 id: None,
                 nm: class.nm,
                 cltea: id,
+                teas: None,
                 st: None,
                 co: DateTime::now(),
-                up: None,
+                uo: None,
             }),
             Err(err) => Err(err),
         }
+    }
+
+    pub fn put(class: ClassModelPut) -> Document {
+        let mut doc = Document::new();
+
+        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                doc.insert(key, v);
+            }
+        };
+
+        // Handle updates for `nm` (name) and `cltea` (class teacher)
+        insert_if_some("nm", class.nm.map(bson::Bson::String));
+        insert_if_some(
+            "cltea",
+            class
+                .cltea
+                .map(|cltea| bson::Bson::ObjectId(ObjectId::from_str(&cltea).unwrap())),
+        );
+
+        insert_if_some(
+            "st",
+            class.st.map(|students| {
+                bson::Bson::Array(
+                    students
+                        .into_iter()
+                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
+                        .collect(),
+                )
+            }),
+        );
+
+        insert_if_some(
+            "teas",
+            class.teas.map(|teachers| {
+                bson::Bson::Array(
+                    teachers
+                        .into_iter()
+                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
+                        .collect(),
+                )
+            }),
+        );
+
+        doc
     }
 }
 
@@ -46,7 +101,7 @@ pub struct ClassModelGet {
     pub cltea: String,
     pub st: Option<Vec<String>>,
     pub co: String,
-    pub up: Option<String>,
+    pub uo: Option<String>,
 }
 
 impl ClassModelGet {
@@ -62,7 +117,7 @@ impl ClassModelGet {
                 .co
                 .try_to_rfc3339_string()
                 .unwrap_or_else(|_| "".to_string()),
-            up: Some(class.up.map_or("".to_string(), |date| {
+            uo: Some(class.uo.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }

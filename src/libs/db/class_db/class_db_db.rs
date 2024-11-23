@@ -1,5 +1,6 @@
-use futures::stream::StreamExt;
 use std::str::FromStr;
+
+use futures::stream::StreamExt;
 
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -9,7 +10,9 @@ use mongodb::{
 
 use crate::{
     error::class_error::class_error_error::{ClassError, ClassResult},
-    models::class_model::class_model_model::{ClassModel, ClassModelGet, ClassModelNew},
+    models::class_model::class_model_model::{
+        ClassModel, ClassModelGet, ClassModelNew, ClassModelPut,
+    },
 };
 
 #[derive(Debug)]
@@ -35,20 +38,13 @@ impl ClassDb {
         }
     }
 
-    pub async fn get_class_by_id(&self, id: String) -> ClassResult<ClassModel> {
-        let obj_id = ObjectId::from_str(&id).map_err(|_| ClassError::InvalidId);
-        match obj_id {
-            Ok(res) => {
-                let get = self.class.find_one(doc! {"_id" : res}).await;
-                match get {
-                    Ok(Some(result)) => Ok(result),
-                    Ok(None) => Err(ClassError::ClassNotFoundById),
-                    Err(err) => Err(ClassError::CanNotGetClass {
-                        err: err.to_string(),
-                    }),
-                }
-            }
-            Err(_) => Err(ClassError::InvalidId),
+    pub async fn get_class_by_id(&self, id: ObjectId) -> ClassResult<ClassModel> {
+        match self.class.find_one(doc! {"_id" : id}).await {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ClassError::ClassNotFoundById),
+            Err(err) => Err(ClassError::CanNotGetClass {
+                err: err.to_string(),
+            }),
         }
     }
 
@@ -77,6 +73,70 @@ impl ClassDb {
                 Ok(classes)
             }
             Err(err) => Err(err),
+        }
+    }
+
+    pub async fn update_class(
+        &self,
+        class: Option<ClassModelPut>,
+        id: ObjectId,
+        add_students: Option<Vec<String>>,
+        remove_students: Option<Vec<String>>,
+    ) -> ClassResult<ClassModel> {
+        let mut update_doc = doc! {
+            "$currentDate": { "uo": true },
+        };
+
+        if let Some(class_data) = class {
+            println!("Updating class details: {:?}", class_data); // Print class data when updating
+            update_doc.insert("$set", ClassModel::put(class_data));
+        }
+
+        if let Some(add) = add_students {
+            let student_obj_ids: Vec<ObjectId> = add
+                .into_iter()
+                .filter_map(|id| ObjectId::from_str(&id).ok())
+                .collect();
+
+            if !student_obj_ids.is_empty() {
+                println!("Adding students: {:?}", student_obj_ids); // Print students being added
+                update_doc.insert(
+                    "$addToSet",
+                    doc! {
+                        "st": { "$each": student_obj_ids }
+                    },
+                );
+            }
+        }
+
+        if let Some(remove) = remove_students {
+            let student_obj_ids: Vec<ObjectId> = remove
+                .into_iter()
+                .filter_map(|id| ObjectId::from_str(&id).ok())
+                .collect();
+
+            if !student_obj_ids.is_empty() {
+                println!("Removing students: {:?}", student_obj_ids); // Print students being removed
+                update_doc.insert(
+                    "$pullAll",
+                    doc! {
+                        "st": student_obj_ids
+                    },
+                );
+                println!("Updated $pullAll is ok 😒🌼😡"); // Print confirmation message when removing students
+            }
+        }
+
+        match self
+            .class
+            .find_one_and_update(doc! { "_id": id }, update_doc)
+            .await
+        {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ClassError::ClassNotFoundById),
+            Err(err) => Err(ClassError::CanNotUpdateClass {
+                err: err.to_string(),
+            }),
         }
     }
 }
