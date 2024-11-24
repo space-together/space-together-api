@@ -20,7 +20,7 @@ pub struct UserDb {
     pub user: Collection<UserModel>,
 }
 
-enum UpdateValueType {
+enum UpdateDeleteValueType {
     ObjectId(ObjectId),
     String(String),
 }
@@ -184,16 +184,16 @@ impl UserDb {
 
         let field_value = if field == "_id" {
             match ObjectId::from_str(&value) {
-                Ok(object_id) => UpdateValueType::ObjectId(object_id),
+                Ok(object_id) => UpdateDeleteValueType::ObjectId(object_id),
                 Err(_) => return Err(UserError::InvalidId),
             }
         } else {
-            UpdateValueType::String(value.clone())
+            UpdateDeleteValueType::String(value.clone())
         };
 
         let field_value_to_use = match field_value {
-            UpdateValueType::ObjectId(object_id) => bson::Bson::ObjectId(object_id),
-            UpdateValueType::String(string) => bson::Bson::String(string),
+            UpdateDeleteValueType::ObjectId(object_id) => bson::Bson::ObjectId(object_id),
+            UpdateDeleteValueType::String(string) => bson::Bson::String(string),
         };
 
         match self
@@ -208,7 +208,8 @@ impl UserDb {
             Ok(None) => Err(UserError::UserNotFound {
                 field: field.to_string(),
             }),
-            Err(err) => Err(UserError::CanNotUpdateUser {
+            Err(err) => Err(UserError::CanNotDoActionUser {
+                action: "update".to_string(),
                 err: err.to_string(),
             }),
         }
@@ -232,5 +233,44 @@ impl UserDb {
 
     pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModel>> {
         self.find_many_by_field("rl", role).await
+    }
+
+    async fn delete_user_by_field(&self, field: &str, value: String) -> UserResult<UserModel> {
+        let field_value = if field == "_id" {
+            match ObjectId::from_str(&value) {
+                Ok(object_id) => UpdateDeleteValueType::ObjectId(object_id),
+                Err(_) => return Err(UserError::InvalidId),
+            }
+        } else {
+            UpdateDeleteValueType::String(value.clone())
+        };
+
+        let field_value_to_use = match field_value {
+            UpdateDeleteValueType::ObjectId(object_id) => bson::Bson::ObjectId(object_id),
+            UpdateDeleteValueType::String(string) => bson::Bson::String(string),
+        };
+
+        match self
+            .user
+            .find_one_and_delete(doc! {field: field_value_to_use})
+            .await
+        {
+            Ok(Some(doc)) => Ok(doc),
+            Ok(None) => Err(UserError::UserNotFound {
+                field: field.to_string(),
+            }),
+            Err(err) => Err(UserError::CanNotDoActionUser {
+                action: "delete".to_string(),
+                err: err.to_string(),
+            }),
+        }
+    }
+
+    pub async fn delete_user_by_id(&self, id: ObjectId) -> UserResult<UserModel> {
+        self.delete_user_by_field("_id", id.to_string()).await
+    }
+
+    pub async fn delete_user_by_username(&self, username: String) -> UserResult<UserModel> {
+        self.delete_user_by_field("un", username).await
     }
 }

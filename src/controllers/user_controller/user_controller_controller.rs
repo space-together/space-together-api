@@ -87,6 +87,26 @@ pub async fn controller_user_get_by_username(
     }
 }
 
+pub async fn controller_user_delete_by_id(
+    id: ObjectId,
+    state: Arc<AppState>,
+) -> UserResult<UserModelGet> {
+    match state.db.user.delete_user_by_id(id).await {
+        Ok(res) => Ok(UserModelGet::format(res)),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_user_delete_by_username(
+    state: Arc<AppState>,
+    username: String,
+) -> UserResult<UserModelGet> {
+    match state.db.user.delete_user_by_username(username).await {
+        Ok(res) => Ok(UserModelGet::format(res)),
+        Err(err) => Err(err),
+    }
+}
+
 pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<UserModelGet>> {
     let get_all = state.db.user.get_all_users().await;
     match get_all {

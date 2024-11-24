@@ -12,7 +12,7 @@ pub enum UserError {
     UserRoleIsNotExit,
     CanNotGetAllUsers { err: String, field: String },
     CanNotGetRole,
-    CanNotUpdateUser { err: String },
+    CanNotDoActionUser { err: String, action: String },
 }
 
 impl std::fmt::Display for UserError {
@@ -30,8 +30,8 @@ impl std::fmt::Display for UserError {
             UserError::CanNotGetRole => {
                 write!(f, "Can not get user role, please try other user role ")
             }
-            UserError::CanNotUpdateUser { err } => {
-                write!(f, "Can not update user bcs: 😡 {} 😡", err)
+            UserError::CanNotDoActionUser { err, action } => {
+                write!(f, "Can not {} user bcs: 😡 {} 😡", action, err)
             }
             UserError::UserIsReadyExit { field, value } => write!(
                 f,
