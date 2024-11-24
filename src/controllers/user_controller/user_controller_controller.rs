@@ -13,19 +13,29 @@ pub async fn controller_create_user(
     user: UserModelNew,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    match state.db.user.create_user(user).await {
-        Ok(_id) => {
-            match state
+    match state
+        .db
+        .user_role
+        .get_user_role_by_id(user.rl.clone())
+        .await
+    {
+        Err(_) => Err(UserError::InvalidId),
+        Ok(role) => match state.db.user.create_user(user).await {
+            Err(err) => Err(err),
+            Ok(insert_id) => match state
                 .db
                 .user
-                .get_user_by_id(change_insertoneresult_into_object_id(_id))
+                .get_user_by_id(change_insertoneresult_into_object_id(insert_id))
                 .await
             {
-                Ok(res) => Ok(UserModelGet::format(res)),
                 Err(err) => Err(err),
-            }
-        }
-        Err(err) => Err(err),
+                Ok(res) => {
+                    let mut user_get = UserModelGet::format(res);
+                    user_get.rl = role.rl;
+                    Ok(user_get)
+                }
+            },
+        },
     }
 }
 
@@ -34,14 +44,21 @@ pub async fn controller_user_update_by_id(
     id: ObjectId,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if let Some(ref email) = user.em {
-        if (state.db.user.get_user_by_email(email.to_string()).await).is_ok() {
-            return Err(UserError::EmailIsReadyExit {
-                email: email.to_string(),
-            });
-        }
-    }
     match state.db.user.update_user_by_id(user, id).await {
+        Err(err) => Err(err),
+        Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
+            Ok(res) => Ok(UserModelGet::format(res)),
+            Err(err) => Err(err),
+        },
+    }
+}
+
+pub async fn controller_user_update_by_username(
+    user: UserModelPut,
+    username: String,
+    state: Arc<AppState>,
+) -> UserResult<UserModelGet> {
+    match state.db.user.update_user_by_username(user, username).await {
         Err(err) => Err(err),
         Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
             Ok(res) => Ok(UserModelGet::format(res)),
@@ -55,6 +72,16 @@ pub async fn controller_get_user_by_id(
     id: ObjectId,
 ) -> UserResult<UserModelGet> {
     match state.db.user.get_user_by_id(id).await {
+        Ok(res) => Ok(UserModelGet::format(res)),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_user_get_by_username(
+    state: Arc<AppState>,
+    username: String,
+) -> UserResult<UserModelGet> {
+    match state.db.user.get_user_by_username(username).await {
         Ok(res) => Ok(UserModelGet::format(res)),
         Err(err) => Err(err),
     }

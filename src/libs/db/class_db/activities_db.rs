@@ -72,9 +72,10 @@ impl ActivityDb {
     }
 
     pub async fn get_activity_by_id(&self, id: ObjectId) -> ActivitiesResult<ActivityModel> {
-        match self.find_one_by_field("_id", id).await? {
-            Some(activity) => Ok(activity),
-            None => Err(ActivitiesErr::ActivityNotFound),
+        match self.find_one_by_field("_id", id).await {
+            Ok(Some(activity)) => Ok(activity),
+            Ok(None) => Err(ActivitiesErr::ActivityNotFound),
+            Err(err) => Err(err),
         }
     }
 

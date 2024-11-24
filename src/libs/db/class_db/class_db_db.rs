@@ -88,7 +88,6 @@ impl ClassDb {
         };
 
         if let Some(class_data) = class {
-            println!("Updating class details: {:?}", class_data); // Print class data when updating
             update_doc.insert("$set", ClassModel::put(class_data));
         }
 
@@ -99,7 +98,6 @@ impl ClassDb {
                 .collect();
 
             if !student_obj_ids.is_empty() {
-                println!("Adding students: {:?}", student_obj_ids); // Print students being added
                 update_doc.insert(
                     "$addToSet",
                     doc! {
@@ -116,14 +114,12 @@ impl ClassDb {
                 .collect();
 
             if !student_obj_ids.is_empty() {
-                println!("Removing students: {:?}", student_obj_ids); // Print students being removed
                 update_doc.insert(
                     "$pullAll",
                     doc! {
                         "st": student_obj_ids
                     },
                 );
-                println!("Updated $pullAll is ok 😒🌼😡"); // Print confirmation message when removing students
             }
         }
 

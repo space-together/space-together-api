@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use futures::stream::StreamExt;
 
 use mongodb::{
-    bson::{doc, oid::ObjectId},
+    bson::{self, doc, oid::ObjectId},
     options::IndexOptions,
     results::InsertOneResult,
     Collection, IndexModel,
@@ -9,6 +11,7 @@ use mongodb::{
 
 use crate::{
     error::user_error::user_error_::{UserError, UserResult},
+    libs::functions::characters_fn::{is_valid_name, is_valid_username},
     models::user_model::user_model_model::{UserModel, UserModelGet, UserModelNew, UserModelPut},
 };
 
@@ -17,15 +20,38 @@ pub struct UserDb {
     pub user: Collection<UserModel>,
 }
 
+enum UpdateValueType {
+    ObjectId(ObjectId),
+    String(String),
+}
+
 impl UserDb {
-    pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
-        let get = self.user.find_one(doc! {"em" : email}).await;
-        match get {
-            Ok(Some(res)) => Ok(res),
-            Ok(None) => Err(UserError::UserNotFound),
-            Err(err) => Err(UserError::CanNotFindUser {
+    async fn find_one_by_field(&self, field: &str, value: String) -> UserResult<Option<UserModel>> {
+        self.user
+            .find_one(doc! { field: value})
+            .await
+            .map_err(|err| UserError::CanNotFindUser {
                 err: err.to_string(),
+            })
+    }
+
+    pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
+        match self.find_one_by_field("em", email).await {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserError::UserNotFound {
+                field: "email".to_string(),
             }),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn get_user_by_username(&self, username: String) -> UserResult<UserModel> {
+        match self.find_one_by_field("un", username).await {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserError::UserNotFound {
+                field: "username".to_string(),
+            }),
+            Err(err) => Err(err),
         }
     }
 
@@ -33,6 +59,7 @@ impl UserDb {
         let index = IndexModel::builder()
             .keys(doc! {
             "em" : 1,
+            "un" : 1
             })
             .options(IndexOptions::builder().unique(true).build())
             .build();
@@ -43,30 +70,33 @@ impl UserDb {
             });
         }
 
+        if let Err(err) = is_valid_name(&user.nm) {
+            return Err(UserError::InvalidName { err });
+        }
+
         if self.get_user_by_email(user.em.clone()).await.is_ok() {
-            return Err(UserError::EmailIsReadyExit {
-                email: user.em.clone(),
+            return Err(UserError::UserIsReadyExit {
+                field: "Email".to_string(),
+                value: "user.em.clone".to_string(),
             });
         }
 
-        match UserModel::new(user) {
-            Ok(ok) => {
-                let create = self.user.insert_one(ok).await;
-                match create {
-                    Ok(res) => Ok(res),
-                    Err(err) => Err(UserError::CanNotCreateUser {
-                        err: err.to_string(),
-                    }),
-                }
-            }
-            Err(err) => Err(err),
+        let create = self.user.insert_one(UserModel::new(user)).await;
+        match create {
+            Ok(res) => Ok(res),
+            Err(err) => Err(UserError::CanNotCreateUser {
+                err: err.to_string(),
+            }),
         }
     }
+
     pub async fn get_user_by_id(&self, id: ObjectId) -> UserResult<UserModel> {
         let get = self.user.find_one(doc! {"_id" : id}).await;
         match get {
             Ok(Some(res)) => Ok(res),
-            Ok(None) => Err(UserError::UserNotFound),
+            Ok(None) => Err(UserError::UserNotFound {
+                field: "_id".to_string(),
+            }),
             Err(err) => Err(UserError::CanNotFindUser {
                 err: err.to_string(),
             }),
@@ -125,22 +155,79 @@ impl UserDb {
         Ok(users)
     }
 
+    async fn update_by_field(
+        &self,
+        user: UserModelPut,
+        field: &str,
+        value: String,
+    ) -> UserResult<UserModel> {
+        if let Some(name) = user.nm.clone() {
+            if let Err(err) = is_valid_name(&name) {
+                return Err(UserError::InvalidName { err });
+            }
+        }
+
+        if let Some(username) = user.un.clone() {
+            if let Err(err) = is_valid_username(&username) {
+                return Err(UserError::InvalidUsername { err });
+            }
+        }
+
+        if let Some(email) = user.em.clone() {
+            if self.get_user_by_email(email.clone()).await.is_ok() {
+                return Err(UserError::UserIsReadyExit {
+                    field: "email".to_string(),
+                    value: email.clone(),
+                });
+            }
+        }
+
+        let field_value = if field == "_id" {
+            match ObjectId::from_str(&value) {
+                Ok(object_id) => UpdateValueType::ObjectId(object_id),
+                Err(_) => return Err(UserError::InvalidId),
+            }
+        } else {
+            UpdateValueType::String(value.clone())
+        };
+
+        let field_value_to_use = match field_value {
+            UpdateValueType::ObjectId(object_id) => bson::Bson::ObjectId(object_id),
+            UpdateValueType::String(string) => bson::Bson::String(string),
+        };
+
+        match self
+            .user
+            .find_one_and_update(
+                doc! {field: field_value_to_use},
+                doc! {"$set" : UserModel::put(user)},
+            )
+            .await
+        {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(UserError::UserNotFound {
+                field: field.to_string(),
+            }),
+            Err(err) => Err(UserError::CanNotUpdateUser {
+                err: err.to_string(),
+            }),
+        }
+    }
+
     pub async fn update_user_by_id(
         &self,
         user: UserModelPut,
         id: ObjectId,
     ) -> UserResult<UserModel> {
-        match self
-            .user
-            .find_one_and_update(doc! {"_id" : id}, doc! {"$set" : UserModel::put(user)})
-            .await
-        {
-            Ok(Some(res)) => Ok(res),
-            Ok(None) => Err(UserError::UserNotFound),
-            Err(err) => Err(UserError::CanNotUpdateUser {
-                err: err.to_string(),
-            }),
-        }
+        self.update_by_field(user, "_id", id.to_string()).await
+    }
+
+    pub async fn update_user_by_username(
+        &self,
+        user: UserModelPut,
+        username: String,
+    ) -> UserResult<UserModel> {
+        self.update_by_field(user, "un", username).await
     }
 
     pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModel>> {

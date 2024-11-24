@@ -3,12 +3,13 @@ pub type UserResult<T> = core::result::Result<T, UserError>;
 #[derive(Debug)]
 pub enum UserError {
     CanNotCreateUser { err: String },
-    UserIsReadyExit,
-    UserNotFound,
+    UserIsReadyExit { field: String, value: String },
+    UserNotFound { field: String },
     CanNotFindUser { err: String },
     InvalidId,
+    InvalidName { err: String },
+    InvalidUsername { err: String },
     UserRoleIsNotExit,
-    EmailIsReadyExit { email: String },
     CanNotGetAllUsers { err: String, field: String },
     CanNotGetRole,
     CanNotUpdateUser { err: String },
@@ -20,23 +21,32 @@ impl std::fmt::Display for UserError {
             UserError::CanNotCreateUser { err } => {
                 write!(f, "Can't create user bcs : 😡 {} 😡, try again later", err)
             }
+            UserError::InvalidName { err } => {
+                write!(f, "Invalid name: {}", err)
+            }
+            UserError::InvalidUsername { err } => {
+                write!(f, "Invalid username: {}", err)
+            }
             UserError::CanNotGetRole => {
-                write!(f, "Can not get user role , please try other user role ")
+                write!(f, "Can not get user role, please try other user role ")
             }
             UserError::CanNotUpdateUser { err } => {
-                write!(f, "Can not update user bcs : 😡 {} 😡", err)
+                write!(f, "Can not update user bcs: 😡 {} 😡", err)
             }
-            UserError::UserIsReadyExit => write!(f, "user is ready to exit, try other user"),
-            UserError::UserNotFound => write!(f, "User not found"),
+            UserError::UserIsReadyExit { field, value } => write!(
+                f,
+                "{} is ready to exit {}, try other {}",
+                field, value, field
+            ),
+            UserError::UserNotFound { field } => {
+                write!(f, "User not found by {}, please try other {}", field, field)
+            }
             UserError::CanNotFindUser { err } => {
                 write!(f, "Can't find user bcs : 😡 {} 😡, try again later", err)
             }
             UserError::InvalidId => write!(f, "Invalid id"),
             UserError::UserRoleIsNotExit => {
                 write!(f, "User's role is not exit, try other user role")
-            }
-            UserError::EmailIsReadyExit { email } => {
-                write!(f, "Email is ready to exit {}, try other email", email)
             }
             UserError::CanNotGetAllUsers { err, field } => {
                 write!(
