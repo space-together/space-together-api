@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -8,7 +10,7 @@ use mongodb::{
 use crate::{
     error::class_error::class_group_err::{ClassGroupErr, ClassGroupResult},
     models::class_model::class_group_model::class_group_model_model::{
-        ClassGroupModel, ClassGroupModelGet, ClassGroupModelNew,
+        ClassGroupModel, ClassGroupModelGet, ClassGroupModelNew, ClassGroupModelPut,
     },
 };
 
@@ -118,8 +120,76 @@ impl ClassGroupDb {
 
     pub async fn get_class_group_by_class(
         &self,
-        class: ObjectId,
+        group: ObjectId,
     ) -> ClassGroupResult<Vec<ClassGroupModel>> {
-        self.find_many_by_field("cl_id", class).await
+        self.find_many_by_field("cl_id", group).await
+    }
+
+    pub async fn get_class_group_by_student(
+        &self,
+        student: ObjectId,
+    ) -> ClassGroupResult<Vec<ClassGroupModel>> {
+        self.find_many_by_field("st", student).await
+    }
+
+    pub async fn update_class_group(
+        &self,
+        group: Option<ClassGroupModelPut>,
+        id: ObjectId,
+        add_students: Option<Vec<String>>,
+        remove_students: Option<Vec<String>>,
+    ) -> ClassGroupResult<ClassGroupModel> {
+        let mut update_doc = doc! {
+            "$currentDate": { "uo": true },
+        };
+
+        if let Some(class_data) = group {
+            update_doc.insert("$set", ClassGroupModel::put(class_data));
+        }
+
+        if let Some(add) = add_students {
+            let student_obj_ids: Vec<ObjectId> = add
+                .into_iter()
+                .filter_map(|id| ObjectId::from_str(&id).ok())
+                .collect();
+
+            if !student_obj_ids.is_empty() {
+                update_doc.insert(
+                    "$addToSet",
+                    doc! {
+                        "st": { "$each": student_obj_ids }
+                    },
+                );
+            }
+        }
+
+        if let Some(remove) = remove_students {
+            let student_obj_ids: Vec<ObjectId> = remove
+                .into_iter()
+                .filter_map(|id| ObjectId::from_str(&id).ok())
+                .collect();
+
+            if !student_obj_ids.is_empty() {
+                update_doc.insert(
+                    "$pullAll",
+                    doc! {
+                        "st": student_obj_ids
+                    },
+                );
+            }
+        }
+
+        match self
+            .class_group
+            .find_one_and_update(doc! { "_id": id }, update_doc)
+            .await
+        {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ClassGroupErr::CanNotGetClassById),
+            Err(err) => Err(ClassGroupErr::CanNotDoAction {
+                err: { err.to_string() },
+                action: "update".to_string(),
+            }),
+        }
     }
 }

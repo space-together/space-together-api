@@ -6,7 +6,7 @@ use crate::{
     error::class_error::class_group_err::ClassGroupResult,
     libs::functions::object_id::change_insertoneresult_into_object_id,
     models::class_model::class_group_model::class_group_model_model::{
-        ClassGroupModel, ClassGroupModelGet, ClassGroupModelNew,
+        ClassGroupModel, ClassGroupModelGet, ClassGroupModelNew, ClassGroupModelPut,
     },
     AppState,
 };
@@ -58,6 +58,42 @@ pub async fn controller_get_class_groups_by_class(
 ) -> ClassGroupResult<Vec<ClassGroupModelGet>> {
     match state.db.class_group.get_class_group_by_class(id).await {
         Ok(res) => Ok(res.into_iter().map(ClassGroupModel::format).collect()),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_get_class_groups_by_student(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> ClassGroupResult<Vec<ClassGroupModelGet>> {
+    match state.db.class_group.get_class_group_by_student(id).await {
+        Ok(res) => Ok(res.into_iter().map(ClassGroupModel::format).collect()),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_class_group_update(
+    state: Arc<AppState>,
+    id: ObjectId,
+    class: Option<ClassGroupModelPut>,
+    add_students: Option<Vec<String>>,
+    remove_students: Option<Vec<String>>,
+) -> ClassGroupResult<ClassGroupModelGet> {
+    match state
+        .db
+        .class_group
+        .update_class_group(class, id, add_students, remove_students)
+        .await
+    {
+        Ok(res) => match state
+            .db
+            .class_group
+            .get_class_group_by_id(res.id.unwrap())
+            .await
+        {
+            Ok(data) => Ok(ClassGroupModel::format(data)),
+            Err(err) => Err(err),
+        },
         Err(err) => Err(err),
     }
 }

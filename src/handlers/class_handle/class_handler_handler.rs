@@ -85,7 +85,7 @@ pub async fn handler_get_all_classes(state: Data<AppState>) -> impl Responder {
 
 #[derive(Debug, Deserialize)]
 pub struct AddRemoveStudentsModel {
-    pub students: Vec<String>, // Mandatory for adding students
+    pub students: Vec<String>,
 }
 
 pub async fn handle_class_add_students(
