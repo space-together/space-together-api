@@ -6,9 +6,10 @@ use serde::Deserialize;
 
 use crate::{
     controllers::class_controller::class_group_controller::{
-        controller_class_group_create, controller_class_group_get_all,
-        controller_class_group_update, controller_get_class_group_by_id,
-        controller_get_class_groups_by_class, controller_get_class_groups_by_student,
+        controller_class_group_create, controller_class_group_delete_by_id,
+        controller_class_group_get_all, controller_class_group_update,
+        controller_get_class_group_by_id, controller_get_class_groups_by_class,
+        controller_get_class_groups_by_student,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{
@@ -80,6 +81,21 @@ pub async fn handle_get_class_group_by_student(
     match change_string_into_object_id(id.into_inner()) {
         Err(err) => HttpResponse::BadRequest().json(err),
         Ok(_id) => match controller_get_class_groups_by_student(state.into_inner(), _id).await {
+            Ok(res) => HttpResponse::Ok().json(res),
+            Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+                message: err.to_string(),
+            }),
+        },
+    }
+}
+
+pub async fn handle_class_group_delete_by_id(
+    state: Data<AppState>,
+    id: Path<String>,
+) -> impl Responder {
+    match change_string_into_object_id(id.into_inner()) {
+        Err(err) => HttpResponse::BadRequest().json(err),
+        Ok(_id) => match controller_class_group_delete_by_id(state.into_inner(), _id).await {
             Ok(res) => HttpResponse::Ok().json(res),
             Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: err.to_string(),

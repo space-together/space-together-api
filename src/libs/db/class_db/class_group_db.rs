@@ -192,4 +192,19 @@ impl ClassGroupDb {
             }),
         }
     }
+
+    pub async fn delete_class_group(&self, id: ObjectId) -> ClassGroupResult<ClassGroupModel> {
+        match self
+            .class_group
+            .find_one_and_delete(doc! {"_id" : id})
+            .await
+        {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ClassGroupErr::CanNotGetClassById),
+            Err(err) => Err(ClassGroupErr::CanNotDoAction {
+                err: { err.to_string() },
+                action: "delete".to_string(),
+            }),
+        }
+    }
 }
