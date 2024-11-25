@@ -35,7 +35,7 @@ impl std::fmt::Display for UserError {
             }
             UserError::UserIsReadyExit { field, value } => write!(
                 f,
-                "{} is ready to exit {}, try other {}",
+                "{} is ready to exit [{}], try other {}",
                 field, value, field
             ),
             UserError::UserNotFound { field } => {

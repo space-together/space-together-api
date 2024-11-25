@@ -10,7 +10,7 @@ use mongodb::{
 };
 
 use crate::{
-    error::user_error::user_error_::{UserError, UserResult},
+    error::user_error::user_error_err::{UserError, UserResult},
     libs::functions::characters_fn::{is_valid_name, is_valid_username},
     models::user_model::user_model_model::{UserModel, UserModelGet, UserModelNew, UserModelPut},
 };
@@ -178,6 +178,15 @@ impl UserDb {
                 return Err(UserError::UserIsReadyExit {
                     field: "email".to_string(),
                     value: email.clone(),
+                });
+            }
+        }
+
+        if let Some(username) = user.un.clone() {
+            if self.get_user_by_username(username.clone()).await.is_ok() {
+                return Err(UserError::UserIsReadyExit {
+                    field: "username".to_string(),
+                    value: username.clone(),
                 });
             }
         }

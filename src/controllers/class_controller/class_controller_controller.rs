@@ -60,6 +60,26 @@ pub async fn controller_get_all_classes(state: Arc<AppState>) -> ClassResult<Vec
     }
 }
 
+pub async fn controller_class_gets_by_teacher(
+    state: Arc<AppState>,
+    teacher: ObjectId,
+) -> ClassResult<Vec<ClassModelGet>> {
+    match state.db.class.get_class_by_teacher(teacher).await {
+        Ok(res) => Ok(res.into_iter().map(ClassModelGet::format).collect()),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_class_gets_by_student(
+    state: Arc<AppState>,
+    teacher: ObjectId,
+) -> ClassResult<Vec<ClassModelGet>> {
+    match state.db.class.get_class_by_student(teacher).await {
+        Ok(res) => Ok(res.into_iter().map(ClassModelGet::format).collect()),
+        Err(err) => Err(err),
+    }
+}
+
 pub async fn controller_class_update(
     state: Arc<AppState>,
     id: ObjectId,

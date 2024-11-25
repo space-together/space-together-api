@@ -39,8 +39,8 @@ impl ClassModel {
                 id: None,
                 nm: class.nm,
                 cltea: id,
-                teas: None,
-                st: None,
+                teas: Some(Vec::new()),
+                st: Some(Vec::new()),
                 co: DateTime::now(),
                 uo: None,
             }),
@@ -100,6 +100,7 @@ pub struct ClassModelGet {
     pub nm: String,
     pub cltea: String,
     pub st: Option<Vec<String>>,
+    pub teas: Option<Vec<String>>,
     pub co: String,
     pub uo: Option<String>,
 }
@@ -112,6 +113,9 @@ impl ClassModelGet {
             cltea: class.cltea.to_string(),
             st: class
                 .st
+                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
+            teas: class
+                .teas
                 .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
             co: class
                 .co

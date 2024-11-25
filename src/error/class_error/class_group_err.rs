@@ -8,6 +8,7 @@ pub enum ClassGroupErr {
     ClassGroupNotFoundById,
     CanNotFindClassGroup { err: String },
     CanNotGetAllClassGroups { err: String },
+    CanNotGetAllClassGroupBy { field: String, err: String },
 }
 
 impl std::fmt::Display for ClassGroupErr {
@@ -28,6 +29,13 @@ impl std::fmt::Display for ClassGroupErr {
             }
             ClassGroupErr::CanNotGetAllClassGroups { err } => {
                 write!(f, "Can't get all class groups bcs 😡 {} 😡", err)
+            }
+            ClassGroupErr::CanNotGetAllClassGroupBy { err, field } => {
+                write!(
+                    f,
+                    "Can't get class in {} bcs : 😡 {} 😡, try again later",
+                    field, err
+                )
             }
         }
     }

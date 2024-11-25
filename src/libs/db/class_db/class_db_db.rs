@@ -83,6 +83,19 @@ impl ClassDb {
         add_students: Option<Vec<String>>,
         remove_students: Option<Vec<String>>,
     ) -> ClassResult<ClassModel> {
+        if let Err(err) = self
+            .class
+            .update_one(
+                doc! { "_id": id, "st": { "$exists": false } },
+                doc! { "$set": { "st": [] } },
+            )
+            .await
+        {
+            return Err(ClassError::CanNotUpdateClass {
+                err: err.to_string(),
+            });
+        }
+
         let mut update_doc = doc! {
             "$currentDate": { "uo": true },
         };
@@ -134,5 +147,49 @@ impl ClassDb {
                 err: err.to_string(),
             }),
         }
+    }
+
+    async fn find_many_by_field(
+        &self,
+        field: &str,
+        value: ObjectId,
+    ) -> ClassResult<Vec<ClassModel>> {
+        let query = if field == "st" {
+            doc! { "st": { "$in": [value] } }
+        } else {
+            doc! { field: value }
+        };
+
+        let mut cursor =
+            self.class
+                .find(query)
+                .await
+                .map_err(|err| ClassError::CanNotGetAllClassBy {
+                    err: err.to_string(),
+                    field: field.to_string(),
+                })?;
+
+        let mut classes = Vec::new();
+        while let Some(data) = cursor.next().await {
+            match data {
+                Ok(doc) => classes.push(doc),
+                Err(err) => {
+                    return Err(ClassError::CanNotGetAllClassBy {
+                        err: err.to_string(),
+                        field: field.to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(classes)
+    }
+
+    pub async fn get_class_by_student(&self, student: ObjectId) -> ClassResult<Vec<ClassModel>> {
+        self.find_many_by_field("st", student).await
+    }
+
+    pub async fn get_class_by_teacher(&self, teacher: ObjectId) -> ClassResult<Vec<ClassModel>> {
+        self.find_many_by_field("cltea", teacher).await
     }
 }

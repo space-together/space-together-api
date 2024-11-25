@@ -82,7 +82,7 @@ pub fn generate_username(name: &str) -> String {
         .unwrap_or(&words.join("_"))
         .to_string();
 
-    let username_with_suffix = format!("{}_{}", username, rand::random::<u16>());
+    let username_with_suffix = format!("{}_{}", username, rand::random::<u8>());
 
     username_with_suffix
 }

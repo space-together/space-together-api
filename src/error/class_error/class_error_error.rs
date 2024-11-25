@@ -8,6 +8,7 @@ pub enum ClassError {
     ClassNotFoundById,
     ClassTeacherIsNotExit { id: String },
     CanNotGetAllClass { err: String },
+    CanNotGetAllClassBy { field: String, err: String },
     CanNotUpdateClass { err: String },
 }
 
@@ -24,10 +25,17 @@ impl std::fmt::Display for ClassError {
                 write!(f, "Class not update class bcs 😡{}😡", err)
             }
             ClassError::ClassTeacherIsNotExit { id } => {
-                write!(f, "Class teacher is not exit {}, please try other id", id)
+                write!(f, "Class teacher is not exit [{}], please try other id", id)
             }
             ClassError::CanNotGetAllClass { err } => {
                 write!(f, "Can not get all classes bcs 😡 {} 😡 ", err)
+            }
+            ClassError::CanNotGetAllClassBy { err, field } => {
+                write!(
+                    f,
+                    "Can't get class in {} bcs : 😡 {} 😡, try again later",
+                    field, err
+                )
             }
         }
     }
