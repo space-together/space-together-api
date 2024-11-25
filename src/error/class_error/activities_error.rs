@@ -8,7 +8,7 @@ pub enum ActivitiesErr {
     CanNotFindActivity { error: String },
     CanGetAllActivity { error: String, field: String },
     CanNotDeleteActivity { error: String },
-    CanNotUpdateActivity { error: String },
+    CanNotDoAction { error: String, action: String },
     ActivityNotFound,
     ActivityIsReadyExit,
     ActivityTypeIsNotExit,
@@ -46,8 +46,8 @@ impl std::fmt::Display for ActivitiesErr {
             ActivitiesErr::CanNotDeleteActivity { error } => {
                 write!(f, " can't delete activity bcs 😡 {} 😡 ", error)
             }
-            ActivitiesErr::CanNotUpdateActivity { error } => {
-                write!(f, " can't update activity bcs  {} �� ", error)
+            ActivitiesErr::CanNotDoAction { error, action } => {
+                write!(f, " can't do {} activity bcs  😡{} 😡 ", action, error)
             }
         }
     }

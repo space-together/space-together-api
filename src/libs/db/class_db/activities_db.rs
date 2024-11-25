@@ -92,4 +92,15 @@ impl ActivityDb {
     ) -> ActivitiesResult<Vec<ActivityModel>> {
         self.find_many_by_field("gr", id).await
     }
+
+    pub async fn delete_activity_by_id(&self, id: ObjectId) -> ActivitiesResult<ActivityModel> {
+        match self.activity.find_one_and_delete(doc! {"_id" : id}).await {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(ActivitiesErr::ActivityNotFound),
+            Err(err) => Err(ActivitiesErr::CanNotDoAction {
+                error: err.to_string(),
+                action: "delete".to_string(),
+            }),
+        }
+    }
 }

@@ -70,3 +70,13 @@ pub async fn controller_activity_get_by_id(
         Ok(activity) => Ok(ActivityModel::format(activity)),
     }
 }
+
+pub async fn controller_activity_delete_by_id(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> ActivitiesResult<ActivityModelGet> {
+    match state.db.activity.delete_activity_by_id(id).await {
+        Err(err) => Err(err),
+        Ok(activity) => Ok(ActivityModel::format(activity)),
+    }
+}
