@@ -77,7 +77,7 @@ impl UserDb {
         if self.get_user_by_email(user.em.clone()).await.is_ok() {
             return Err(UserError::UserIsReadyExit {
                 field: "Email".to_string(),
-                value: "user.em.clone".to_string(),
+                value: user.em.clone(),
             });
         }
 

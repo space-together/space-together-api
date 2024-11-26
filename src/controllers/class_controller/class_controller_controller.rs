@@ -52,6 +52,16 @@ pub async fn controller_get_class_by_id(
     }
 }
 
+pub async fn controller_class_delete_by_id(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> ClassResult<ClassModelGet> {
+    match state.db.class.delete_class_by_id(id).await {
+        Ok(res) => Ok(ClassModelGet::format(res)),
+        Err(err) => Err(err),
+    }
+}
+
 pub async fn controller_get_all_classes(state: Arc<AppState>) -> ClassResult<Vec<ClassModelGet>> {
     let all_classes = state.db.class.get_all_classes().await;
     match all_classes {

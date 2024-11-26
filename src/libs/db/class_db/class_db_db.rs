@@ -91,8 +91,9 @@ impl ClassDb {
             )
             .await
         {
-            return Err(ClassError::CanNotUpdateClass {
+            return Err(ClassError::CanNotDoActionClass {
                 err: err.to_string(),
+                action: "update".to_string(),
             });
         }
 
@@ -143,8 +144,9 @@ impl ClassDb {
         {
             Ok(Some(result)) => Ok(result),
             Ok(None) => Err(ClassError::ClassNotFoundById),
-            Err(err) => Err(ClassError::CanNotUpdateClass {
+            Err(err) => Err(ClassError::CanNotDoActionClass {
                 err: err.to_string(),
+                action: "update".to_string(),
             }),
         }
     }
@@ -191,5 +193,16 @@ impl ClassDb {
 
     pub async fn get_class_by_teacher(&self, teacher: ObjectId) -> ClassResult<Vec<ClassModel>> {
         self.find_many_by_field("cltea", teacher).await
+    }
+
+    pub async fn delete_class_by_id(&self, id: ObjectId) -> ClassResult<ClassModel> {
+        match self.class.find_one_and_delete(doc! {"_id" : id}).await {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ClassError::ClassNotFoundById),
+            Err(err) => Err(ClassError::CanNotDoActionClass {
+                err: err.to_string(),
+                action: "delete".to_string(),
+            }),
+        }
     }
 }

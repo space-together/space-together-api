@@ -20,7 +20,7 @@ pub fn routers_user_role(
             .route("", get().to(handle_get_all_user_roles))
             .route("/{id}", put().to(handle_user_role_update))
             .route("/{id}", delete().to(handle_user_role_delete))
-            .route("/search", get().to(handle_user_role_get_by_name)) //http://127.0.0.1:2052/api/v0.0.1/user/role/search?name=Student
+            .route("/role/{name}", get().to(handle_user_role_get_by_name))
             .route("/{id}", get().to(handle_get_user_role)),
     )
 }

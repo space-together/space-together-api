@@ -7,10 +7,9 @@ use crate::{
     AppState,
 };
 use actix_web::{
-    web::{self, Data, Json, Query},
+    web::{self, Data, Json, Path},
     HttpResponse, Responder,
 };
-use serde::Deserialize;
 
 pub async fn handle_create_user_role(
     state: web::Data<AppState>,
@@ -28,12 +27,8 @@ pub async fn handle_create_user_role(
     }
 }
 
-pub async fn handle_get_user_role(
-    state: web::Data<AppState>,
-    id: web::Path<String>,
-) -> impl Responder {
-    let get = controller_get_user_role(id.into_inner(), state.into_inner()).await;
-    match get {
+pub async fn handle_get_user_role(state: web::Data<AppState>, id: Path<String>) -> impl Responder {
+    match controller_get_user_role(id.into_inner(), state.into_inner()).await {
         Ok(res) => HttpResponse::Ok().json(res),
         Err(err) => {
             let error = ReqErrModel {
@@ -44,16 +39,11 @@ pub async fn handle_get_user_role(
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct SearchParams {
-    pub name: String,
-}
-
 pub async fn handle_user_role_get_by_name(
     state: Data<AppState>,
-    query: Query<SearchParams>,
+    name: Path<String>,
 ) -> impl Responder {
-    match controller_get_user_role_name(query.name.clone(), state.into_inner()).await {
+    match controller_get_user_role_name(name.into_inner(), state.into_inner()).await {
         Ok(res) => HttpResponse::Ok().json(res),
         Err(err) => {
             let error = ReqErrModel {

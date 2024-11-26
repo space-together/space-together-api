@@ -44,6 +44,17 @@ pub async fn controller_user_update_by_id(
     id: ObjectId,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
+    if let Some(role) = user.rl.clone() {
+        if state
+            .db
+            .user_role
+            .get_user_role_by_rl(role.clone())
+            .await
+            .is_err()
+        {
+            return Err(UserError::InvalidUserRoleId);
+        }
+    }
     match state.db.user.update_user_by_id(user, id).await {
         Err(err) => Err(err),
         Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {

@@ -45,8 +45,8 @@ impl UserRoleDb {
             });
         }
 
-        if self.get_user_role_by_rl(role.rl.clone()).await.is_ok() {
-            return Err(UserRoleError::RoleIsReadyExit);
+        if let Ok(role) = self.get_user_role_by_rl(role.rl.clone()).await {
+            return Err(UserRoleError::RoleIsReadyExit { role: role.rl });
         }
 
         match self.role.insert_one(UserRoleModel::new(role)).await {

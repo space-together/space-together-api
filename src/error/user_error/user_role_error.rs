@@ -3,7 +3,7 @@ pub type UserRoleResult<T> = core::result::Result<T, UserRoleError>;
 #[derive(Debug)]
 pub enum UserRoleError {
     CanNotCreateUserRole { err: String },
-    RoleIsReadyExit,
+    RoleIsReadyExit { role: String },
     RoleNotFound,
     CanNotFindUserRole { err: String },
     InvalidId,
@@ -37,7 +37,9 @@ impl std::fmt::Display for UserRoleError {
                     err
                 )
             }
-            UserRoleError::RoleIsReadyExit => write!(f, "Role is ready to exit, try other role"),
+            UserRoleError::RoleIsReadyExit { role } => {
+                write!(f, "Role is ready to exit [{}], try other role", role)
+            }
             UserRoleError::RoleNotFound => write!(f, "UserRole not found"),
             UserRoleError::InvalidId => write!(f, "Invalid id"),
             UserRoleError::CanNotFindUserRole { err } => {

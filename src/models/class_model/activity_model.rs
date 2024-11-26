@@ -16,6 +16,7 @@ pub struct ActivityModel {
     pub act: String,          // activity
     pub dl: DateTime,         // died line
     pub co: DateTime,         // created at
+    pub uo: Option<DateTime>, // Update on
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -28,6 +29,17 @@ pub struct ActivityModelGet {
     pub gr: Option<String>, // group
     pub cl: Option<String>, // class id
     pub co: String,         // created at
+    pub uo: Option<String>, // Update on
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ActivityModelPut {
+    pub ty: String,
+    pub ow: String,
+    pub act: String,
+    pub dl: String,
+    pub gr: Option<String>,
+    pub cl: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -64,6 +76,7 @@ impl ActivityModel {
             act: activity.act,
             dl,
             co: DateTime::now(),
+            uo: None,
         })
     }
 
@@ -75,6 +88,9 @@ impl ActivityModel {
             gr: Some(activity.gr.map_or("".to_string(), |id| id.to_string())),
             ty: activity.ty.to_string(),
             ow: activity.ow.to_string(),
+            uo: Some(activity.uo.map_or("".to_string(), |date| {
+                date.try_to_rfc3339_string().unwrap_or("".to_string())
+            })),
             dl: activity
                 .dl
                 .try_to_rfc3339_string()
@@ -85,4 +101,18 @@ impl ActivityModel {
                 .unwrap_or("".to_string()),
         }
     }
+
+    // pub fn put(activity: ActivityModelPut) -> Document {
+    //     let mut doc = Document::new();
+
+    //     let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+    //         if let Some(v) = value {
+    //             doc.insert(key, v);
+    //         }
+    //     };
+
+    //     // insert_if_some("ty" , activity.)
+
+    //     doc
+    // }
 }
