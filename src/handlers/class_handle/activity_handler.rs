@@ -7,7 +7,7 @@ use crate::{
     controllers::class_controller::activity_controller::{
         controller_activity_create, controller_activity_delete_by_id,
         controller_activity_get_by_class, controller_activity_get_by_group,
-        controller_activity_get_by_id,
+        controller_activity_get_by_id, controller_activity_get_by_teacher,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{class_model::activity_model::ActivityModelNew, request_error_model::ReqErrModel},
@@ -35,6 +35,21 @@ pub async fn handle_activity_get_by_group(
 ) -> impl Responder {
     match change_string_into_object_id(id.into_inner()) {
         Ok(obj) => match controller_activity_get_by_group(state.into_inner(), obj).await {
+            Ok(res) => HttpResponse::Ok().json(res),
+            Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+                message: err.to_string(),
+            }),
+        },
+        Err(err) => HttpResponse::BadRequest().json(err),
+    }
+}
+
+pub async fn handle_activity_get_by_teacher(
+    state: Data<AppState>,
+    id: Path<String>,
+) -> impl Responder {
+    match change_string_into_object_id(id.into_inner()) {
+        Ok(obj) => match controller_activity_get_by_teacher(state.into_inner(), obj).await {
             Ok(res) => HttpResponse::Ok().json(res),
             Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: err.to_string(),

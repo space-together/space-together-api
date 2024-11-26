@@ -29,6 +29,16 @@ pub async fn controller_activity_get_by_group(
     }
 }
 
+pub async fn controller_activity_get_by_teacher(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> ActivitiesResult<Vec<ActivityModelGet>> {
+    match state.db.activity.get_activity_by_teacher(id).await {
+        Err(err) => Err(err),
+        Ok(res) => Ok(res.into_iter().map(ActivityModel::format).collect()),
+    }
+}
+
 pub async fn controller_activity_create(
     state: Arc<AppState>,
     activity: ActivityModelNew,
