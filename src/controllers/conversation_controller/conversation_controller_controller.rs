@@ -69,3 +69,14 @@ pub async fn controller_conversation_by_id(
         Err(err) => Err(err),
     }
 }
+
+pub async fn controller_conversation_by_member(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> ConversationResult<Vec<ConversationModelGet>> {
+    let get = state.db.conversation.get_conversation_by_member(id).await;
+    match get {
+        Ok(res) => Ok(res.into_iter().map(ConversationModel::format).collect()),
+        Err(err) => Err(err),
+    }
+}

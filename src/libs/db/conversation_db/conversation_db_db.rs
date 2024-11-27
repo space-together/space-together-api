@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use futures::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     results::InsertOneResult,
@@ -52,5 +53,46 @@ impl ConversationDb {
             }
             Err(err) => Err(err),
         }
+    }
+
+    async fn find_many_by_field(
+        &self,
+        field: &str,
+        value: ObjectId,
+    ) -> ConversationResult<Vec<ConversationModel>> {
+        let query = if field == "st" {
+            doc! { "mms": { "$in": [value] } }
+        } else {
+            doc! { field: value }
+        };
+
+        let mut cursor = self.conversation.find(query).await.map_err(|err| {
+            ConversationErr::CanNotGetAllByField {
+                err: err.to_string(),
+                field: field.to_string(),
+            }
+        })?;
+
+        let mut conversations = Vec::new();
+        while let Some(data) = cursor.next().await {
+            match data {
+                Ok(doc) => conversations.push(doc),
+                Err(err) => {
+                    return Err(ConversationErr::CanNotGetAllByField {
+                        err: err.to_string(),
+                        field: field.to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(conversations)
+    }
+
+    pub async fn get_conversation_by_member(
+        &self,
+        id: ObjectId,
+    ) -> ConversationResult<Vec<ConversationModel>> {
+        self.find_many_by_field("mms", id).await
     }
 }
