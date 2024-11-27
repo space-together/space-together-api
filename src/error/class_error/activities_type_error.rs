@@ -7,15 +7,17 @@ pub enum ActivitiesTypeErr {
     ActivitiesTypeNotFound,
     CanNotFindActivitiesType { err: String },
     CanNotGetAllActivitiesTypes { err: String },
-    ActivitiesTypeIsReadyExit,
+    ActivitiesTypeIsReadyExit { name: String },
+    CanNotDoAction { err: String, action: String },
 }
 
 impl std::fmt::Display for ActivitiesTypeErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ActivitiesTypeErr::ActivitiesTypeIsReadyExit => write!(
+            ActivitiesTypeErr::ActivitiesTypeIsReadyExit { name } => write!(
                 f,
-                "Activity is ready to exit, please try other activity type name"
+                "Activity is ready to exit [{}], please try other activity type name",
+                name
             ),
             ActivitiesTypeErr::InvalidId => write!(f, "Invalid id"),
             ActivitiesTypeErr::ActivitiesTypeNotFound => {
@@ -29,6 +31,9 @@ impl std::fmt::Display for ActivitiesTypeErr {
             }
             ActivitiesTypeErr::CanNotCreateActivitiesType { err } => {
                 write!(f, "Can't create activity type bcs 😡 {} 😡 ", err)
+            }
+            ActivitiesTypeErr::CanNotDoAction { err, action } => {
+                write!(f, "Can't do {} bcs 😡{}😡 ", action, err)
             }
         }
     }

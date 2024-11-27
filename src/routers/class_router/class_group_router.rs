@@ -22,12 +22,15 @@ pub fn routers_class_group(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mu
             .route("/{id}", get().to(handle_get_class_group_by_id))
             .route("/{id}", put().to(handle_class_group_update_by_id))
             .route("/{id}", delete().to(handle_class_group_delete_by_id))
-            .route("/add/{id}", post().to(handle_class_group_add_students))
+            .route("/class/{id}", get().to(handle_get_class_group_by_class))
             .route(
-                "/remove/{id}",
+                "/student/add/{id}",
+                post().to(handle_class_group_add_students),
+            )
+            .route(
+                "/student/remove/{id}",
                 post().to(handle_class_group_remove_students),
             )
-            .route("/class/{id}", get().to(handle_get_class_group_by_class))
             .route("/student/{id}", get().to(handle_get_class_group_by_student)),
     )
 }

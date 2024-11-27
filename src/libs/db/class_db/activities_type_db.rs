@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -11,7 +9,7 @@ use mongodb::{
 use crate::{
     error::class_error::activities_type_error::{ActivitiesTypeErr, ActivitiesTypeResult},
     models::class_model::activities_type_model::{
-        ActivitiesTypeModel, ActivitiesTypeModelGet, ActivitiesTypeModelNew,
+        ActivitiesTypeModel, ActivitiesTypeModelGet, ActivitiesTypeModelNew, ActivitiesTypeModelPut,
     },
 };
 
@@ -32,15 +30,17 @@ impl ActivitiesTypeDb {
             .options(IndexOptions::builder().unique(true).build())
             .build();
 
-        let one_index = self.activities_type.create_index(index).await;
-        if one_index.is_err() {
-            return Err(ActivitiesTypeErr::ActivitiesTypeIsReadyExit);
+        if self.activities_type.create_index(index).await.is_err() {
+            return Err(ActivitiesTypeErr::ActivitiesTypeIsReadyExit {
+                name: activity_type.ty.clone(),
+            });
         };
 
-        let new = ActivitiesTypeModel::new(activity_type);
-        let create = self.activities_type.insert_one(new).await;
-
-        match create {
+        match self
+            .activities_type
+            .insert_one(ActivitiesTypeModel::new(activity_type))
+            .await
+        {
             Ok(res) => Ok(res),
             Err(err) => Err(ActivitiesTypeErr::CanNotCreateActivitiesType {
                 err: err.to_string(),
@@ -49,24 +49,17 @@ impl ActivitiesTypeDb {
     }
     pub async fn get_activities_type_by_id(
         &self,
-        id: String,
+        id: ObjectId,
     ) -> ActivitiesTypeResult<ActivitiesTypeModel> {
-        let obj_id = ObjectId::from_str(&id).map_err(|_| ActivitiesTypeErr::InvalidId);
-
-        match obj_id {
-            Ok(i) => {
-                let get = self.activities_type.find_one(doc! {"_id" : i}).await;
-                match get {
-                    Ok(Some(data)) => Ok(data),
-                    Ok(None) => Err(ActivitiesTypeErr::ActivitiesTypeNotFound),
-                    Err(er) => Err(ActivitiesTypeErr::CanNotFindActivitiesType {
-                        err: er.to_string(),
-                    }),
-                }
-            }
-            Err(err) => Err(err),
+        match self.activities_type.find_one(doc! {"_id" : id}).await {
+            Ok(Some(data)) => Ok(data),
+            Ok(None) => Err(ActivitiesTypeErr::ActivitiesTypeNotFound),
+            Err(er) => Err(ActivitiesTypeErr::CanNotFindActivitiesType {
+                err: er.to_string(),
+            }),
         }
     }
+
     pub async fn get_all_activities_type(
         &self,
     ) -> ActivitiesTypeResult<Vec<ActivitiesTypeModelGet>> {
@@ -105,6 +98,46 @@ impl ActivitiesTypeDb {
             Ok(None) => Err(ActivitiesTypeErr::ActivitiesTypeNotFound),
             Err(er) => Err(ActivitiesTypeErr::CanNotFindActivitiesType {
                 err: er.to_string(),
+            }),
+        }
+    }
+
+    pub async fn delete_activities_type_by_id(
+        &self,
+        id: ObjectId,
+    ) -> ActivitiesTypeResult<ActivitiesTypeModel> {
+        match self
+            .activities_type
+            .find_one_and_delete(doc! {"_id" : id})
+            .await
+        {
+            Ok(Some(data)) => Ok(data),
+            Ok(None) => Err(ActivitiesTypeErr::ActivitiesTypeNotFound),
+            Err(er) => Err(ActivitiesTypeErr::CanNotDoAction {
+                err: er.to_string(),
+                action: "delete".to_string(),
+            }),
+        }
+    }
+
+    pub async fn update_activities_type_by_id(
+        &self,
+        id: ObjectId,
+        activity_type: ActivitiesTypeModelPut,
+    ) -> ActivitiesTypeResult<ActivitiesTypeModel> {
+        match self
+            .activities_type
+            .find_one_and_update(
+                doc! {"_id" : id},
+                doc! {"$set" : ActivitiesTypeModel::put(activity_type)},
+            )
+            .await
+        {
+            Ok(Some(data)) => Ok(data),
+            Ok(None) => Err(ActivitiesTypeErr::ActivitiesTypeNotFound),
+            Err(er) => Err(ActivitiesTypeErr::CanNotDoAction {
+                err: er.to_string(),
+                action: "update".to_string(),
             }),
         }
     }

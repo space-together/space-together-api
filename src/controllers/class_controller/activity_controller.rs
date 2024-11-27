@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::bson::oid::ObjectId;
 
@@ -43,10 +43,14 @@ pub async fn controller_activity_create(
     state: Arc<AppState>,
     activity: ActivityModelNew,
 ) -> ActivitiesResult<ActivityModelGet> {
+    if ObjectId::from_str(&activity.ty).is_err() {
+        return Err(ActivitiesErr::Invalid);
+    }
+
     if state
         .db
         .activities_type
-        .get_activities_type_by_id(activity.ty.clone())
+        .get_activities_type_by_id(ObjectId::from_str(&activity.ty).unwrap())
         .await
         .is_err()
     {
