@@ -1,6 +1,6 @@
 use crate::{
     error::class_error::activities_error::{ActivitiesErr, ActivitiesResult},
-    models::class_model::activity_model::{ActivityModel, ActivityModelNew},
+    models::class_model::activity_model::{ActivityModel, ActivityModelNew, ActivityModelPut},
 };
 use futures::StreamExt;
 use mongodb::{
@@ -107,6 +107,28 @@ impl ActivityDb {
             Err(err) => Err(ActivitiesErr::CanNotDoAction {
                 error: err.to_string(),
                 action: "delete".to_string(),
+            }),
+        }
+    }
+
+    pub async fn update_activity_by_id(
+        &self,
+        id: ObjectId,
+        activity: ActivityModelPut,
+    ) -> ActivitiesResult<ActivityModel> {
+        match self
+            .activity
+            .find_one_and_update(
+                doc! {"_id" : id},
+                doc! {"$set" : ActivityModel::put(activity), "$currentDate" : {"uo" : true}},
+            )
+            .await
+        {
+            Ok(Some(res)) => Ok(res),
+            Ok(None) => Err(ActivitiesErr::ActivityNotFound),
+            Err(err) => Err(ActivitiesErr::CanNotDoAction {
+                error: err.to_string(),
+                action: "update".to_string(),
             }),
         }
     }

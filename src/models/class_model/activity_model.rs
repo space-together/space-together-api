@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use mongodb::bson::{oid::ObjectId, DateTime};
+use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 use crate::error::class_error::activities_error::{ActivitiesErr, ActivitiesResult};
@@ -13,7 +13,7 @@ pub struct ActivityModel {
     pub ow: ObjectId,         // create by
     pub gr: Option<ObjectId>, // group
     pub cl: Option<ObjectId>, // class id
-    pub act: String,          // activity
+    pub act: String,          // activity description
     pub dl: DateTime,         // died line
     pub co: DateTime,         // created at
     pub uo: Option<DateTime>, // Update on
@@ -24,7 +24,7 @@ pub struct ActivityModelGet {
     pub id: String,
     pub ty: String,         // Activity type
     pub ow: String,         // create by
-    pub act: String,        // activity
+    pub act: String,        // activity description
     pub dl: String,         // died line
     pub gr: Option<String>, // group
     pub cl: Option<String>, // class id
@@ -34,10 +34,9 @@ pub struct ActivityModelGet {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ActivityModelPut {
-    pub ty: String,
-    pub ow: String,
-    pub act: String,
-    pub dl: String,
+    pub ty: Option<String>,
+    pub act: Option<String>,
+    pub dl: Option<String>,
     pub gr: Option<String>,
     pub cl: Option<String>,
 }
@@ -64,8 +63,7 @@ impl ActivityModel {
             Some(gr) => Some(ObjectId::from_str(gr).map_err(|_| ActivitiesErr::Invalid)?),
             None => None,
         };
-        let dl = DateTime::parse_rfc3339_str(&activity.dl)
-            .map_err(|_| ActivitiesErr::InvalidDateTime)?;
+        let dl = DateTime::parse_rfc3339_str(&activity.dl).unwrap();
 
         Ok(ActivityModel {
             id: None,
@@ -102,17 +100,41 @@ impl ActivityModel {
         }
     }
 
-    // pub fn put(activity: ActivityModelPut) -> Document {
-    //     let mut doc = Document::new();
+    pub fn put(ty: ActivityModelPut) -> Document {
+        let mut doc = Document::new();
 
-    //     let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
-    //         if let Some(v) = value {
-    //             doc.insert(key, v);
-    //         }
-    //     };
+        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                doc.insert(key, v);
+            }
+        };
 
-    //     // insert_if_some("ty" , activity.)
+        insert_if_some(
+            "ty",
+            ty.ty
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
 
-    //     doc
-    // }
+        insert_if_some(
+            "gr",
+            ty.gr
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+
+        insert_if_some(
+            "cl",
+            ty.cl
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+
+        insert_if_some(
+            "dl",
+            ty.dl
+                .map(|date| bson::Bson::DateTime(DateTime::parse_rfc3339_str(&date).unwrap())),
+        );
+
+        insert_if_some("act", ty.act.map(bson::Bson::String));
+
+        doc
+    }
 }

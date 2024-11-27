@@ -4,8 +4,12 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::class_error::activities_error::{ActivitiesErr, ActivitiesResult},
-    libs::functions::object_id::change_insertoneresult_into_object_id,
-    models::class_model::activity_model::{ActivityModel, ActivityModelGet, ActivityModelNew},
+    libs::functions::{
+        characters_fn::validate_datetime, object_id::change_insertoneresult_into_object_id,
+    },
+    models::class_model::activity_model::{
+        ActivityModel, ActivityModelGet, ActivityModelNew, ActivityModelPut,
+    },
     AppState,
 };
 
@@ -43,6 +47,10 @@ pub async fn controller_activity_create(
     state: Arc<AppState>,
     activity: ActivityModelNew,
 ) -> ActivitiesResult<ActivityModelGet> {
+    if let Err(err) = validate_datetime(&activity.dl) {
+        return Err(ActivitiesErr::InvalidDateTime { date: err });
+    }
+
     if ObjectId::from_str(&activity.ty).is_err() {
         return Err(ActivitiesErr::Invalid);
     }
@@ -92,5 +100,25 @@ pub async fn controller_activity_delete_by_id(
     match state.db.activity.delete_activity_by_id(id).await {
         Err(err) => Err(err),
         Ok(activity) => Ok(ActivityModel::format(activity)),
+    }
+}
+
+pub async fn controller_activity_update_by_id(
+    state: Arc<AppState>,
+    id: ObjectId,
+    activity: ActivityModelPut,
+) -> ActivitiesResult<ActivityModelGet> {
+    if let Some(date) = activity.dl.clone() {
+        if let Err(err) = validate_datetime(&date) {
+            return Err(ActivitiesErr::InvalidDateTime { date: err });
+        }
+    }
+
+    match state.db.activity.update_activity_by_id(id, activity).await {
+        Err(err) => Err(err),
+        Ok(_) => match state.db.activity.get_activity_by_id(id).await {
+            Err(err) => Err(err),
+            Ok(activity) => Ok(ActivityModel::format(activity)),
+        },
     }
 }
