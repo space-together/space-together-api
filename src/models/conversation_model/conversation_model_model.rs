@@ -1,4 +1,6 @@
-use mongodb::bson::{oid::ObjectId, DateTime};
+use std::str::FromStr;
+
+use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -8,6 +10,7 @@ pub struct ConversationModel {
     pub mms: Vec<ObjectId>, // Members
     pub gr: Option<bool>,   // Group
     pub co: DateTime,
+    pub uo: Option<DateTime>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -22,6 +25,13 @@ pub struct ConversationModelGet {
     pub mms: Vec<String>,
     pub gr: Option<bool>,
     pub co: String,
+    pub uo: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ConversationModelPut {
+    pub mms: Option<Vec<String>>,
+    pub gr: Option<bool>,
 }
 
 impl ConversationModel {
@@ -37,6 +47,7 @@ impl ConversationModel {
             mms,
             gr: conversation.gr,
             co: DateTime::now(),
+            uo: None,
         }
     }
     pub fn format(conversation: ConversationModel) -> ConversationModelGet {
@@ -48,6 +59,34 @@ impl ConversationModel {
                 .co
                 .try_to_rfc3339_string()
                 .unwrap_or("".to_string()),
+            uo: Some(conversation.uo.map_or("".to_string(), |date| {
+                date.try_to_rfc3339_string().unwrap_or("".to_string())
+            })),
         }
+    }
+
+    pub fn put(conversation: ConversationModelPut) -> Document {
+        let mut doc = Document::new();
+
+        let mut some_data = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                doc.insert(key, v);
+            }
+        };
+
+        some_data(
+            "mms",
+            conversation.mms.map(|ids| {
+                bson::Bson::Array(
+                    ids.into_iter()
+                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
+                        .collect(),
+                )
+            }),
+        );
+
+        some_data("gr", conversation.gr.map(bson::Bson::Boolean));
+
+        doc
     }
 }

@@ -5,8 +5,9 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::conversation_error::conversation_error_error::{ConversationErr, ConversationResult},
+    libs::functions::object_id::change_insertoneresult_into_object_id,
     models::conversation_model::conversation_model_model::{
-        ConversationModel, ConversationModelGet, ConversationModelNew,
+        ConversationModel, ConversationModelGet, ConversationModelNew, ConversationModelPut,
     },
     AppState,
 };
@@ -43,14 +44,13 @@ pub async fn controller_conversation_create(
 
     match create_result {
         Ok(res) => {
-            let id = res
-                .inserted_id
-                .as_object_id()
-                .ok_or(ConversationErr::InvalidId)?
-                .to_hex();
-
             // Fetch the newly created conversation
-            match state.db.conversation.get_conversation_by_id(id).await {
+            match state
+                .db
+                .conversation
+                .get_conversation_by_id(change_insertoneresult_into_object_id(res))
+                .await
+            {
                 Ok(result) => Ok(ConversationModel::format(result)),
                 Err(_) => Err(ConversationErr::ConversationNotFound),
             }
@@ -61,7 +61,7 @@ pub async fn controller_conversation_create(
 
 pub async fn controller_conversation_by_id(
     state: Arc<AppState>,
-    id: String,
+    id: ObjectId,
 ) -> ConversationResult<ConversationModelGet> {
     let get = state.db.conversation.get_conversation_by_id(id).await;
     match get {
@@ -74,9 +74,29 @@ pub async fn controller_conversation_by_member(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> ConversationResult<Vec<ConversationModelGet>> {
-    let get = state.db.conversation.get_conversation_by_member(id).await;
-    match get {
+    match state.db.conversation.get_conversation_by_member(id).await {
         Ok(res) => Ok(res.into_iter().map(ConversationModel::format).collect()),
         Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_conversation_update_by_id(
+    state: Arc<AppState>,
+    id: ObjectId,
+    data: Option<ConversationModelPut>,
+    add_members: Option<Vec<String>>,
+    remove_members: Option<Vec<String>>,
+) -> ConversationResult<ConversationModelGet> {
+    match state
+        .db
+        .conversation
+        .update_conversation_by_id(id, data, add_members, remove_members)
+        .await
+    {
+        Err(err) => Err(err),
+        Ok(_) => match state.db.conversation.get_conversation_by_id(id).await {
+            Ok(res) => Ok(ConversationModel::format(res)),
+            Err(err) => Err(err),
+        },
     }
 }

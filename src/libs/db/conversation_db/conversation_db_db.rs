@@ -10,7 +10,7 @@ use mongodb::{
 use crate::{
     error::conversation_error::conversation_error_error::{ConversationErr, ConversationResult},
     models::conversation_model::conversation_model_model::{
-        ConversationModel, ConversationModelNew,
+        ConversationModel, ConversationModelNew, ConversationModelPut,
     },
 };
 
@@ -37,21 +37,14 @@ impl ConversationDb {
     }
     pub async fn get_conversation_by_id(
         &self,
-        id: String,
+        id: ObjectId,
     ) -> ConversationResult<ConversationModel> {
-        let obj_id = ObjectId::from_str(&id).map_err(|_| ConversationErr::InvalidId);
-        match obj_id {
-            Ok(res) => {
-                let get = self.conversation.find_one(doc! {"_id" : res}).await;
-                match get {
-                    Ok(Some(result)) => Ok(result),
-                    Ok(None) => Err(ConversationErr::ConversationNotFound),
-                    Err(err) => Err(ConversationErr::CanNotFindConversation {
-                        err: err.to_string(),
-                    }),
-                }
-            }
-            Err(err) => Err(err),
+        match self.conversation.find_one(doc! {"_id" : id}).await {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ConversationErr::ConversationNotFound),
+            Err(err) => Err(ConversationErr::CanNotFindConversation {
+                err: err.to_string(),
+            }),
         }
     }
 
@@ -94,5 +87,78 @@ impl ConversationDb {
         id: ObjectId,
     ) -> ConversationResult<Vec<ConversationModel>> {
         self.find_many_by_field("mms", id).await
+    }
+
+    pub async fn update_conversation_by_id(
+        &self,
+        id: ObjectId,
+        data: Option<ConversationModelPut>,
+        add_members: Option<Vec<String>>,
+        remove_members: Option<Vec<String>>,
+    ) -> ConversationResult<ConversationModel> {
+        if let Err(err) = self
+            .conversation
+            .update_one(
+                doc! {"_id" : id, "st": {"$exists" : false}},
+                doc! {"$set" : {"mms" : []}},
+            )
+            .await
+        {
+            return Err(ConversationErr::CanNotDoAction {
+                err: err.to_string(),
+                action: "update".to_string(),
+            });
+        }
+
+        let mut update_doc = doc! {"$currentDate" : {"uo" : true}};
+
+        if let Some(data) = data {
+            update_doc.insert("$set", ConversationModel::put(data));
+        }
+
+        if let Some(add) = add_members {
+            let members_id: Vec<ObjectId> = add
+                .into_iter()
+                .filter_map(|id| ObjectId::from_str(&id).ok())
+                .collect();
+
+            if !members_id.is_empty() {
+                update_doc.insert(
+                    "$addToSet",
+                    doc! {
+                        "mms": { "$each": members_id }
+                    },
+                );
+            }
+        }
+
+        if let Some(remove) = remove_members {
+            let members_id: Vec<ObjectId> = remove
+                .into_iter()
+                .filter_map(|id| ObjectId::from_str(&id).ok())
+                .collect();
+
+            if !members_id.is_empty() {
+                update_doc.insert(
+                    "$pullAll",
+                    doc! {
+                        "mms": { "$each": members_id }
+                    },
+                );
+            }
+        }
+
+        match self
+            .conversation
+            .find_one_and_update(doc! {"_id": id}, update_doc)
+            .await
+        {
+            Err(err) => Err(ConversationErr::CanNotDoAction {
+                err: err.to_string(),
+                action: "update".to_string(),
+            }),
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ConversationErr::ConversationNotFound),
+        }
     }
 }

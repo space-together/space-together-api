@@ -10,6 +10,7 @@ pub enum ConversationErr {
     UserNotFound,
     ConversationMemberNotFound,
     CanNotGetAllByField { err: String, field: String },
+    CanNotDoAction { err: String, action: String },
 }
 
 impl std::fmt::Display for ConversationErr {
@@ -31,6 +32,9 @@ impl std::fmt::Display for ConversationErr {
             ConversationErr::UserNotFound => write!(f, "User not found, try other users"),
             ConversationErr::CanNotGetAllByField { err, field } => {
                 write!(f, "Can not get conversation by {} bcs 😡{}😡", field, err)
+            }
+            ConversationErr::CanNotDoAction { err, action } => {
+                write!(f, "Can not {} in conversation bcs 😡{}😡", action, err)
             }
             ConversationErr::ConversationMemberNotFound => {
                 write!(f, "Conversation member not found, try other users")
