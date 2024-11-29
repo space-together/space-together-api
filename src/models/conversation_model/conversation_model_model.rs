@@ -8,8 +8,9 @@ pub struct ConversationModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub mms: Vec<ObjectId>, // Members
+    pub nm: Option<String>, // name
     pub gr: Option<bool>,   // Group
-    pub co: DateTime,
+    pub co: DateTime,       // create on
     pub uo: Option<DateTime>,
 }
 
@@ -17,11 +18,13 @@ pub struct ConversationModel {
 pub struct ConversationModelNew {
     pub mms: Vec<String>,
     pub gr: Option<bool>,
+    pub nm: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConversationModelGet {
     pub id: String,
+    pub nm: Option<String>,
     pub mms: Vec<String>,
     pub gr: Option<bool>,
     pub co: String,
@@ -32,6 +35,7 @@ pub struct ConversationModelGet {
 pub struct ConversationModelPut {
     pub mms: Option<Vec<String>>,
     pub gr: Option<bool>,
+    pub nm: Option<String>,
 }
 
 impl ConversationModel {
@@ -45,6 +49,7 @@ impl ConversationModel {
         ConversationModel {
             id: None,
             mms,
+            nm: conversation.nm,
             gr: conversation.gr,
             co: DateTime::now(),
             uo: None,
@@ -55,6 +60,7 @@ impl ConversationModel {
             id: conversation.id.map_or("".to_string(), |id| id.to_string()),
             mms: conversation.mms.iter().map(|id| id.to_string()).collect(),
             gr: conversation.gr,
+            nm: conversation.nm,
             co: conversation
                 .co
                 .try_to_rfc3339_string()
@@ -86,6 +92,7 @@ impl ConversationModel {
         );
 
         some_data("gr", conversation.gr.map(bson::Bson::Boolean));
+        some_data("nm", conversation.nm.map(bson::Bson::String));
 
         doc
     }

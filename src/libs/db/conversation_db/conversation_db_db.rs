@@ -48,6 +48,24 @@ impl ConversationDb {
         }
     }
 
+    pub async fn delete_conversation_by_id(
+        &self,
+        id: ObjectId,
+    ) -> ConversationResult<ConversationModel> {
+        match self
+            .conversation
+            .find_one_and_delete(doc! {"_id" : id})
+            .await
+        {
+            Ok(Some(result)) => Ok(result),
+            Ok(None) => Err(ConversationErr::ConversationNotFound),
+            Err(err) => Err(ConversationErr::CanNotDoAction {
+                action: "delete".to_string(),
+                err: err.to_string(),
+            }),
+        }
+    }
+
     async fn find_many_by_field(
         &self,
         field: &str,
@@ -99,7 +117,7 @@ impl ConversationDb {
         if let Err(err) = self
             .conversation
             .update_one(
-                doc! {"_id" : id, "st": {"$exists" : false}},
+                doc! {"_id" : id, "mms": {"$exists" : false}},
                 doc! {"$set" : {"mms" : []}},
             )
             .await
@@ -142,7 +160,7 @@ impl ConversationDb {
                 update_doc.insert(
                     "$pullAll",
                     doc! {
-                        "mms": { "$each": members_id }
+                        "mms": members_id
                     },
                 );
             }

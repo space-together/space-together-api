@@ -7,7 +7,8 @@ use serde::Deserialize;
 use crate::{
     controllers::conversation_controller::conversation_controller_controller::{
         controller_conversation_by_id, controller_conversation_by_member,
-        controller_conversation_create, controller_conversation_update_by_id,
+        controller_conversation_create, controller_conversation_delete_by_id,
+        controller_conversation_update_by_id,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{
@@ -40,6 +41,21 @@ pub async fn handle_conversation_get_by_id(
     match change_string_into_object_id(id.into_inner()) {
         Err(err) => HttpResponse::BadRequest().json(err),
         Ok(i) => match controller_conversation_by_id(state.into_inner(), i).await {
+            Ok(res) => HttpResponse::Ok().json(res),
+            Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+                message: err.to_string(),
+            }),
+        },
+    }
+}
+
+pub async fn handle_conversation_delete_by_id(
+    state: Data<AppState>,
+    id: Path<String>,
+) -> impl Responder {
+    match change_string_into_object_id(id.into_inner()) {
+        Err(err) => HttpResponse::BadRequest().json(err),
+        Ok(i) => match controller_conversation_delete_by_id(state.into_inner(), i).await {
             Ok(res) => HttpResponse::Ok().json(res),
             Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: err.to_string(),

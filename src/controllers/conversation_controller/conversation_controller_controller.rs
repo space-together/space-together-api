@@ -70,12 +70,61 @@ pub async fn controller_conversation_by_id(
     }
 }
 
+pub async fn controller_conversation_delete_by_id(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> ConversationResult<ConversationModelGet> {
+    match state.db.conversation.delete_conversation_by_id(id).await {
+        Ok(res) => Ok(ConversationModel::format(res)),
+        Err(err) => Err(err),
+    }
+}
+
 pub async fn controller_conversation_by_member(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> ConversationResult<Vec<ConversationModelGet>> {
-    match state.db.conversation.get_conversation_by_member(id).await {
-        Ok(res) => Ok(res.into_iter().map(ConversationModel::format).collect()),
+    // Fetch all conversations for the user
+    let conversations_result = state.db.conversation.get_conversation_by_member(id).await;
+
+    match conversations_result {
+        Ok(conversations) => {
+            // Separate conversations into those with and without new messages
+            let mut conversations_with_new_messages = vec![];
+            let mut conversations_without_new_messages = vec![];
+
+            for conversation in conversations {
+                // Fetch latest messages for this conversation
+                if let Ok(messages) = state
+                    .db
+                    .message
+                    .get_messages_by_conversation(conversation.id.unwrap())
+                    .await
+                {
+                    // Check if there's any message not seen by the user
+                    let has_unread_messages = messages.iter().any(|message| {
+                        message
+                            .seen_by
+                            .as_ref()
+                            .map_or(true, |seen_by| !seen_by.contains(&id.to_string()))
+                    });
+
+                    if has_unread_messages {
+                        conversations_with_new_messages
+                            .push(ConversationModel::format(conversation));
+                    } else {
+                        conversations_without_new_messages
+                            .push(ConversationModel::format(conversation));
+                    }
+                }
+            }
+
+            // Combine the prioritized conversations with new messages first
+            let mut all_conversations = conversations_with_new_messages;
+            all_conversations.extend(conversations_without_new_messages);
+
+            Ok(all_conversations)
+        }
         Err(err) => Err(err),
     }
 }

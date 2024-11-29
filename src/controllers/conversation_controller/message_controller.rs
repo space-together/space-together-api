@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use mongodb::bson::oid::ObjectId;
+
 use crate::{
     error::conversation_error::message_error::{MessageError, MessageResult},
     models::conversation_model::message_model::{MessageModel, MessageModelGet, MessageModelNew},
@@ -32,7 +34,7 @@ pub async fn controller_message_create(
 
 pub async fn controller_message_get_all_by_conversation(
     state: Arc<AppState>,
-    id: String,
+    id: ObjectId,
 ) -> MessageResult<Vec<MessageModelGet>> {
     let find = state.db.message.get_messages_by_conversation(id).await;
     match find {

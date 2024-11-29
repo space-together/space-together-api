@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use actix_web::web::{get, post, put, scope, Data, ServiceConfig};
+use actix_web::web::{delete, get, post, put, scope, Data, ServiceConfig};
 
 use crate::{
     handlers::conversation_handle::conversation_handle_handle::{
-        handle_conversation_add_member, handle_conversation_create, handle_conversation_get_by_id,
+        handle_conversation_add_member, handle_conversation_create,
+        handle_conversation_delete_by_id, handle_conversation_get_by_id,
         handle_conversation_get_by_member, handle_conversation_remover_member,
         handle_conversation_update_by_id,
     },
@@ -18,6 +19,7 @@ pub fn routers_conversation(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &m
             .route("", post().to(handle_conversation_create))
             .route("/{id}", get().to(handle_conversation_get_by_id))
             .route("/{id}", put().to(handle_conversation_update_by_id))
+            .route("/{id}", delete().to(handle_conversation_delete_by_id))
             .route("/member/{id}", get().to(handle_conversation_get_by_member))
             .route(
                 "/member/add/{id}",

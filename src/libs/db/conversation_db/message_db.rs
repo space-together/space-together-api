@@ -61,40 +61,33 @@ impl MessageDb {
 
     pub async fn get_messages_by_conversation(
         &self,
-        id: String,
+        id: ObjectId,
     ) -> MessageResult<Vec<MessageModelGet>> {
-        let obj_id = ObjectId::from_str(&id).map_err(|_| MessageError::InvalidId);
+        let cursor = self
+            .message
+            .find(doc! {"cov" : id})
+            .sort(doc! {"co": -1})
+            .await
+            .map_err(|err| MessageError::CanNotGetAllMessagesForConversation {
+                err: err.to_string(),
+            });
+        let mut messages: Vec<MessageModelGet> = Vec::new();
 
-        match obj_id {
-            Ok(i) => {
-                let cursor = self
-                    .message
-                    .find(doc! {"cov" : i})
-                    .sort(doc! {"co": -1})
-                    .await
-                    .map_err(|err| MessageError::CanNotGetAllMessagesForConversation {
-                        err: err.to_string(),
-                    });
-                let mut messages: Vec<MessageModelGet> = Vec::new();
-
-                match cursor {
-                    Ok(mut res) => {
-                        while let Some(result) = res.next().await {
-                            match result {
-                                Ok(doc) => messages.push(MessageModel::format(doc)),
-                                Err(err) => {
-                                    return Err(MessageError::CanNotGetAllMessagesForConversation {
-                                        err: err.to_string(),
-                                    })
-                                }
-                            }
+        match cursor {
+            Ok(mut res) => {
+                while let Some(result) = res.next().await {
+                    match result {
+                        Ok(doc) => messages.push(MessageModel::format(doc)),
+                        Err(err) => {
+                            return Err(MessageError::CanNotGetAllMessagesForConversation {
+                                err: err.to_string(),
+                            })
                         }
-                        Ok(messages)
                     }
-                    Err(err) => Err(err),
                 }
+                Ok(messages)
             }
-            Err(_) => Err(MessageError::InvalidId),
+            Err(err) => Err(err),
         }
     }
     pub async fn delete_message_by_id(&self, id: String) -> MessageResult<MessageModel> {
