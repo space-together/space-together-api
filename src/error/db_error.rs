@@ -5,6 +5,7 @@ pub enum DbError {
     CanNotConnectToDatabase { err: String },
     CanNotGetAllTables { err: String },
     QueryFailed { err: String },
+    DatabaseStatusNotFound,
 }
 
 impl std::fmt::Display for DbError {
@@ -26,6 +27,9 @@ impl std::fmt::Display for DbError {
                     "Can not get tables in database bcs : 😡 {} 😡 , try again later",
                     err
                 )
+            }
+            DbError::DatabaseStatusNotFound => {
+                write!(f, "Database status not found")
             }
         }
     }

@@ -12,6 +12,7 @@ use super::{
     conversation_router::{
         conversation_router_router::routers_conversation, message_router::routers_message,
     },
+    database_router::database_status_router::routers_database,
     user_router::{user_role_router::routers_user_role, user_router_router::routers_user},
 };
 use crate::AppState;
@@ -34,6 +35,9 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/conversation").configure(|user_cfg| {
                 routers_conversation(user_cfg, state.clone());
                 routers_message(user_cfg, state.clone());
+            }))
+            .service(web::scope("/database").configure(|user_cfg| {
+                routers_database(user_cfg, state.clone());
             })),
     );
 }

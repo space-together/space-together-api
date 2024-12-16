@@ -1,1 +1,1 @@
-pub mod collection_router;
+pub mod database_status_router;

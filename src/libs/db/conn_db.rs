@@ -46,8 +46,11 @@ impl ConnDb {
             Ok(res) => {
                 let st_data = res.database("space-together-data");
 
-                // Retrieve stats for collections
                 let stats_result = Self::get_database_stats(&res, "space-together-data").await;
+                let stats = match stats_result {
+                    Ok(s) => Some(s),
+                    Err(_) => None,
+                };
 
                 // Initialize collections
                 let user_role = UserRoleDb {
@@ -75,15 +78,6 @@ impl ConnDb {
                     activity: st_data.collection("activities"),
                 };
 
-                let stats = match stats_result {
-                    Ok(s) => Some(s),
-                    Err(err) => {
-                        println!("Failed to retrieve database stats: 😡{}😡", err);
-                        None
-                    }
-                };
-
-                println!("Database status: {:?}", stats);
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
@@ -104,7 +98,6 @@ impl ConnDb {
         }
     }
 
-    /// Retrieve statistics for all collections in the database
     pub async fn get_database_stats(client: &Client, db_name: &str) -> DbResult<DatabaseStats> {
         let database = client.database(db_name);
         let mut total_documents = 0;
@@ -123,7 +116,6 @@ impl ConnDb {
         for name in &collection_names {
             let collection = database.collection::<mongodb::bson::Document>(name);
 
-            // Fetch all documents
             let mut cursor = match collection.find(doc! {}).await {
                 Ok(c) => c,
                 Err(err) => {
@@ -156,7 +148,7 @@ impl ConnDb {
                         continue;
                     }
                 };
-                collection_size += doc_json.len(); // Calculate size
+                collection_size += doc_json.len();
             }
 
             // Aggregate results
@@ -166,7 +158,7 @@ impl ConnDb {
             collections_stats.push(CollectionStats {
                 name: name.clone(),
                 document_count,
-                size_bytes: format_bytes(collection_size), // Format size
+                size_bytes: format_bytes(collection_size),
             });
         }
 
