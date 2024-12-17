@@ -11,5 +11,6 @@ pub struct CollectionStats {
 pub struct DatabaseStats {
     pub total_documents: u64,
     pub total_size_bytes: String,
+    pub total_collection: usize,
     pub collections: Vec<CollectionStats>,
 }
