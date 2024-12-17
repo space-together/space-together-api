@@ -77,12 +77,15 @@ impl ConversationDb {
             doc! { field: value }
         };
 
-        let mut cursor = self.conversation.find(query).await.map_err(|err| {
-            ConversationErr::CanNotGetAllByField {
+        let mut cursor = self
+            .conversation
+            .find(query)
+            .sort(doc! {"co" : -1})
+            .await
+            .map_err(|err| ConversationErr::CanNotGetAllByField {
                 err: err.to_string(),
                 field: field.to_string(),
-            }
-        })?;
+            })?;
 
         let mut conversations = Vec::new();
         while let Some(data) = cursor.next().await {
@@ -99,7 +102,6 @@ impl ConversationDb {
 
         Ok(conversations)
     }
-
     pub async fn get_conversation_by_member(
         &self,
         id: ObjectId,

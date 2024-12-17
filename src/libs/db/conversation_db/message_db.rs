@@ -90,20 +90,13 @@ impl MessageDb {
             Err(err) => Err(err),
         }
     }
-    pub async fn delete_message_by_id(&self, id: String) -> MessageResult<MessageModel> {
-        let obj_id = ObjectId::from_str(&id).map_err(|_| MessageError::InvalidId);
-        match obj_id {
-            Ok(i) => {
-                let delete = self.message.find_one_and_delete(doc! {"_id" : i}).await;
-                match delete {
-                    Ok(Some(msg)) => Ok(msg),
-                    Ok(None) => Err(MessageError::MessageNotFound),
-                    Err(err) => Err(MessageError::CanNotDeleteMessage {
-                        err: err.to_string(),
-                    }),
-                }
-            }
-            Err(err) => Err(err),
+    pub async fn delete_message_by_id(&self, id: ObjectId) -> MessageResult<MessageModel> {
+        match self.message.find_one_and_delete(doc! {"_id" : id}).await {
+            Ok(Some(msg)) => Ok(msg),
+            Ok(None) => Err(MessageError::MessageNotFound),
+            Err(err) => Err(MessageError::CanNotDeleteMessage {
+                err: err.to_string(),
+            }),
         }
     }
 }

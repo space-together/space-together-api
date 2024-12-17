@@ -120,11 +120,9 @@ impl RequestTypeDb {
     }
 
     pub async fn get_all(&self) -> RequestRequest<Vec<RequestTypeModelGet>> {
-        let cursor = self.request.find(doc! {}).await;
-
         let mut roles: Vec<RequestTypeModelGet> = Vec::new();
 
-        match cursor {
+        match self.request.find(doc! {}).await {
             Ok(mut res) => {
                 while let Some(result) = res.next().await {
                     match result {

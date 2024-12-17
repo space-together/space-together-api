@@ -48,12 +48,13 @@ pub async fn handle_message_delete_by_id(
     state: Data<AppState>,
     id: Path<String>,
 ) -> impl Responder {
-    let find = controller_message_delete_by_id(state.into_inner(), id.into_inner()).await;
-
-    match find {
-        Ok(res) => HttpResponse::Ok().json(res),
-        Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
-            message: err.to_string(),
-        }),
+    match change_string_into_object_id(id.into_inner()) {
+        Err(e) => HttpResponse::BadRequest().json(e),
+        Ok(i) => match controller_message_delete_by_id(state.into_inner(), i).await {
+            Ok(res) => HttpResponse::Ok().json(res),
+            Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+                message: err.to_string(),
+            }),
+        },
     }
 }

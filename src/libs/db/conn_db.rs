@@ -4,7 +4,7 @@ use super::{
         class_group_db::ClassGroupDb,
     },
     conversation_db::message_db::MessageDb,
-    request_db::request_type_db::RequestTypeDb,
+    request_db::{request_db_db::RequestDb, request_type_db::RequestTypeDb},
     user_db::{user_db_db::UserDb, user_role_db::UserRoleDb},
 };
 use crate::{
@@ -32,6 +32,7 @@ pub struct ConnDb {
     pub activity: ActivityDb,
     pub stats: Option<DatabaseStats>,
     pub request_type: RequestTypeDb,
+    pub request: RequestDb,
 }
 
 impl ConnDb {
@@ -82,6 +83,9 @@ impl ConnDb {
                 let request_type = RequestTypeDb {
                     request: st_data.collection("request_type"),
                 };
+                let request = RequestDb {
+                    request: st_data.collection("requests"),
+                };
 
                 println!("Database connected successfully 🌼");
 
@@ -96,6 +100,7 @@ impl ConnDb {
                     activity,
                     stats,
                     request_type,
+                    request,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {

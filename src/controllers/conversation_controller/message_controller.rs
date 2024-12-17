@@ -45,10 +45,9 @@ pub async fn controller_message_get_all_by_conversation(
 
 pub async fn controller_message_delete_by_id(
     state: Arc<AppState>,
-    id: String,
+    id: ObjectId,
 ) -> MessageResult<MessageModelGet> {
-    let delete = state.db.message.delete_message_by_id(id).await;
-    match delete {
+    match state.db.message.delete_message_by_id(id).await {
         Ok(res) => Ok(MessageModel::format(res)),
         Err(err) => Err(err),
     }
