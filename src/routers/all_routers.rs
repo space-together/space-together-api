@@ -18,31 +18,34 @@ use super::{
     },
     user_router::{user_role_router::routers_user_role, user_router_router::routers_user},
 };
-use crate::AppState;
+use crate::{handlers::database_handle::all_end_point_handle::list_all_endpoints, AppState};
 
 pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
     cfg.service(
         scope("/api/v0.0.1")
             .route("/", web::get().to(manual_hello))
+            .route("/endpoints", web::get().to(list_all_endpoints)) // Debug route
             .app_data(web::Data::new(state.clone()))
-            .service(web::scope("/user").configure(|user_cfg| {
+            .service(web::scope("/users").configure(|user_cfg| {
                 routers_user_role(user_cfg, state.clone());
                 routers_user(user_cfg, state.clone());
             }))
-            .service(web::scope("/class").configure(|user_cfg| {
-                routers_class(user_cfg, state.clone());
+            .service(web::scope("/classes").configure(|user_cfg| {
                 routers_class_group(user_cfg, state.clone());
+                routers_class(user_cfg, state.clone());
+            }))
+            .service(scope("/classes/activities").configure(|user_cfg| {
                 routers_activities_type(user_cfg, state.clone());
                 routers_activity(user_cfg, state.clone());
             }))
-            .service(web::scope("/conversation").configure(|user_cfg| {
-                routers_conversation(user_cfg, state.clone());
+            .service(web::scope("/conversations").configure(|user_cfg| {
                 routers_message(user_cfg, state.clone());
+                routers_conversation(user_cfg, state.clone());
             }))
             .service(web::scope("/db").configure(|user_cfg| {
                 routers_database(user_cfg, state.clone());
             }))
-            .service(web::scope("/request").configure(|user_cfg| {
+            .service(web::scope("/requests").configure(|user_cfg| {
                 routers_request_type(user_cfg, state.clone());
                 routers_request(user_cfg, state.clone());
             })),

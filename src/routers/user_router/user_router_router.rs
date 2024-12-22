@@ -13,7 +13,7 @@ use crate::{
 
 pub fn routers_user(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("/user")
+        scope("")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_create_user))
             .route("", get().to(handle_get_all_users))

@@ -12,7 +12,7 @@ use crate::{
 
 pub fn routers_request(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("/request")
+        scope("")
             .app_data(Data::new(state))
             .route("", post().to(handle_request_create))
             .route("", get().to(handle_request_get_all))

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     error::request_error::request_error_error::RequestRequest,
+    libs::functions::object_id::change_insertoneresult_into_object_id,
     models::request_model::request_type_model::{
         RequestTypeModel, RequestTypeModelGet, RequestTypeModelNew,
     },
@@ -12,9 +13,14 @@ pub async fn controllers_request_type_create(
     state: Arc<AppState>,
     role: RequestTypeModelNew,
 ) -> RequestRequest<RequestTypeModelGet> {
-    match state.db.request_type.create(role.clone()).await {
+    match state.db.request_type.create(role).await {
         Err(e) => Err(e),
-        Ok(_) => match state.db.request_type.get_by_role(role.role).await {
+        Ok(id) => match state
+            .db
+            .request_type
+            .get_by_id(change_insertoneresult_into_object_id(id))
+            .await
+        {
             Ok(res) => Ok(RequestTypeModel::format(res)),
             Err(e) => Err(e),
         },

@@ -11,7 +11,7 @@ use crate::{
 
 pub fn routers_message(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("message")
+        scope("/messages")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_message_create))
             .route("/{id}", delete().to(handle_message_delete_by_id))

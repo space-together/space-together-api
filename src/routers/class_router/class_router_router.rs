@@ -13,7 +13,7 @@ use crate::{
 
 pub fn routers_class(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("/class")
+        scope("")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_create_class))
             .route("", get().to(handler_get_all_classes))

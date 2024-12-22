@@ -6,6 +6,7 @@ pub enum DbError {
     CanNotGetAllTables { err: String },
     QueryFailed { err: String },
     DatabaseStatusNotFound,
+    CannotReadDocuments { err: String },
 }
 
 impl std::fmt::Display for DbError {
@@ -20,6 +21,9 @@ impl std::fmt::Display for DbError {
             }
             DbError::QueryFailed { err } => {
                 write!(f, "Query failed with error 😡 {} 😡", err)
+            }
+            DbError::CannotReadDocuments { err } => {
+                write!(f, " Can not read documents error 😡 {} 😡", err)
             }
             DbError::CanNotGetAllTables { err } => {
                 write!(

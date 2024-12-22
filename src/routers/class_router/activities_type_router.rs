@@ -16,7 +16,7 @@ pub fn routers_activities_type(
     state: Arc<AppState>,
 ) -> &mut ServiceConfig {
     cfg.service(
-        scope("/activities_type")
+        scope("/role")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_activity_type_create))
             .route("", get().to(handle_activity_type_get_all))

@@ -13,7 +13,7 @@ use crate::{
 
 pub fn routers_activity(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("/activity")
+        scope("")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_activity_create))
             .route("/{id}", get().to(handle_activity_get_by_id))

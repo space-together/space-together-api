@@ -15,7 +15,7 @@ use crate::{
 
 pub fn routers_class_group(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("/groups")
+        scope("/class_groups")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_create_class_groups))
             .route("", get().to(handle_class_group_get_all))

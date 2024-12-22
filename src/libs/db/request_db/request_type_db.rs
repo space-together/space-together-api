@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -24,11 +26,20 @@ impl RequestTypeDb {
         field: &str,
         value: String,
     ) -> RequestRequest<RequestTypeModel> {
-        // if field == "_id" {
-        //     field = ObjectId::from_str(field);
-        // }
+        // Prepare query based on the field type
+        let query = if field == "_id" {
+            match ObjectId::from_str(&value) {
+                Ok(object_id) => doc! { field: object_id },
+                Err(_) => {
+                    return Err(RequestError::InvalidId);
+                }
+            }
+        } else {
+            doc! { field: &value }
+        };
 
-        match self.request.find_one(doc! { field: &value}).await {
+        // Perform the database query
+        match self.request.find_one(query).await {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(RequestError::CanNotGetRequestByField {
                 field: field.to_string(),
@@ -41,9 +52,9 @@ impl RequestTypeDb {
         }
     }
 
-    // pub async fn get_by_id(&self, id: ObjectId) -> RequestRequest<RequestTypeModel> {
-    //     todo!()
-    // }
+    pub async fn get_by_id(&self, id: ObjectId) -> RequestRequest<RequestTypeModel> {
+        self.find_one_by_field("_id", id.to_string()).await
+    }
 
     pub async fn get_by_role(&self, role: String) -> RequestRequest<RequestTypeModel> {
         self.find_one_by_field("role", role).await

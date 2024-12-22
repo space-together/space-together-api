@@ -11,7 +11,7 @@ use crate::{
 
 pub fn routers_request_type(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut ServiceConfig {
     cfg.service(
-        scope("/type")
+        scope("/role")
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_request_type_create))
             .route("", get().to(handle_request_type_get_all)),

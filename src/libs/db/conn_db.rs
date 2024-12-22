@@ -57,7 +57,7 @@ impl ConnDb {
 
                 // Initialize collections
                 let user_role = UserRoleDb {
-                    role: st_data.collection("user_role"),
+                    role: st_data.collection("users.role"),
                 };
                 let user = UserDb {
                     user: st_data.collection("users"),
@@ -66,22 +66,22 @@ impl ConnDb {
                     class: st_data.collection("classes"),
                 };
                 let class_group = ClassGroupDb {
-                    class_group: st_data.collection("class_groups"),
+                    class_group: st_data.collection("--classes_groups"), // private
                 };
                 let conversation = ConversationDb {
-                    conversation: st_data.collection("conversations"),
+                    conversation: st_data.collection("--conversations"), // private
                 };
                 let message = MessageDb {
-                    message: st_data.collection("messages"),
+                    message: st_data.collection("--messages"), // private collection
                 };
                 let activities_type = ActivitiesTypeDb {
-                    activities_type: st_data.collection("activities_type"),
+                    activities_type: st_data.collection("classes_activities.role"), // role
                 };
                 let activity = ActivityDb {
-                    activity: st_data.collection("activities"),
+                    activity: st_data.collection("--classes_activities"), //
                 };
                 let request_type = RequestTypeDb {
-                    request: st_data.collection("request_type"),
+                    request: st_data.collection("requests.role"), // role for request
                 };
                 let request = RequestDb {
                     request: st_data.collection("requests"),
