@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::libs::functions::characters_fn::generate_username;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum Gender {
     M,
     F,
@@ -37,7 +37,7 @@ pub struct UserModel {
     pub co: DateTime,         // created on
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelNew {
     pub nm: String,
     pub un: Option<String>,
@@ -48,7 +48,7 @@ pub struct UserModelNew {
     pub gd: Gender,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelPut {
     pub rl: Option<String>,
     pub un: Option<String>,
@@ -107,7 +107,7 @@ impl UserModel {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelGet {
     pub id: String,
     pub rl: String,

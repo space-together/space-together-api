@@ -1,45 +1,54 @@
 # Build Stage
 ARG RUST_VERSION=1.83.0
-ARG APP_NAME=space-together-api
-
 FROM rust:${RUST_VERSION}-slim-bookworm AS builder
-# Set working directory
+
 WORKDIR /code
 
-
-# Install required packages
+# Install required dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential pkg-config libssl-dev && \
+    build-essential pkg-config libssl-dev musl-tools && \
+    rustup target add x86_64-unknown-linux-musl && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the manifest files and prefetch dependencies
-COPY Cargo.toml Cargo.lock ./
-RUN cargo fetch --locked
+# Install cargo-watch and cargo-chef
+RUN cargo install cargo-watch cargo-chef
 
-# Copy the application source code
+# Copy Cargo.toml and Cargo.lock files to cache dependencies
+COPY Cargo.toml Cargo.lock ./
+
+# Generate dependency cache with cargo-chef
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Fetch and cache dependencies
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+
+# Copy source code
 COPY src ./src
 
 # Build the application
-RUN cargo build --release
+RUN cargo build --release --target x86_64-unknown-linux-musl
 
-# Runtime Stage
-FROM bitnami/minideb:bookworm
+# Development Stage for Live Reloading
+FROM rust:${RUST_VERSION}-slim-bookworm AS dev
 
-# Install required runtime dependencies
-RUN install_packages libssl-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Add a non-root user
-RUN useradd -ms /bin/bash appuser
-USER appuser
+COPY --from=builder /code/target/x86_64-unknown-linux-musl/release/space-together-api /app/space-together-api
+COPY --from=builder /code/src /app/src
+COPY --from=builder /code/Cargo.toml /app/Cargo.toml
+COPY --from=builder /code/Cargo.lock /app/Cargo.lock
 
-# Copy the built binary from the builder stage
-COPY --from=builder /code/target/release/space-together-api /app/space-together-api
-
-# Expose application port
 EXPOSE 2052
 
-# Run the application
-CMD ["/app/space-together-api"]
+CMD ["cargo", "watch", "-q", "-c", "-w", "src/", "-x", "run"]
+
+# Production Stage with Minimal Image
+FROM scratch AS prod
+
+COPY --from=builder /code/target/x86_64-unknown-linux-musl/release/space-together-api /space-together-api
+
+ENTRYPOINT ["/space-together-api"]

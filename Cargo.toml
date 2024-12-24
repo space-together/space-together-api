@@ -1,6 +1,6 @@
 [package]
 name = "space-together-api"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/space-together/space-together-api"
 description = "space-together-api which implements all request from space-together applications."
@@ -29,3 +29,7 @@ actix-cors = "0.7.0"
 [dependencies.mongodb]
 version = "3.1.0"
 features = ["sync"]
+
+[[bin]]
+name = "space-together-api"
+path = "src/main.rs"

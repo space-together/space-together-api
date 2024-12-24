@@ -121,7 +121,24 @@ pub async fn controller_user_delete_by_username(
 pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<UserModelGet>> {
     let get_all = state.db.user.get_all_users().await;
     match get_all {
-        Ok(res) => Ok(res),
+        Ok(res) => {
+            let mut users: Vec<UserModelGet> = Vec::new();
+            for user in res.iter() {
+                if let Ok(role) = state
+                    .db
+                    .user_role
+                    .get_user_role_by_id(user.rl.clone())
+                    .await
+                {
+                    let mut user_get = (*user).clone();
+                    user_get.rl = role.rl;
+                    users.push(user_get);
+                } else {
+                    users.push(user.clone());
+                }
+            }
+            Ok(users)
+        }
         Err(err) => Err(err),
     }
 }
