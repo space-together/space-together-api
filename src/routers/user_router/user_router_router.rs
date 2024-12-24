@@ -20,7 +20,7 @@ pub fn routers_user(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut Servi
             .route("/{id}", get().to(handle_get_user_by_id))
             .route("/{id}", delete().to(handle_user_delete_by_id))
             .route("/{id}", put().to(handle_user_update_by_id))
-            .route("/role/{role}", get().to(handle_user_get_all_by_role))
+            .route("/rl/{role}", get().to(handle_user_get_all_by_role)) // user role router is ready called change rl => role
             .route(
                 "/username/{username}",
                 get().to(handle_get_user_by_username),

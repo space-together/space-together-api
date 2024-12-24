@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use config::application_conf::AppConfig;
 use dotenv::dotenv;
@@ -43,6 +44,12 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header(),
+            )
             .app_data(web::Data::from(app_state.clone()))
             .configure(|cfg| all_routers(cfg, app_state.clone())) // Configure with all_routers
     })
