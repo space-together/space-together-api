@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::bson::oid::ObjectId;
 
@@ -15,10 +15,14 @@ pub async fn controller_create_user(
     user: UserModelNew,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
+    if ObjectId::from_str(&user.rl).is_err() {
+        return Err(UserError::InvalidUserRoleId);
+    }
+
     match state
         .db
         .user_role
-        .get_user_role_by_id(user.rl.clone())
+        .get_user_role_by_id(ObjectId::from_str(&user.rl).unwrap())
         .await
     {
         Err(_) => Err(UserError::InvalidId),
@@ -85,7 +89,24 @@ pub async fn controller_get_user_by_id(
     id: ObjectId,
 ) -> UserResult<UserModelGet> {
     match state.db.user.get_user_by_id(id).await {
-        Ok(res) => Ok(UserModelGet::format(res)),
+        Ok(res) => {
+            let role = state
+                .db
+                .user_role
+                .get_user_role_by_id(res.rl.unwrap())
+                .await;
+
+            match role {
+                Ok(role) => {
+                    let mut user_get = UserModelGet::format(res);
+                    user_get.rl = role.rl;
+                    Ok(user_get)
+                }
+                Err(err) => Err(UserError::CanNotGetRole {
+                    error: err.to_string(),
+                }),
+            }
+        }
         Err(err) => Err(err),
     }
 }
@@ -149,7 +170,7 @@ pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<Us
                 if let Ok(role) = state
                     .db
                     .user_role
-                    .get_user_role_by_id(user.rl.clone())
+                    .get_user_role_by_id(ObjectId::from_str(&user.rl).unwrap())
                     .await
                 {
                     let mut user_get = (*user).clone();
@@ -170,7 +191,9 @@ pub async fn controller_users_get_all_by_role(
     role: String,
 ) -> UserResult<Vec<UserModelGet>> {
     match state.db.user_role.get_user_role_by_rl(role).await {
-        Err(_) => Err(UserError::CanNotGetRole),
+        Err(err) => Err(UserError::CanNotGetRole {
+            error: err.to_string(),
+        }),
         Ok(res) => match state.db.user.get_users_by_rl(res.id.unwrap()).await {
             Ok(res) => Ok(res.into_iter().map(UserModelGet::format).collect()),
             Err(err) => Err(err),

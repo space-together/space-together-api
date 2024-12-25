@@ -3,6 +3,7 @@ use crate::{
         controller_create_user_model, controller_get_all_user_roles, controller_get_user_role,
         controller_get_user_role_name, controller_user_role_delete, controller_user_role_update,
     },
+    libs::functions::object_id::change_string_into_object_id,
     models::{request_error_model::ReqErrModel, user_model::user_role_model::UserRoleModelNew},
     AppState,
 };
@@ -28,14 +29,17 @@ pub async fn handle_create_user_role(
 }
 
 pub async fn handle_get_user_role(state: web::Data<AppState>, id: Path<String>) -> impl Responder {
-    match controller_get_user_role(id.into_inner(), state.into_inner()).await {
-        Ok(res) => HttpResponse::Ok().json(res),
-        Err(err) => {
-            let error = ReqErrModel {
-                message: err.to_string(),
-            };
-            HttpResponse::BadRequest().json(error)
-        }
+    match change_string_into_object_id(id.into_inner()) {
+        Err(err) => HttpResponse::BadRequest().json(err),
+        Ok(_id) => match controller_get_user_role(_id, state.into_inner()).await {
+            Ok(res) => HttpResponse::Ok().json(res),
+            Err(err) => {
+                let error = ReqErrModel {
+                    message: err.to_string(),
+                };
+                HttpResponse::BadRequest().json(error)
+            }
+        },
     }
 }
 

@@ -57,12 +57,8 @@ impl UserRoleDb {
         }
     }
 
-    pub async fn get_user_role_by_id(&self, id: String) -> UserRoleResult<UserRoleModel> {
-        let obj_id = ObjectId::from_str(&id);
-        if obj_id.is_err() {
-            return Err(UserRoleError::InvalidId);
-        };
-        let get = self.role.find_one(doc! {"_id" : obj_id.unwrap()}).await;
+    pub async fn get_user_role_by_id(&self, id: ObjectId) -> UserRoleResult<UserRoleModel> {
+        let get = self.role.find_one(doc! {"_id" : id}).await;
         match get {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserRoleError::RoleNotFound),

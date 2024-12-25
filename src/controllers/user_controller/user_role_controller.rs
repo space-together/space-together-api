@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+use mongodb::bson::oid::ObjectId;
+
 use crate::{
-    error::user_error::user_role_error::{UserRoleError, UserRoleResult},
-    libs::functions::object_id::change_object_id_into_string,
+    error::user_error::user_role_error::UserRoleResult,
+    libs::functions::object_id::change_insertoneresult_into_object_id,
     models::user_model::user_role_model::{UserRoleModelGet, UserRoleModelNew},
     AppState,
 };
@@ -13,14 +15,11 @@ pub async fn controller_create_user_model(
 ) -> UserRoleResult<UserRoleModelGet> {
     match state.db.user_role.create_user_role(role).await {
         Ok(res) => {
-            let id = res
-                .inserted_id
-                .as_object_id()
-                .map(|oid| oid.to_hex())
-                .ok_or(UserRoleError::InvalidId)
-                .unwrap();
-
-            let get = state.db.user_role.get_user_role_by_id(id).await;
+            let get = state
+                .db
+                .user_role
+                .get_user_role_by_id(change_insertoneresult_into_object_id(res))
+                .await;
 
             match get {
                 Ok(role) => Ok(UserRoleModelGet::format(role)),
@@ -32,7 +31,7 @@ pub async fn controller_create_user_model(
 }
 
 pub async fn controller_get_user_role(
-    id: String,
+    id: ObjectId,
     state: Arc<AppState>,
 ) -> UserRoleResult<UserRoleModelGet> {
     let get = state.db.user_role.get_user_role_by_id(id).await;
@@ -71,7 +70,7 @@ pub async fn controller_user_role_update(
         Ok(res) => match state
             .db
             .user_role
-            .get_user_role_by_id(change_object_id_into_string(res.id.unwrap()))
+            .get_user_role_by_id(res.id.unwrap())
             .await
         {
             Ok(role) => Ok(UserRoleModelGet::format(role)),
