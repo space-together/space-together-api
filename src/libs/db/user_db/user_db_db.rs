@@ -12,7 +12,9 @@ use mongodb::{
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
     libs::functions::characters_fn::{is_valid_name, is_valid_username},
-    models::user_model::user_model_model::{UserModel, UserModelGet, UserModelNew, UserModelPut},
+    models::user_model::user_model_model::{
+        UserModel, UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
+    },
 };
 
 #[derive(Debug)]
@@ -281,5 +283,40 @@ impl UserDb {
 
     pub async fn delete_user_by_username(&self, username: String) -> UserResult<UserModel> {
         self.delete_user_by_field("un", username).await
+    }
+
+    pub async fn delete_users(&self, ids: Vec<ObjectId>) -> UserResult<Vec<UserModelGet>> {
+        let mut users = Vec::new();
+        for id in ids {
+            match self.delete_user_by_id(id).await {
+                Ok(user) => users.push(UserModelGet::format(user)),
+                Err(err) => return Err(err),
+            }
+        }
+        Ok(users)
+    }
+
+    pub async fn update_many(
+        &self,
+        users: Vec<UsersUpdateManyModel>,
+    ) -> UserResult<Vec<UserModelGet>> {
+        let mut result_updates = Vec::new();
+        for user in users {
+            match self
+                .update_user_by_id(
+                    user.user,
+                    ObjectId::from_str(&user.id).expect("Invalid id to disable many users"),
+                )
+                .await
+            {
+                Ok(user) => result_updates.push(user),
+                Err(err) => return Err(err),
+            }
+        }
+
+        Ok(result_updates
+            .into_iter()
+            .map(UserModelGet::format)
+            .collect())
     }
 }

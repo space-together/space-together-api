@@ -33,6 +33,7 @@ pub struct UserModel {
     pub em: String,           // email
     pub ph: Option<String>,   //phone number
     pub gd: Option<Gender>,   // gender
+    pub ds: Option<bool>,     // disable
     pub pw: Option<String>,   // password
     pub co: DateTime,         // created on
 }
@@ -57,6 +58,23 @@ pub struct UserModelPut {
     pub ph: Option<String>,
     pub pw: Option<String>,
     pub gd: Option<Gender>,
+    pub ds: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UsersDeleteManyModelHandle {
+    pub users: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UsersUpdateManyModel {
+    pub id: String,
+    pub user: UserModelPut,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UsersUpdateManyModelHandle {
+    pub users: Vec<UsersUpdateManyModel>,
 }
 
 impl UserModel {
@@ -68,6 +86,7 @@ impl UserModel {
             em: user.em,
             gd: Some(user.gd),
             ph: user.ph,
+            ds: Some(false),
             un: Some(user.un.unwrap_or_else(|| generate_username(&user.nm))),
             pw: Some(user.pw),
             co: DateTime::now(),
@@ -90,6 +109,7 @@ impl UserModel {
                 .map(|rl| bson::Bson::ObjectId(ObjectId::from_str(&rl).unwrap())),
         );
         insert_if_some("nm", user.nm.map(bson::Bson::String));
+        insert_if_some("ds", user.ds.map(bson::Bson::Boolean));
         insert_if_some("un", user.un.map(bson::Bson::String));
         insert_if_some("em", user.em.map(bson::Bson::String));
         insert_if_some("ph", user.ph.map(bson::Bson::String));
@@ -114,6 +134,7 @@ pub struct UserModelGet {
     pub nm: String,
     pub un: Option<String>,
     pub em: String,
+    pub ds: Option<bool>,
     pub ph: Option<String>,
     pub pw: Option<String>,
     pub gd: Option<Gender>,
@@ -130,6 +151,7 @@ impl UserModelGet {
             em: user.em,
             gd: user.gd,
             ph: user.ph,
+            ds: user.ds,
             pw: user.pw,
             co: user
                 .co

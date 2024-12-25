@@ -5,7 +5,9 @@ use mongodb::bson::oid::ObjectId;
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
     libs::functions::object_id::change_insertoneresult_into_object_id,
-    models::user_model::user_model_model::{UserModelGet, UserModelNew, UserModelPut},
+    models::user_model::user_model_model::{
+        UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
+    },
     AppState,
 };
 
@@ -104,6 +106,26 @@ pub async fn controller_user_delete_by_id(
 ) -> UserResult<UserModelGet> {
     match state.db.user.delete_user_by_id(id).await {
         Ok(res) => Ok(UserModelGet::format(res)),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_user_delete_many(
+    users: Vec<ObjectId>,
+    state: Arc<AppState>,
+) -> UserResult<Vec<UserModelGet>> {
+    match state.db.user.delete_users(users).await {
+        Ok(res) => Ok(res),
+        Err(err) => Err(err),
+    }
+}
+
+pub async fn controller_user_update_many(
+    users: Vec<UsersUpdateManyModel>,
+    state: Arc<AppState>,
+) -> UserResult<Vec<UserModelGet>> {
+    match state.db.user.update_many(users).await {
+        Ok(res) => Ok(res),
         Err(err) => Err(err),
     }
 }

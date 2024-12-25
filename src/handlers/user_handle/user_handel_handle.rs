@@ -2,18 +2,22 @@ use actix_web::{
     web::{Data, Json, Path},
     HttpResponse, Responder,
 };
+use mongodb::bson::oid::ObjectId;
 
 use crate::{
     controllers::user_controller::user_controller_controller::{
         controller_create_user, controller_get_all_users, controller_get_user_by_id,
         controller_user_delete_by_id, controller_user_delete_by_username,
-        controller_user_get_by_username, controller_user_update_by_id,
-        controller_user_update_by_username, controller_users_get_all_by_role,
+        controller_user_delete_many, controller_user_get_by_username, controller_user_update_by_id,
+        controller_user_update_by_username, controller_user_update_many,
+        controller_users_get_all_by_role,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{
         request_error_model::ReqErrModel,
-        user_model::user_model_model::{UserModelNew, UserModelPut},
+        user_model::user_model_model::{
+            UserModelNew, UserModelPut, UsersDeleteManyModelHandle, UsersUpdateManyModelHandle,
+        },
     },
     AppState,
 };
@@ -79,6 +83,44 @@ pub async fn handle_user_delete_by_id(state: Data<AppState>, id: Path<String>) -
             }),
             Ok(data) => HttpResponse::Ok().json(data),
         },
+    }
+}
+
+pub async fn handle_user_delete_many(
+    state: Data<AppState>,
+    users: Json<UsersDeleteManyModelHandle>,
+) -> impl Responder {
+    let users = users.into_inner();
+    let mut object_ids: Vec<ObjectId> = Vec::new();
+
+    for user in &users.users {
+        if let Err(e) = change_string_into_object_id(user.clone()) {
+            return HttpResponse::BadRequest().json(e);
+        } else {
+            object_ids.push(change_string_into_object_id(user.clone()).unwrap());
+        }
+    }
+
+    let delete_many = controller_user_delete_many(object_ids, state.into_inner()).await;
+
+    match delete_many {
+        Ok(res) => HttpResponse::Ok().json(res),
+        Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+            message: err.to_string(),
+        }),
+    }
+}
+
+pub async fn handle_user_update_many(
+    state: Data<AppState>,
+    users: Json<UsersUpdateManyModelHandle>,
+) -> impl Responder {
+    let create = controller_user_update_many(users.into_inner().users, state.into_inner()).await;
+    match create {
+        Ok(res) => HttpResponse::Ok().json(res),
+        Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+            message: err.to_string(),
+        }),
     }
 }
 
