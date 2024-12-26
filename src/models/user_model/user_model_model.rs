@@ -36,6 +36,7 @@ pub struct UserModel {
     pub ds: Option<bool>,     // disable
     pub pw: Option<String>,   // password
     pub co: DateTime,         // created on
+    pub up: Option<DateTime>, // updated on
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -90,19 +91,21 @@ impl UserModel {
             un: Some(user.un.unwrap_or_else(|| generate_username(&user.nm))),
             pw: Some(user.pw),
             co: DateTime::now(),
+            up: None,
         }
     }
 
     pub fn put(user: UserModelPut) -> Document {
-        let mut document = Document::new();
+        let mut set_doc = Document::new();
         let mut is_updated = false;
 
         let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
             if let Some(v) = value {
-                document.insert(key, v);
+                set_doc.insert(key, v);
                 is_updated = true;
             }
         };
+
         insert_if_some(
             "rl",
             user.rl
@@ -120,10 +123,10 @@ impl UserModel {
         );
 
         if is_updated {
-            document.insert("uo", bson::DateTime::now());
+            set_doc.insert("uo", bson::Bson::DateTime(DateTime::now()));
         }
 
-        document
+        set_doc
     }
 }
 
@@ -139,6 +142,7 @@ pub struct UserModelGet {
     pub pw: Option<String>,
     pub gd: Option<Gender>,
     pub co: String,
+    pub uo: Option<String>,
 }
 
 impl UserModelGet {
@@ -157,6 +161,10 @@ impl UserModelGet {
                 .co
                 .try_to_rfc3339_string()
                 .unwrap_or_else(|_| "".to_string()),
+            uo: user.up.map(|up| {
+                up.try_to_rfc3339_string()
+                    .unwrap_or_else(|_| "".to_string())
+            }),
         }
     }
 }
