@@ -5,4 +5,5 @@ use serde::Serialize;
 pub struct EndpointMolder {
     pub method: String,
     pub path: String,
+    pub description: Option<String>,
 }
