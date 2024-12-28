@@ -5,8 +5,12 @@ use actix_web::{
 use sha256::digest;
 
 use crate::{
-    libs::functions::characters_fn::is_valid_email,
-    models::{auth::login_model::UserLoginModule, request_error_model::ReqErrModel},
+    libs::{functions::characters_fn::is_valid_email, utils::jwt::jwt_login::user_encode_jwt},
+    models::{
+        auth::login_model::{UserLoginClaimsModel, UserLoginModule},
+        jwt_model::token_model::TokenModel,
+        request_error_model::ReqErrModel,
+    },
     AppState,
 };
 
@@ -25,11 +29,22 @@ pub async fn user_login_handle(
             message: e.to_string(),
         });
     }
-    if get_user.unwrap().pw.unwrap() != digest(user.password.clone()) {
+    let get_user = get_user.unwrap();
+
+    if get_user.pw.unwrap() != digest(user.password.clone()) {
         return HttpResponse::Unauthorized().json(ReqErrModel {
             message: "Invalid credentials".to_string(),
         });
     }
 
-    HttpResponse::Ok().json("{'token': 'hello'}".to_string())
+    let user_claim = UserLoginClaimsModel {
+        id: get_user.id.unwrap().to_string(),
+        name: get_user.nm,
+        email: get_user.em,
+        role: Some(get_user.rl.unwrap().to_string()),
+    };
+
+    let token = user_encode_jwt(user_claim).unwrap();
+
+    HttpResponse::Ok().json(TokenModel { token })
 }

@@ -26,7 +26,7 @@ impl FromRequest for UserClaimsModel {
     }
 }
 
-pub fn encode_jwt(user: UserLoginClaimsModel) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn user_encode_jwt(user: UserLoginClaimsModel) -> Result<String, jsonwebtoken::errors::Error> {
     let now = Utc::now();
     let expire = Duration::hours(24);
 
@@ -46,4 +46,16 @@ pub fn encode_jwt(user: UserLoginClaimsModel) -> Result<String, jsonwebtoken::er
         &claims,
         &EncodingKey::from_secret(secret.as_ref()),
     )
+}
+
+pub fn user_decode_jwt(
+    jwt: String,
+) -> Result<TokenData<UserClaimsModel>, jsonwebtoken::errors::Error> {
+    let secret = (*constants::SECRET).clone();
+    let claim_data: Result<TokenData<UserClaimsModel>, jsonwebtoken::errors::Error> = decode(
+        &jwt,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default(),
+    );
+    claim_data
 }
