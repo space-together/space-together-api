@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod class_model;
 pub mod conversation_model;
 pub mod database_model;

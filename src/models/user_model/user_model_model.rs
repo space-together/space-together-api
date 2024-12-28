@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
+use sha256::digest;
 
 use crate::libs::functions::characters_fn::generate_username;
 
@@ -89,7 +90,7 @@ impl UserModel {
             ph: user.ph,
             ds: Some(false),
             un: Some(user.un.unwrap_or_else(|| generate_username(&user.nm))),
-            pw: Some(user.pw),
+            pw: Some(digest(user.pw)),
             co: DateTime::now(),
             up: None,
         }

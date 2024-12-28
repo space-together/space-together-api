@@ -18,7 +18,6 @@ pub fn routers_user(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut Servi
             .app_data(Data::new(state.clone()))
             .route("", post().to(handle_create_user))
             .route("", get().to(handle_get_all_users))
-            // user role router is ready called change rl => role
             .route(
                 "/username/{username}",
                 get().to(handle_get_user_by_username),
