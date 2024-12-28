@@ -12,7 +12,7 @@ use crate::{
         controller_user_update_by_username, controller_user_update_many,
         controller_users_get_all_by_role,
     },
-    libs::functions::object_id::change_string_into_object_id,
+    libs::functions::{characters_fn::is_valid_email, object_id::change_string_into_object_id},
     models::{
         request_error_model::ReqErrModel,
         user_model::user_model_model::{
@@ -23,6 +23,10 @@ use crate::{
 };
 
 pub async fn handle_create_user(state: Data<AppState>, user: Json<UserModelNew>) -> impl Responder {
+    if let Err(e) = is_valid_email(&user.em.clone()) {
+        return HttpResponse::BadRequest().json(ReqErrModel { message: e });
+    }
+
     let create = controller_create_user(user.into_inner(), state.into_inner()).await;
     match create {
         Ok(res) => HttpResponse::Created().json(res),

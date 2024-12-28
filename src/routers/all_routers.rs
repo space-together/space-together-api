@@ -5,6 +5,7 @@ use actix_web::{
 use std::sync::Arc;
 
 use super::{
+    auth_router::routers_auth_router,
     class_router::{
         activities_type_router::routers_activities_type, activity_router::routers_activity,
         class_group_router::routers_class_group, class_router_router::routers_class,
@@ -27,6 +28,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .route("/endpoints", web::get().to(list_all_endpoints)) // Debug route
             .app_data(web::Data::new(state.clone()))
             .service(web::scope("/users").configure(|user_cfg| {
+                routers_auth_router(user_cfg, state.clone());
                 routers_user_role(user_cfg, state.clone());
                 routers_user(user_cfg, state.clone());
             }))
