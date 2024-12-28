@@ -16,7 +16,7 @@ mod middleware;
 mod models;
 mod routers;
 
-use crate::routers::all_routers::all_routers; // Import the function
+use crate::routers::all_routers::all_routers;
 #[derive(Debug)]
 pub struct AppState {
     pub db: ConnDb,
