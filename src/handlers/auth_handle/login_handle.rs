@@ -5,11 +5,13 @@ use actix_web::{
 use sha256::digest;
 
 use crate::{
+    controllers::user_controller::user_controller_controller::controller_create_user,
     libs::{functions::characters_fn::is_valid_email, utils::jwt::jwt_login::user_encode_jwt},
     models::{
-        auth::login_model::{UserLoginClaimsModel, UserLoginModule},
+        auth::login_model::{UserLoginClaimsModel, UserLoginModule, UserRegisterClaimsModel},
         jwt_model::token_model::TokenModel,
         request_error_model::ReqErrModel,
+        user_model::user_model_model::UserModelNew,
     },
     AppState,
 };
@@ -47,4 +49,33 @@ pub async fn user_login_handle(
     let token = user_encode_jwt(user_claim).unwrap();
 
     HttpResponse::Ok().json(TokenModel { token })
+}
+
+pub async fn user_register_handle(
+    state: Data<AppState>,
+    user: Json<UserModelNew>,
+) -> impl Responder {
+    if let Err(e) = is_valid_email(&user.em.clone()) {
+        return HttpResponse::BadRequest().json(ReqErrModel { message: e });
+    }
+
+    let create = controller_create_user(user.into_inner(), state.into_inner()).await;
+    match create {
+        Ok(res) => {
+            let user = res.clone();
+            let user_claim = UserLoginClaimsModel {
+                id: res.id,
+                name: res.nm,
+                email: res.em,
+                role: Some(res.rl),
+            };
+
+            let token = user_encode_jwt(user_claim).unwrap();
+
+            HttpResponse::Created().json(UserRegisterClaimsModel { token, user })
+        }
+        Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+            message: err.to_string(),
+        }),
+    }
 }
