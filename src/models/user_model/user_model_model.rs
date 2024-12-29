@@ -4,7 +4,10 @@ use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 use sha256::digest;
 
-use crate::libs::functions::characters_fn::generate_username;
+use crate::{
+    libs::functions::characters_fn::generate_username,
+    models::images_model::profile_images_model::ProfileImageModelGet,
+};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum Gender {
@@ -59,6 +62,7 @@ pub struct UserModelPut {
     pub em: Option<String>,
     pub ph: Option<String>,
     pub pw: Option<String>,
+    pub im: Option<String>,
     pub gd: Option<Gender>,
     pub ds: Option<bool>,
 }
@@ -112,6 +116,7 @@ impl UserModel {
             user.rl
                 .map(|rl| bson::Bson::ObjectId(ObjectId::from_str(&rl).unwrap())),
         );
+        insert_if_some("im", user.im.map(bson::Bson::String));
         insert_if_some("nm", user.nm.map(bson::Bson::String));
         insert_if_some("ds", user.ds.map(bson::Bson::Boolean));
         insert_if_some("un", user.un.map(bson::Bson::String));
@@ -136,6 +141,7 @@ pub struct UserModelGet {
     pub id: String,
     pub rl: String,
     pub nm: String,
+    pub im: Option<Vec<ProfileImageModelGet>>,
     pub un: Option<String>,
     pub em: String,
     pub ds: Option<bool>,
@@ -154,6 +160,7 @@ impl UserModelGet {
             nm: user.nm,
             un: user.un,
             em: user.em,
+            im: None,
             gd: user.gd,
             ph: user.ph,
             ds: user.ds,

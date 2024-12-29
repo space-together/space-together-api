@@ -35,7 +35,11 @@ where
         }
     }
 
-    pub async fn get_one(&self, id: ObjectId, collection: Option<String>) -> DbClassResult<T> {
+    pub async fn get_one_by_id(
+        &self,
+        id: ObjectId,
+        collection: Option<String>,
+    ) -> DbClassResult<T> {
         let filter = doc! { "_id": id };
         let item = self.collection.find_one(filter).await;
 
@@ -56,8 +60,19 @@ where
         }
     }
 
-    pub async fn get_many(&self, collection: Option<String>) -> DbClassResult<Vec<T>> {
-        let cursor_result = self.collection.find(doc! {}).await;
+    pub async fn get_many(
+        &self,
+        id: Option<ObjectId>,
+        collection: Option<String>,
+    ) -> DbClassResult<Vec<T>> {
+        let mut filter = doc! {};
+
+        if let Some(i) = id {
+            filter = doc! {"_id" : i};
+        }
+
+        let cursor_result = self.collection.find(filter).await;
+
         match cursor_result {
             Err(e) => Err(DbClassError::CanNotDoAction {
                 error: e.to_string(),

@@ -5,8 +5,13 @@ use mongodb::bson::oid::ObjectId;
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
     libs::functions::object_id::change_insertoneresult_into_object_id,
-    models::user_model::user_model_model::{
-        UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
+    models::{
+        images_model::profile_images_model::{
+            ProfileImageModel, ProfileImageModelGet, ProfileImageModelNew,
+        },
+        user_model::user_model_model::{
+            UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
+        },
     },
     AppState,
 };
@@ -61,10 +66,42 @@ pub async fn controller_user_update_by_id(
             return Err(UserError::InvalidUserRoleId);
         }
     }
+
+    let mut user_images: Vec<ProfileImageModelGet> =
+        state.db.avatars.get_many(id.clone(), "Avatar").await;
+
+    if let Some(image) = user.im.clone() {
+        let avatar = ProfileImageModelNew { src: image, ui: id };
+
+        let avatar_new = state
+            .db
+            .avatars
+            .create(ProfileImageModel::new(avatar), Some("avatar".to_string()))
+            .await;
+
+        match avatar_new {
+            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
+            Ok(i) => match state
+                .db
+                .avatars
+                .get_one_by_id(i, Some("Avatar".to_string()))
+                .await
+            {
+                Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
+                Ok(image) => user_images.push(ProfileImageModel::format(image)),
+            },
+        }
+    }
+
     match state.db.user.update_user_by_id(user, id).await {
         Err(err) => Err(err),
         Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
-            Ok(res) => Ok(UserModelGet::format(res)),
+            Ok(u) => {
+                let mut my_user = UserModelGet::format(u);
+                my_user.im = Some(user_images);
+
+                Ok(my_user)
+            }
             Err(err) => Err(err),
         },
     }

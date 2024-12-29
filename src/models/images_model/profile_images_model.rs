@@ -11,6 +11,14 @@ pub struct ProfileImageModel {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProfileImageModelGet {
+    pub id: String,
+    pub ui: String, // user id
+    pub src: String,
+    pub co: String, // create on
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProfileImageModelNew {
     pub src: String,
     pub ui: ObjectId,
@@ -23,6 +31,15 @@ impl ProfileImageModel {
             ui: avatar.ui,
             src: avatar.src,
             co: DateTime::now(),
+        }
+    }
+
+    pub fn format(avatar: Self) -> ProfileImageModelGet {
+        ProfileImageModelGet {
+            id: avatar.id.map_or("".to_string(), |id| id.to_string()),
+            ui: avatar.ui.to_string(),
+            src: avatar.src,
+            co: avatar.co.try_to_rfc3339_string().unwrap_or("".to_string()),
         }
     }
 }

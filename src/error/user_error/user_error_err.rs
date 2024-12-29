@@ -14,11 +14,15 @@ pub enum UserError {
     CanNotGetAllUsers { err: String, field: String },
     CanNotGetRole { error: String },
     CanNotDoActionUser { err: String, action: String },
+    SomeError { err: String },
 }
 
 impl std::fmt::Display for UserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            UserError::SomeError { err } => {
+                write!(f, "{err}")
+            }
             UserError::CanNotCreateUser { err } => {
                 write!(f, "Can't create user bcs : 😡 {} 😡, try again later", err)
             }
