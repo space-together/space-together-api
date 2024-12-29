@@ -18,7 +18,7 @@ use crate::{
     },
     models::{
         database_model::collection_model::DatabaseStats,
-        images_model::profile_images_model::ProfileImagesModel,
+        images_model::profile_images_model::ProfileImageModel,
     },
 };
 use dotenv::dotenv;
@@ -38,7 +38,7 @@ pub struct ConnDb {
     pub stats: Option<DatabaseStats>,
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
-    pub avatars: MongoCrud<ProfileImagesModel>,
+    pub avatars: MongoCrud<ProfileImageModel>,
 }
 
 impl ConnDb {
