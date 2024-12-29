@@ -48,6 +48,7 @@ impl ConnDb {
         match client {
             Ok(res) => {
                 let st_data = res.database("space-together-data");
+                let st_image = res.database("space-together-images");
 
                 let stats_result = Self::get_database_stats(&res, "space-together-data").await;
                 let stats = match stats_result {
