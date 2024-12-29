@@ -166,3 +166,11 @@ pub fn is_valid_email(email: &str) -> Result<String, String> {
         ))
     }
 }
+
+pub fn generate_code() -> String {
+    let mut rng = thread_rng();
+    let chars: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        .chars()
+        .collect();
+    (0..6).map(|_| *chars.choose(&mut rng).unwrap()).collect()
+}

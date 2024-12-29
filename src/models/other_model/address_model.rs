@@ -7,4 +7,5 @@ pub struct AddressModel {
     pub state: Option<String>,
     pub postal_code: Option<String>,
     pub country: String,
+    pub google_map_uri: Option<String>,
 }
