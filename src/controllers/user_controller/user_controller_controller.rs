@@ -4,7 +4,10 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
-    libs::functions::object_id::change_insertoneresult_into_object_id,
+    libs::{
+        classes::db_crud::GetManyByField,
+        functions::object_id::change_insertoneresult_into_object_id,
+    },
     models::{
         images_model::profile_images_model::{
             ProfileImageModel, ProfileImageModelGet, ProfileImageModelNew,
@@ -67,8 +70,23 @@ pub async fn controller_user_update_by_id(
         }
     }
 
-    let mut user_images: Vec<ProfileImageModelGet> =
-        state.db.avatars.get_many(id.clone(), "Avatar").await;
+    let image_collection = Some("Avatar".to_string());
+
+    let mut user_images: Vec<ProfileImageModelGet> = match state
+        .db
+        .avatars
+        .get_many(
+            Some(GetManyByField {
+                value: id,
+                field: "ui".to_string(),
+            }),
+            image_collection.clone(),
+        )
+        .await
+    {
+        Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
+        Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
+    };
 
     if let Some(image) = user.im.clone() {
         let avatar = ProfileImageModelNew { src: image, ui: id };
@@ -76,17 +94,12 @@ pub async fn controller_user_update_by_id(
         let avatar_new = state
             .db
             .avatars
-            .create(ProfileImageModel::new(avatar), Some("avatar".to_string()))
+            .create(ProfileImageModel::new(avatar), image_collection.clone())
             .await;
 
         match avatar_new {
             Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-            Ok(i) => match state
-                .db
-                .avatars
-                .get_one_by_id(i, Some("Avatar".to_string()))
-                .await
-            {
+            Ok(i) => match state.db.avatars.get_one_by_id(i, image_collection).await {
                 Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
                 Ok(image) => user_images.push(ProfileImageModel::format(image)),
             },
@@ -132,11 +145,27 @@ pub async fn controller_get_user_by_id(
                 .user_role
                 .get_user_role_by_id(res.rl.unwrap())
                 .await;
-
             match role {
                 Ok(role) => {
+                    let user_images: Vec<ProfileImageModelGet> = match state
+                        .db
+                        .avatars
+                        .get_many(
+                            Some(GetManyByField {
+                                value: id,
+                                field: "ui".to_string(),
+                            }),
+                            Some("Avatar".to_string()),
+                        )
+                        .await
+                    {
+                        Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
+                        Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
+                    };
+
                     let mut user_get = UserModelGet::format(res);
                     user_get.rl = role.rl;
+                    user_get.im = Some(user_images);
                     Ok(user_get)
                 }
                 Err(err) => Err(UserError::CanNotGetRole {

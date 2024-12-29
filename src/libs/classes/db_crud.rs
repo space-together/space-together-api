@@ -10,6 +10,12 @@ use crate::{
     libs::functions::object_id::change_insertoneresult_into_object_id,
 };
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GetManyByField {
+    pub field: String,
+    pub value: ObjectId,
+}
+
 #[derive(Debug)]
 pub struct MongoCrud<T>
 where
@@ -62,13 +68,13 @@ where
 
     pub async fn get_many(
         &self,
-        id: Option<ObjectId>,
+        field: Option<GetManyByField>,
         collection: Option<String>,
     ) -> DbClassResult<Vec<T>> {
         let mut filter = doc! {};
 
-        if let Some(i) = id {
-            filter = doc! {"_id" : i};
+        if let Some(i) = field {
+            filter = doc! {i.field: i.value};
         }
 
         let cursor_result = self.collection.find(filter).await;
