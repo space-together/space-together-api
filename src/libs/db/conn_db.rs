@@ -10,14 +10,19 @@ use super::{
 use crate::{
     error::db_error::{DbError, DbResult},
     libs::{
-        db::conversation_db::conversation_db_db::ConversationDb, functions::bytes_fn::format_bytes,
+        classes::db_crud::MongoCrud,
+        db::{
+            conversation_db::conversation_db_db::ConversationDb,
+            db_status::db_status_db::get_database_stats,
+        },
     },
-    models::database_model::collection_model::{CollectionStats, DatabaseStats},
+    models::{
+        database_model::collection_model::DatabaseStats,
+        images_model::profile_images_model::ProfileImagesModel,
+    },
 };
 use dotenv::dotenv;
-use futures::TryStreamExt;
-use mongodb::{bson::doc, Client};
-use serde_json::to_string;
+use mongodb::Client;
 use std::env;
 
 #[derive(Debug)]
@@ -33,6 +38,7 @@ pub struct ConnDb {
     pub stats: Option<DatabaseStats>,
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
+    pub avatars: MongoCrud<ProfileImagesModel>,
 }
 
 impl ConnDb {
@@ -50,7 +56,7 @@ impl ConnDb {
                 let st_data = res.database("space-together-data");
                 let st_image = res.database("space-together-images");
 
-                let stats_result = Self::get_database_stats(&res, "space-together-data").await;
+                let stats_result = get_database_stats(&res, "space-together-data").await;
                 let stats = match stats_result {
                     Ok(s) => Some(s),
                     Err(_) => None,
@@ -88,6 +94,11 @@ impl ConnDb {
                     request: st_data.collection("requests"),
                 };
 
+                // image collections
+                let avatars = MongoCrud {
+                    collection: st_image.collection("avatars"),
+                };
+
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
@@ -102,83 +113,12 @@ impl ConnDb {
                     stats,
                     request_type,
                     request,
+                    avatars,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {
                 err: err.to_string(),
             }),
         }
-    }
-
-    pub async fn get_database_stats(client: &Client, db_name: &str) -> DbResult<DatabaseStats> {
-        let database = client.database(db_name);
-        let mut total_documents = 0;
-        let mut total_size_bytes = 0;
-        let mut collections_stats = Vec::new();
-
-        let collection_names = match database.list_collection_names().await {
-            Ok(names) => names,
-            Err(err) => {
-                return Err(DbError::CanNotGetAllTables {
-                    err: err.to_string(),
-                });
-            }
-        };
-
-        for name in &collection_names {
-            let collection = database.collection::<mongodb::bson::Document>(name);
-
-            let mut cursor = match collection.find(doc! {}).await {
-                Ok(c) => c,
-                Err(err) => {
-                    eprintln!(
-                        "Error fetching documents from collection '{}': {:?}",
-                        name, err
-                    );
-                    continue;
-                }
-            };
-
-            let mut document_count = 0;
-            let mut collection_size = 0;
-
-            while let Some(doc) = cursor.try_next().await.unwrap_or_else(|err| {
-                eprintln!(
-                    "Error reading document from collection '{}': {:?}",
-                    name, err
-                );
-                None
-            }) {
-                document_count += 1;
-                let doc_json = match to_string(&doc) {
-                    Ok(json) => json,
-                    Err(err) => {
-                        eprintln!(
-                            "Error serializing document from collection '{}': {:?}",
-                            name, err
-                        );
-                        continue;
-                    }
-                };
-                collection_size += doc_json.len();
-            }
-
-            // Aggregate results
-            total_documents += document_count;
-            total_size_bytes += collection_size;
-
-            collections_stats.push(CollectionStats {
-                name: name.clone(),
-                document_count,
-                size_bytes: format_bytes(collection_size),
-            });
-        }
-
-        Ok(DatabaseStats {
-            total_documents,
-            total_collection: collection_names.len(),
-            total_size_bytes: format_bytes(total_size_bytes),
-            collections: collections_stats,
-        })
     }
 }

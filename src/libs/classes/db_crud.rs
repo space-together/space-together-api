@@ -1,9 +1,7 @@
 use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId, Document},
-    options::ClientOptions,
-    results::UpdateResult,
-    Client, Collection,
+    Collection,
 };
 use serde::{Deserialize, Serialize};
 
@@ -12,38 +10,18 @@ use crate::{
     libs::functions::object_id::change_insertoneresult_into_object_id,
 };
 
+#[derive(Debug)]
 pub struct MongoCrud<T>
 where
     T: Send + Sync,
 {
-    collection: Collection<T>,
+    pub(crate) collection: Collection<T>,
 }
 
 impl<T> MongoCrud<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Unpin + Send + Sync,
 {
-    pub async fn new(
-        db_name: &str,
-        collection_name: &str,
-        uri: &str,
-        collection: Option<String>,
-    ) -> DbClassResult<Self> {
-        let client_options =
-            ClientOptions::parse(uri)
-                .await
-                .map_err(|err| DbClassError::CanNotDoAction {
-                    error: err.to_string(),
-                    collection: collection.unwrap_or_else(|| "unknown".to_string()),
-                    action: "parse MongoDB URI".to_string(),
-                    how_fix_it: "Ensure the MongoDB URI is correctly formatted".to_string(),
-                })?;
-        let client = Client::with_options(client_options).map_err(|err| DbClassError::from(err))?;
-        let database = client.database(db_name);
-        let collection = database.collection::<T>(collection_name);
-        Ok(Self { collection })
-    }
-
     pub async fn create(&self, document: T, collection: Option<String>) -> DbClassResult<ObjectId> {
         let insert_result = self.collection.insert_one(document).await;
         match insert_result {
@@ -87,7 +65,7 @@ where
                 action: "get many".to_string(),
                 how_fix_it: "try again later".to_string(),
             }),
-            Ok(mut r) => {
+            Ok(r) => {
                 let items = r.try_collect().await;
                 match items {
                     Ok(data) => Ok(data),
