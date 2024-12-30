@@ -11,11 +11,15 @@ pub enum DbClassError {
         how_fix_it: String,
         collection: String,
     },
+    OtherError {
+        err: String,
+    },
 }
 
 impl std::fmt::Display for DbClassError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            DbClassError::OtherError { err } => write!(f, "{err}"),
             DbClassError::InvalidId => write!(f, "Invalid id, please try other id"),
             DbClassError::CanNotDoAction {
                 error,

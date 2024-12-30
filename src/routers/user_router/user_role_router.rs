@@ -18,9 +18,9 @@ pub fn routers_user_role(
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(handle_create_user_role))
             .route("", get().to(handle_get_all_user_roles))
+            .route("/role/{name}", get().to(handle_user_role_get_by_name))
             .route("/{id}", put().to(handle_user_role_update))
             .route("/{id}", delete().to(handle_user_role_delete))
-            .route("/role/{name}", get().to(handle_user_role_get_by_name))
             .route("/{id}", get().to(handle_get_user_role)),
     )
 }

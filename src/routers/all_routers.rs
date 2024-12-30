@@ -17,6 +17,7 @@ use super::{
     request_router::{
         request_router_router::routers_request, request_type_router::routers_request_type,
     },
+    school_router::school_router_router::routers_school,
     user_router::{user_role_router::routers_user_role, user_router_router::routers_user},
 };
 use crate::{handlers::database_handle::all_end_point_handle::list_all_endpoints, AppState};
@@ -52,6 +53,9 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/requests").configure(|user_cfg| {
                 routers_request_type(user_cfg, state.clone());
                 routers_request(user_cfg, state.clone());
+            }))
+            .service(web::scope("/school").configure(|user_cfg| {
+                routers_school(user_cfg, state.clone());
             })),
     );
 }

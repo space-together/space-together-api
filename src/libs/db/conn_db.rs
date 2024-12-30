@@ -19,6 +19,7 @@ use crate::{
     models::{
         database_model::collection_model::DatabaseStats,
         images_model::profile_images_model::ProfileImageModel,
+        school_model::school_model_model::SchoolModel,
     },
 };
 use dotenv::dotenv;
@@ -39,6 +40,7 @@ pub struct ConnDb {
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
     pub avatars: MongoCrud<ProfileImageModel>,
+    pub school: MongoCrud<SchoolModel>,
 }
 
 impl ConnDb {
@@ -94,6 +96,11 @@ impl ConnDb {
                     request: st_data.collection("requests"),
                 };
 
+                // schools
+                let school = MongoCrud {
+                    collection: st_data.collection("schools"),
+                };
+
                 // image collections
                 let avatars = MongoCrud {
                     collection: st_image.collection("avatars"),
@@ -113,6 +120,7 @@ impl ConnDb {
                     stats,
                     request_type,
                     request,
+                    school,
                     avatars,
                 })
             }
