@@ -22,6 +22,14 @@ pub async fn controller_school_create(
         return Err(DbClassError::OtherError { err: e.to_string() });
     }
 
+    // create school logo
+    let collection_logo = Some("School".to_string());
+    let mut logo = String::new;
+
+    if let Some(i) = school.logo_uri.clone() {
+        let create_logo = 
+    }
+
     let collection = Some("School".to_string());
     let create = state
         .db
