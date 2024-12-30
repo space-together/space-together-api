@@ -66,6 +66,31 @@ where
         }
     }
 
+    pub async fn get_one_by_field(
+        &self,
+        field: GetManyByField,
+        collection: Option<String>,
+    ) -> DbClassResult<T> {
+        let doc = doc! {field.field: field.value};
+        let item = self.collection.find_one(doc).await;
+
+        match item {
+            Ok(Some(i)) => Ok(i),
+            Ok(None) => Err(DbClassError::CanNotDoAction {
+                error: "Item not found".to_string(),
+                action: "get one".to_string(),
+                collection: collection.unwrap_or_else(|| "unknown".to_string()),
+                how_fix_it: "Change Id".to_string(),
+            }),
+            Err(e) => Err(DbClassError::CanNotDoAction {
+                error: e.to_string(),
+                collection: collection.unwrap_or_else(|| "unknown".to_string()),
+                action: "get one".to_string(),
+                how_fix_it: "try again later".to_string(),
+            }),
+        }
+    }
+
     pub async fn get_many(
         &self,
         field: Option<GetManyByField>,

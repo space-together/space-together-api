@@ -1,5 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
+use futures::future::join_all;
 use mongodb::bson::oid::ObjectId;
 
 use crate::{
@@ -10,6 +11,8 @@ use crate::{
     },
     AppState,
 };
+
+use super::school_controller_logo::fetch_school_logo;
 
 pub async fn controller_school_create(
     state: Arc<AppState>,
@@ -71,11 +74,33 @@ pub async fn controller_school_create(
 
 pub async fn controller_school_get(state: Arc<AppState>) -> DbClassResult<Vec<SchoolModelGet>> {
     let collection = Some("School".to_string());
-    let get = state.db.school.get_many(None, collection).await;
-    match get {
-        Err(e) => Err(e),
-        Ok(k) => Ok(k.into_iter().map(SchoolModel::format).collect()),
-    }
+
+    // Fetch schools
+    let school_results = state.db.school.get_many(None, collection.clone()).await?;
+    let schools: Vec<SchoolModelGet> = school_results
+        .into_iter()
+        .map(SchoolModel::format)
+        .collect();
+
+    // Fetch logos concurrently
+    let school_logo_futures = schools
+        .iter()
+        .map(|school| fetch_school_logo(&state, &school.id, collection.clone()));
+    let logos_results = join_all(school_logo_futures).await;
+
+    // Combine schools and their logos
+    let schools_with_logo: Vec<SchoolModelGet> = schools
+        .into_iter()
+        .zip(logos_results)
+        .map(|(mut school, logo_result)| {
+            if let Ok(logo) = logo_result {
+                school.logo_uri = logo.map(SchoolLogoModel::format);
+            }
+            school
+        })
+        .collect();
+
+    Ok(schools_with_logo)
 }
 
 pub async fn controller_school_get_by_id(

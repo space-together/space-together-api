@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "insertoneresult",
-        "itertools"
+        "itertools",
+        "serde"
     ]
 }
