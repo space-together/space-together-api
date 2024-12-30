@@ -108,10 +108,17 @@ pub async fn controller_school_get_by_id(
     id: ObjectId,
 ) -> DbClassResult<SchoolModelGet> {
     let collection = Some("School".to_string());
-    let get = state.db.school.get_one_by_id(id, collection).await;
+    let get = state.db.school.get_one_by_id(id, collection.clone()).await;
     match get {
         Err(e) => Err(e),
-        Ok(k) => Ok(SchoolModel::format(k)),
+        Ok(k) => {
+            let mut school = SchoolModel::format(k);
+            let get_logo = fetch_school_logo(&state, &school.id, collection).await;
+            if let Ok(logo) = get_logo {
+                school.logo_uri = logo.map(SchoolLogoModel::format);
+            }
+            Ok(school)
+        }
     }
 }
 
