@@ -5,9 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     libs::functions::characters_fn::{generate_code, generate_username},
-    models::other_model::{
-        address_model::AddressModel,
-        contact_model::{ContactModel, SocialMediaModel},
+    models::{
+        images_model::school_logo_model::SchoolLogoModelGet,
+        other_model::{
+            address_model::AddressModel,
+            contact_model::{ContactModel, SocialMediaModel},
+        },
     },
 };
 
@@ -59,7 +62,6 @@ pub struct SchoolModel {
     pub student_ids: Option<Vec<SchoolMember>>, // List of students (user IDs)
     pub teacher_ids: Option<Vec<SchoolMember>>, // List of teacher (user IDs)
     pub classes: Option<Vec<ObjectId>>,         // List of classes in the school
-    pub logo_uri: Option<String>,               // URI for the school logo
     pub is_active: bool,                        // Whether the school is operational
     pub created_on: DateTime,                   // Record creation date
     pub updated_on: Option<DateTime>,           // Record last updated date
@@ -82,7 +84,7 @@ pub struct SchoolModelGet {
     pub student_ids: Option<Vec<SchoolMemberGet>>, // List of students (user IDs)
     pub teacher_ids: Option<Vec<SchoolMemberGet>>, // List of teacher (user IDs)
     pub classes: Option<Vec<String>>,              // List of classes in the school
-    pub logo_uri: Option<String>,                  // URI for the school logo
+    pub logo_uri: Option<SchoolLogoModelGet>,      // URI for the school logo
     pub is_active: bool,                           // Whether the school is operational
     pub created_on: String,                        // Record creation date
     pub updated_on: Option<String>,                // Record last updated date
@@ -117,7 +119,6 @@ impl SchoolModel {
             student_ids: None,
             teacher_ids: None,
             classes: None,
-            logo_uri: school.logo_uri,
             is_active: false,
             created_on: DateTime::now(),
             updated_on: None,
@@ -150,7 +151,7 @@ impl SchoolModel {
             teacher_ids: school
                 .teacher_ids
                 .map(|teachers| teachers.into_iter().map(SchoolMember::format).collect()),
-            logo_uri: school.logo_uri,
+            logo_uri: None,
             created_on: school
                 .created_on
                 .try_to_rfc3339_string()

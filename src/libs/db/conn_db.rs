@@ -18,7 +18,9 @@ use crate::{
     },
     models::{
         database_model::collection_model::DatabaseStats,
-        images_model::{profile_images_model::ProfileImageModel, school_logo_model::SchoolLogo},
+        images_model::{
+            profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
+        },
         school_model::school_model_model::SchoolModel,
     },
 };
@@ -42,7 +44,7 @@ pub struct ConnDb {
     pub school: MongoCrud<SchoolModel>,
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
-    pub school_logo: MongoCrud<SchoolLogo>,
+    pub school_logo: MongoCrud<SchoolLogoModel>,
 }
 
 impl ConnDb {

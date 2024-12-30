@@ -4,7 +4,10 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    models::school_model::school_model_model::{SchoolModel, SchoolModelGet, SchoolModelNew},
+    models::{
+        images_model::school_logo_model::{SchoolLogoModel, SchoolLogoModelNew},
+        school_model::school_model_model::{SchoolModel, SchoolModelGet, SchoolModelNew},
+    },
     AppState,
 };
 
@@ -22,25 +25,46 @@ pub async fn controller_school_create(
         return Err(DbClassError::OtherError { err: e.to_string() });
     }
 
-    // create school logo
-    let collection_logo = Some("School".to_string());
-    let mut logo = String::new;
-
-    if let Some(i) = school.logo_uri.clone() {
-        let create_logo = 
-    }
-
     let collection = Some("School".to_string());
     let create = state
         .db
         .school
-        .create(SchoolModel::new(school), collection.clone())
+        .create(SchoolModel::new(school.clone()), collection.clone())
         .await;
     match create {
         Err(e) => Err(e),
         Ok(i) => match state.db.school.get_one_by_id(i, collection.clone()).await {
             Err(err) => Err(err),
-            Ok(k) => Ok(SchoolModel::format(k)),
+            Ok(k) => {
+                // create school logo
+                let collection_logo = Some("School".to_string());
+                let mut format_school = SchoolModel::format(k.clone());
+
+                if let Some(i) = school.logo_uri.clone() {
+                    let new_logo = SchoolLogoModelNew {
+                        school_id: k.id.unwrap().to_string(),
+                        src: i,
+                    };
+                    let create_logo = state
+                        .db
+                        .school_logo
+                        .create(SchoolLogoModel::new(new_logo), collection_logo.clone())
+                        .await;
+
+                    match create_logo {
+                        Err(e) => return Err(DbClassError::OtherError { err: e.to_string() }),
+                        Ok(i) => match state.db.school_logo.get_one_by_id(i, collection_logo).await
+                        {
+                            Err(e) => return Err(DbClassError::OtherError { err: e.to_string() }),
+                            Ok(logo) => {
+                                format_school.logo_uri = Some(SchoolLogoModel::format(logo))
+                            }
+                        },
+                    }
+                }
+
+                Ok(format_school)
+            }
         },
     }
 }
