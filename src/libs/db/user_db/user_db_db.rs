@@ -134,7 +134,11 @@ impl UserDb {
         }
     }
 
-    async fn find_many_by_field(&self, field: &str, value: ObjectId) -> UserResult<Vec<UserModel>> {
+    async fn find_many_by_field(
+        &self,
+        field: &str,
+        value: ObjectId,
+    ) -> UserResult<Vec<UserModelGet>> {
         let mut cursor = self.user.find(doc! { field: value }).await.map_err(|err| {
             UserError::CanNotGetAllUsers {
                 err: err.to_string(),
@@ -145,7 +149,7 @@ impl UserDb {
         let mut users = Vec::new();
         while let Some(data) = cursor.next().await {
             match data {
-                Ok(doc) => users.push(doc),
+                Ok(doc) => users.push(UserModelGet::format(doc)),
                 Err(err) => {
                     return Err(UserError::CanNotGetAllUsers {
                         err: err.to_string(),
@@ -242,7 +246,7 @@ impl UserDb {
         self.update_by_field(user, "un", username).await
     }
 
-    pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModel>> {
+    pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModelGet>> {
         self.find_many_by_field("rl", role).await
     }
 

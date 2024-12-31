@@ -172,5 +172,5 @@ pub fn generate_code() -> String {
     let chars: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         .chars()
         .collect();
-    (0..6).map(|_| *chars.choose(&mut rng).unwrap()).collect()
+    (0..5).map(|_| *chars.choose(&mut rng).unwrap()).collect()
 }
