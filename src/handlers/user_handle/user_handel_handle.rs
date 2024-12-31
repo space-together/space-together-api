@@ -8,7 +8,8 @@ use crate::{
     controllers::user_controller::user_controller_controller::{
         controller_create_user, controller_get_all_users, controller_get_user_by_id,
         controller_user_delete_by_id, controller_user_delete_by_username,
-        controller_user_delete_many, controller_user_get_by_username, controller_user_update_by_id,
+        controller_user_delete_many, controller_user_get_by_username,
+        controller_user_get_user_by_email, controller_user_update_by_id,
         controller_user_update_by_username, controller_user_update_many,
         controller_users_get_all_by_role,
     },
@@ -53,6 +54,21 @@ pub async fn handle_get_user_by_username(
     username: Path<String>,
 ) -> impl Responder {
     match controller_user_get_by_username(state.into_inner(), username.into_inner()).await {
+        Ok(res) => HttpResponse::Ok().json(res),
+        Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
+            message: err.to_string(),
+        }),
+    }
+}
+
+pub async fn handle_get_user_by_email(
+    state: Data<AppState>,
+    email: Path<String>,
+) -> impl Responder {
+    if let Err(e) = is_valid_email(&email) {
+        return HttpResponse::BadRequest().json(ReqErrModel { message: e });
+    }
+    match controller_user_get_user_by_email(state.into_inner(), email.into_inner()).await {
         Ok(res) => HttpResponse::Ok().json(res),
         Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
             message: err.to_string(),
