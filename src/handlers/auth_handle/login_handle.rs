@@ -8,7 +8,7 @@ use crate::{
     controllers::user_controller::user_controller_controller::controller_create_user,
     libs::{functions::characters_fn::is_valid_email, utils::jwt::jwt_login::user_encode_jwt},
     models::{
-        auth::login_model::{UserLoginClaimsModel, UserLoginModule, UserRegisterClaimsModel},
+        auth::login_model::{UserLoginClaimsModel, UserLoginModule},
         jwt_model::token_model::TokenModel,
         request_error_model::ReqErrModel,
         user_model::user_model_model::UserModelNew,
@@ -62,7 +62,6 @@ pub async fn user_register_handle(
     let create = controller_create_user(user.into_inner(), state.into_inner()).await;
     match create {
         Ok(res) => {
-            let user = res.clone();
             let user_claim = UserLoginClaimsModel {
                 id: res.id,
                 name: res.nm,
@@ -72,7 +71,7 @@ pub async fn user_register_handle(
 
             let token = user_encode_jwt(user_claim).unwrap();
 
-            HttpResponse::Created().json(UserRegisterClaimsModel { token, user })
+            HttpResponse::Ok().json(TokenModel { token })
         }
         Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
             message: err.to_string(),
