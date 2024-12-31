@@ -33,10 +33,12 @@ pub fn user_encode_jwt(user: UserLoginClaimsModel) -> Result<String, jsonwebtoke
     let claims = UserClaimsModel {
         exp: (now + expire).timestamp() as usize,
         iat: now.timestamp() as usize,
-        email: user.email,
-        id: user.id,
-        name: user.name,
-        role: user.role,
+        user: UserLoginClaimsModel {
+            email: user.email,
+            id: user.id,
+            name: user.name,
+            role: user.role,
+        },
     };
 
     let secret = (*constants::SECRET).clone();
