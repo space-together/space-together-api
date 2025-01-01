@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 pub struct ActivitiesTypeModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub ty: String,           //type
-    pub co: DateTime,         // creation on
-    pub uo: Option<DateTime>, // update on
+    pub ty: String,                  //type
+    pub create_on: DateTime,         // creation on
+    pub update_on: Option<DateTime>, // update on
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,8 +19,8 @@ pub struct ActivitiesTypeModelNew {
 pub struct ActivitiesTypeModelGet {
     pub id: String,
     pub ty: String,
-    pub co: String,
-    pub uo: Option<String>,
+    pub create_on: String,
+    pub update_on: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,8 +33,8 @@ impl ActivitiesTypeModel {
         ActivitiesTypeModel {
             id: None,
             ty: ty.ty,
-            co: DateTime::now(),
-            uo: None,
+            create_on: DateTime::now(),
+            update_on: None,
         }
     }
 
@@ -42,8 +42,11 @@ impl ActivitiesTypeModel {
         ActivitiesTypeModelGet {
             id: ty.id.map_or("".to_string(), |id| id.to_string()),
             ty: ty.ty,
-            co: ty.co.try_to_rfc3339_string().unwrap_or("".to_string()),
-            uo: Some(ty.uo.map_or("".to_string(), |date| {
+            create_on: ty
+                .create_on
+                .try_to_rfc3339_string()
+                .unwrap_or("".to_string()),
+            update_on: Some(ty.update_on.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }
