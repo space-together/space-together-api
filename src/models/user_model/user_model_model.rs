@@ -133,7 +133,7 @@ impl UserModel {
         );
 
         if is_updated {
-            set_doc.insert("uo", bson::Bson::DateTime(DateTime::now()));
+            set_doc.insert("update_on", bson::Bson::DateTime(DateTime::now()));
         }
 
         set_doc
@@ -153,7 +153,7 @@ pub struct UserModelGet {
     pub password: Option<String>,
     pub gender: Option<Gender>,
     pub create_on: String,
-    pub uo: Option<String>,
+    pub update_on: Option<String>,
 }
 
 impl UserModelGet {
@@ -173,7 +173,7 @@ impl UserModelGet {
                 .create_on
                 .try_to_rfc3339_string()
                 .unwrap_or_else(|_| "".to_string()),
-            uo: user.update_on.map(|up| {
+            update_on: user.update_on.map(|up| {
                 up.try_to_rfc3339_string()
                     .unwrap_or_else(|_| "".to_string())
             }),

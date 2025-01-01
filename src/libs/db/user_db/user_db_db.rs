@@ -38,7 +38,7 @@ impl UserDb {
     }
 
     pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
-        match self.find_one_by_field("em", email).await {
+        match self.find_one_by_field("email", email).await {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound {
                 field: "email".to_string(),
@@ -60,8 +60,8 @@ impl UserDb {
     pub async fn create_user(&self, user: UserModelNew) -> UserResult<InsertOneResult> {
         let index = IndexModel::builder()
             .keys(doc! {
-            "em" : 1,
-            "un" : 1
+            "email" : 1,
+            "username" : 1
             })
             .options(IndexOptions::builder().unique(true).build())
             .build();
@@ -78,7 +78,7 @@ impl UserDb {
 
         if self.get_user_by_email(user.email.clone()).await.is_ok() {
             return Err(UserError::UserIsReadyExit {
-                field: "Email".to_string(),
+                field: "email".to_string(),
                 value: user.email.clone(),
             });
         }
@@ -243,11 +243,11 @@ impl UserDb {
         user: UserModelPut,
         username: String,
     ) -> UserResult<UserModel> {
-        self.update_by_field(user, "un", username).await
+        self.update_by_field(user, "username", username).await
     }
 
     pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModelGet>> {
-        self.find_many_by_field("rl", role).await
+        self.find_many_by_field("role", role).await
     }
 
     async fn delete_user_by_field(&self, field: &str, value: String) -> UserResult<UserModel> {
@@ -286,7 +286,7 @@ impl UserDb {
     }
 
     pub async fn delete_user_by_username(&self, username: String) -> UserResult<UserModel> {
-        self.delete_user_by_field("un", username).await
+        self.delete_user_by_field("username", username).await
     }
 
     pub async fn delete_users(&self, ids: Vec<ObjectId>) -> UserResult<Vec<UserModelGet>> {
