@@ -74,7 +74,7 @@ pub async fn controller_user_update_by_id(
 
     let mut user_images = get_user_images(&state, &id).await?;
 
-    if let Some(image) = user.im.clone() {
+    if let Some(image) = user.image.clone() {
         let avatar = ProfileImageModelNew {
             src: image,
             user_id: id,
@@ -153,7 +153,7 @@ pub async fn controller_user_update_by_username(
         Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
     };
 
-    if let Some(image) = user.im.clone() {
+    if let Some(image) = user.image.clone() {
         let avatar = ProfileImageModelNew {
             src: image,
             user_id: id,

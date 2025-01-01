@@ -65,7 +65,7 @@ pub async fn controller_activity_create(
         return Err(ActivitiesErr::ActivityTypeIsNotExit);
     }
 
-    if activity.cl.is_some() && activity.gr.is_some() {
+    if activity.class_id.is_some() && activity.group.is_some() {
         return Err(ActivitiesErr::ClassAndActivityCanNotHaveOneActivity);
     }
 
