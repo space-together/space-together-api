@@ -47,11 +47,11 @@ pub struct UserModel {
 pub struct UserModelNew {
     pub name: String,
     pub username: Option<String>,
-    pub role: String,
+    pub role: Option<String>,
     pub email: String,
     pub phone: Option<String>,
     pub password: String,
-    pub gender: Gender,
+    pub gender: Option<Gender>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -87,10 +87,13 @@ impl UserModel {
     pub fn new(user: UserModelNew) -> Self {
         UserModel {
             id: None,
-            role: Some(ObjectId::from_str(&user.role).unwrap()),
+            role: user
+                .role
+                .as_ref()
+                .map(|role| ObjectId::from_str(role).unwrap()),
             name: user.name.clone(),
             email: user.email,
-            gender: Some(user.gender),
+            gender: user.gender,
             phone: user.phone,
             disable: Some(false),
             username: Some(
