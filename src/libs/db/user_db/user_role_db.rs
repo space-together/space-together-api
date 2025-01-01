@@ -20,7 +20,7 @@ pub struct UserRoleDb {
 
 impl UserRoleDb {
     pub async fn get_user_role_by_rl(&self, role: String) -> UserRoleResult<UserRoleModel> {
-        let get = self.role.find_one(doc! {"rl" : role}).await;
+        let get = self.role.find_one(doc! {"role" : role}).await;
         match get {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserRoleError::RoleNotFound),
@@ -35,7 +35,7 @@ impl UserRoleDb {
         role: UserRoleModelNew,
     ) -> UserRoleResult<InsertOneResult> {
         let index = IndexModel::builder()
-            .keys(doc! {"rl": 1})
+            .keys(doc! {"role": 1})
             .options(IndexOptions::builder().unique(true).build())
             .build();
 
