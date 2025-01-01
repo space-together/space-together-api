@@ -31,40 +31,40 @@ impl Gender {
 pub struct UserModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub rl: Option<ObjectId>, // role
-    pub nm: String,           // name
-    pub un: Option<String>,   // username
-    pub em: String,           // email
-    pub ph: Option<String>,   //phone number
-    pub gd: Option<Gender>,   // gender
-    pub ds: Option<bool>,     // disable
-    pub pw: Option<String>,   // password
-    pub co: DateTime,         // created on
-    pub up: Option<DateTime>, // updated on
+    pub role: Option<ObjectId>,      // role
+    pub name: String,                // name
+    pub username: Option<String>,    // username
+    pub email: String,               // email
+    pub phone: Option<String>,       //phone number
+    pub gender: Option<Gender>,      // gender
+    pub disable: Option<bool>,       // disable
+    pub password: Option<String>,    // password
+    pub create_on: DateTime,         // created on
+    pub update_on: Option<DateTime>, // updated on
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelNew {
-    pub nm: String,
-    pub un: Option<String>,
-    pub rl: String,
-    pub em: String,
-    pub ph: Option<String>,
-    pub pw: String,
-    pub gd: Gender,
+    pub name: String,
+    pub username: Option<String>,
+    pub role: String,
+    pub email: String,
+    pub phone: Option<String>,
+    pub password: String,
+    pub gender: Gender,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelPut {
-    pub rl: Option<String>,
-    pub un: Option<String>,
-    pub nm: Option<String>,
-    pub em: Option<String>,
-    pub ph: Option<String>,
-    pub pw: Option<String>,
+    pub role: Option<String>,
+    pub username: Option<String>,
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub password: Option<String>,
     pub im: Option<String>,
-    pub gd: Option<Gender>,
-    pub ds: Option<bool>,
+    pub gender: Option<Gender>,
+    pub disable: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -87,16 +87,19 @@ impl UserModel {
     pub fn new(user: UserModelNew) -> Self {
         UserModel {
             id: None,
-            rl: Some(ObjectId::from_str(&user.rl).unwrap()),
-            nm: user.nm.clone(),
-            em: user.em,
-            gd: Some(user.gd),
-            ph: user.ph,
-            ds: Some(false),
-            un: Some(user.un.unwrap_or_else(|| generate_username(&user.nm))),
-            pw: Some(digest(user.pw)),
-            co: DateTime::now(),
-            up: None,
+            role: Some(ObjectId::from_str(&user.role).unwrap()),
+            name: user.name.clone(),
+            email: user.email,
+            gender: Some(user.gender),
+            phone: user.phone,
+            disable: Some(false),
+            username: Some(
+                user.username
+                    .unwrap_or_else(|| generate_username(&user.name)),
+            ),
+            password: Some(digest(user.password)),
+            create_on: DateTime::now(),
+            update_on: None,
         }
     }
 
@@ -112,20 +115,21 @@ impl UserModel {
         };
 
         insert_if_some(
-            "rl",
-            user.rl
-                .map(|rl| bson::Bson::ObjectId(ObjectId::from_str(&rl).unwrap())),
+            "role",
+            user.role
+                .map(|role| bson::Bson::ObjectId(ObjectId::from_str(&role).unwrap())),
         );
         insert_if_some("im", user.im.map(bson::Bson::String));
-        insert_if_some("nm", user.nm.map(bson::Bson::String));
-        insert_if_some("ds", user.ds.map(bson::Bson::Boolean));
-        insert_if_some("un", user.un.map(bson::Bson::String));
-        insert_if_some("em", user.em.map(bson::Bson::String));
-        insert_if_some("ph", user.ph.map(bson::Bson::String));
-        insert_if_some("pw", user.pw.map(bson::Bson::String));
+        insert_if_some("name", user.name.map(bson::Bson::String));
+        insert_if_some("disable", user.disable.map(bson::Bson::Boolean));
+        insert_if_some("username", user.username.map(bson::Bson::String));
+        insert_if_some("email", user.email.map(bson::Bson::String));
+        insert_if_some("phone", user.phone.map(bson::Bson::String));
+        insert_if_some("password", user.password.map(bson::Bson::String));
         insert_if_some(
-            "gd",
-            user.gd.map(|gender| bson::Bson::String(gender.to_string())),
+            "gender",
+            user.gender
+                .map(|gender| bson::Bson::String(gender.to_string())),
         );
 
         if is_updated {
@@ -139,16 +143,16 @@ impl UserModel {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelGet {
     pub id: String,
-    pub rl: String,
-    pub nm: String,
-    pub im: Option<Vec<ProfileImageModelGet>>,
-    pub un: Option<String>,
-    pub em: String,
-    pub ds: Option<bool>,
-    pub ph: Option<String>,
-    pub pw: Option<String>,
-    pub gd: Option<Gender>,
-    pub co: String,
+    pub role: String,
+    pub name: String,
+    pub image: Option<Vec<ProfileImageModelGet>>,
+    pub username: Option<String>,
+    pub email: String,
+    pub disable: Option<bool>,
+    pub phone: Option<String>,
+    pub password: Option<String>,
+    pub gender: Option<Gender>,
+    pub create_on: String,
     pub uo: Option<String>,
 }
 
@@ -156,20 +160,20 @@ impl UserModelGet {
     pub fn format(user: UserModel) -> Self {
         UserModelGet {
             id: user.id.map_or("".to_string(), |id| id.to_string()),
-            rl: user.rl.map_or("".to_string(), |rl| rl.to_string()),
-            nm: user.nm,
-            un: user.un,
-            em: user.em,
-            im: None,
-            gd: user.gd,
-            ph: user.ph,
-            ds: user.ds,
-            pw: user.pw,
-            co: user
-                .co
+            role: user.role.map_or("".to_string(), |role| role.to_string()),
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            image: None,
+            gender: user.gender,
+            phone: user.phone,
+            disable: user.disable,
+            password: user.password,
+            create_on: user
+                .create_on
                 .try_to_rfc3339_string()
                 .unwrap_or_else(|_| "".to_string()),
-            uo: user.up.map(|up| {
+            uo: user.update_on.map(|up| {
                 up.try_to_rfc3339_string()
                     .unwrap_or_else(|_| "".to_string())
             }),

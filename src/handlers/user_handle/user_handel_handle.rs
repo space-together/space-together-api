@@ -24,7 +24,7 @@ use crate::{
 };
 
 pub async fn handle_create_user(state: Data<AppState>, user: Json<UserModelNew>) -> impl Responder {
-    if let Err(e) = is_valid_email(&user.em.clone()) {
+    if let Err(e) = is_valid_email(&user.email.clone()) {
         return HttpResponse::BadRequest().json(ReqErrModel { message: e });
     }
 

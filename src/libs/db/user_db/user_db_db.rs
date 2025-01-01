@@ -72,14 +72,14 @@ impl UserDb {
             });
         }
 
-        if let Err(err) = is_valid_name(&user.nm) {
+        if let Err(err) = is_valid_name(&user.name) {
             return Err(UserError::InvalidName { err });
         }
 
-        if self.get_user_by_email(user.em.clone()).await.is_ok() {
+        if self.get_user_by_email(user.email.clone()).await.is_ok() {
             return Err(UserError::UserIsReadyExit {
                 field: "Email".to_string(),
-                value: user.em.clone(),
+                value: user.email.clone(),
             });
         }
 
@@ -167,19 +167,19 @@ impl UserDb {
         field: &str,
         value: String,
     ) -> UserResult<UserModel> {
-        if let Some(name) = user.nm.clone() {
+        if let Some(name) = user.name.clone() {
             if let Err(err) = is_valid_name(&name) {
                 return Err(UserError::InvalidName { err });
             }
         }
 
-        if let Some(username) = user.un.clone() {
+        if let Some(username) = user.username.clone() {
             if let Err(err) = is_valid_username(&username) {
                 return Err(UserError::InvalidUsername { err });
             }
         }
 
-        if let Some(email) = user.em.clone() {
+        if let Some(email) = user.email.clone() {
             if self.get_user_by_email(email.clone()).await.is_ok() {
                 return Err(UserError::UserIsReadyExit {
                     field: "email".to_string(),
@@ -188,7 +188,7 @@ impl UserDb {
             }
         }
 
-        if let Some(username) = user.un.clone() {
+        if let Some(username) = user.username.clone() {
             if self.get_user_by_username(username.clone()).await.is_ok() {
                 return Err(UserError::UserIsReadyExit {
                     field: "username".to_string(),

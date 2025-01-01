@@ -16,12 +16,12 @@ pub async fn controller_create_class(
     let find_user = state
         .db
         .user
-        .get_user_by_id(ObjectId::from_str(&class.cltea).unwrap())
+        .get_user_by_id(ObjectId::from_str(&class.class_teacher_id).unwrap())
         .await;
 
     if find_user.is_err() {
         return Err(ClassError::ClassTeacherIsNotExit {
-            id: class.cltea.clone(),
+            id: class.class_teacher_id.clone(),
         });
     }
 
@@ -98,7 +98,7 @@ pub async fn controller_class_update(
     remove_students: Option<Vec<String>>,
 ) -> ClassResult<ClassModelGet> {
     if let Some(class_data) = &class {
-        if let Some(class_teacher) = &class_data.cltea {
+        if let Some(class_teacher) = &class_data.class_teacher_id {
             if ObjectId::from_str(class_teacher).is_err() {
                 return Err(ClassError::InvalidId);
             }

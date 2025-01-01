@@ -25,14 +25,14 @@ pub async fn controller_create_user(
     user: UserModelNew,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if ObjectId::from_str(&user.rl).is_err() {
+    if ObjectId::from_str(&user.role).is_err() {
         return Err(UserError::InvalidUserRoleId);
     }
 
     match state
         .db
         .user_role
-        .get_user_role_by_id(ObjectId::from_str(&user.rl).unwrap())
+        .get_user_role_by_id(ObjectId::from_str(&user.role).unwrap())
         .await
     {
         Err(_) => Err(UserError::InvalidId),
@@ -47,7 +47,7 @@ pub async fn controller_create_user(
                 Err(err) => Err(err),
                 Ok(res) => {
                     let mut user_get = UserModelGet::format(res);
-                    user_get.rl = role.rl;
+                    user_get.role = role.role;
                     Ok(user_get)
                 }
             },
@@ -60,7 +60,7 @@ pub async fn controller_user_update_by_id(
     id: ObjectId,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if let Some(role) = user.rl.clone() {
+    if let Some(role) = user.role.clone() {
         if state
             .db
             .user_role
@@ -75,7 +75,10 @@ pub async fn controller_user_update_by_id(
     let mut user_images = get_user_images(&state, &id).await?;
 
     if let Some(image) = user.im.clone() {
-        let avatar = ProfileImageModelNew { src: image, ui: id };
+        let avatar = ProfileImageModelNew {
+            src: image,
+            user_id: id,
+        };
 
         let avatar_new = state
             .db
@@ -102,7 +105,7 @@ pub async fn controller_user_update_by_id(
         Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
             Ok(u) => {
                 let mut my_user = UserModelGet::format(u);
-                my_user.im = Some(user_images);
+                my_user.image = Some(user_images);
 
                 Ok(my_user)
             }
@@ -116,7 +119,7 @@ pub async fn controller_user_update_by_username(
     username: String,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if let Some(role) = user.rl.clone() {
+    if let Some(role) = user.role.clone() {
         if state
             .db
             .user_role
@@ -140,7 +143,7 @@ pub async fn controller_user_update_by_username(
         .get_many(
             Some(GetManyByField {
                 value: id,
-                field: "ui".to_string(),
+                field: "user_id".to_string(),
             }),
             image_collection.clone(),
         )
@@ -151,7 +154,10 @@ pub async fn controller_user_update_by_username(
     };
 
     if let Some(image) = user.im.clone() {
-        let avatar = ProfileImageModelNew { src: image, ui: id };
+        let avatar = ProfileImageModelNew {
+            src: image,
+            user_id: id,
+        };
 
         let avatar_new = state
             .db
@@ -173,7 +179,7 @@ pub async fn controller_user_update_by_username(
         Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
             Ok(u) => {
                 let mut my_user = UserModelGet::format(u);
-                my_user.im = Some(user_images);
+                my_user.image = Some(user_images);
 
                 Ok(my_user)
             }
@@ -191,7 +197,7 @@ pub async fn controller_get_user_by_id(
             let role = state
                 .db
                 .user_role
-                .get_user_role_by_id(res.rl.unwrap())
+                .get_user_role_by_id(res.role.unwrap())
                 .await;
             match role {
                 Ok(role) => {
@@ -201,7 +207,7 @@ pub async fn controller_get_user_by_id(
                         .get_many(
                             Some(GetManyByField {
                                 value: id,
-                                field: "ui".to_string(),
+                                field: "user_id".to_string(),
                             }),
                             Some("Avatar".to_string()),
                         )
@@ -212,8 +218,8 @@ pub async fn controller_get_user_by_id(
                     };
 
                     let mut user_get = UserModelGet::format(res);
-                    user_get.rl = role.rl;
-                    user_get.im = Some(user_images);
+                    user_get.role = role.role;
+                    user_get.image = Some(user_images);
                     Ok(user_get)
                 }
                 Err(err) => Err(UserError::CanNotGetRole {
@@ -234,7 +240,7 @@ pub async fn controller_user_get_by_username(
             let role = state
                 .db
                 .user_role
-                .get_user_role_by_id(res.rl.unwrap())
+                .get_user_role_by_id(res.role.unwrap())
                 .await;
             match role {
                 Ok(role) => {
@@ -244,7 +250,7 @@ pub async fn controller_user_get_by_username(
                         .get_many(
                             Some(GetManyByField {
                                 value: res.id.unwrap(),
-                                field: "ui".to_string(),
+                                field: "user_id".to_string(),
                             }),
                             Some("Avatar".to_string()),
                         )
@@ -255,8 +261,8 @@ pub async fn controller_user_get_by_username(
                     };
 
                     let mut user_get = UserModelGet::format(res);
-                    user_get.rl = role.rl;
-                    user_get.im = Some(user_images);
+                    user_get.role = role.role;
+                    user_get.image = Some(user_images);
                     Ok(user_get)
                 }
                 Err(err) => Err(UserError::CanNotGetRole {
@@ -277,7 +283,7 @@ pub async fn controller_user_get_user_by_email(
             let role = state
                 .db
                 .user_role
-                .get_user_role_by_id(res.rl.unwrap())
+                .get_user_role_by_id(res.role.unwrap())
                 .await;
             match role {
                 Ok(role) => {
@@ -287,7 +293,7 @@ pub async fn controller_user_get_user_by_email(
                         .get_many(
                             Some(GetManyByField {
                                 value: res.id.unwrap(),
-                                field: "ui".to_string(),
+                                field: "user_id".to_string(),
                             }),
                             Some("Avatar".to_string()),
                         )
@@ -298,8 +304,8 @@ pub async fn controller_user_get_user_by_email(
                     };
 
                     let mut user_get = UserModelGet::format(res);
-                    user_get.rl = role.rl;
-                    user_get.im = Some(user_images);
+                    user_get.role = role.role;
+                    user_get.image = Some(user_images);
                     Ok(user_get)
                 }
                 Err(err) => Err(UserError::CanNotGetRole {
@@ -323,7 +329,7 @@ pub async fn controller_user_delete_by_id(
                 .get_many(
                     Some(GetManyByField {
                         value: id,
-                        field: "ui".to_string(),
+                        field: "user_id".to_string(),
                     }),
                     Some("Avatar".to_string()),
                 )
@@ -368,7 +374,7 @@ pub async fn controller_user_delete_many(
                     .get_many(
                         Some(GetManyByField {
                             value: ObjectId::from_str(&user.id).unwrap(),
-                            field: "ui".to_string(),
+                            field: "user_id".to_string(),
                         }),
                         Some("Avatar".to_string()),
                     )
@@ -421,7 +427,7 @@ pub async fn controller_user_delete_by_username(
                 .get_many(
                     Some(GetManyByField {
                         value: res.id.unwrap(),
-                        field: "ui".to_string(),
+                        field: "user_id".to_string(),
                     }),
                     Some("Avatar".to_string()),
                 )
@@ -461,7 +467,7 @@ pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<Us
                 if let Ok(role) = state
                     .db
                     .user_role
-                    .get_user_role_by_id(ObjectId::from_str(&user.rl).unwrap())
+                    .get_user_role_by_id(ObjectId::from_str(&user.role).unwrap())
                     .await
                 {
                     let mut user_get = user.clone();
@@ -469,14 +475,14 @@ pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<Us
                     let user_images =
                         get_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
 
-                    user_get.im = Some(user_images);
-                    user_get.rl = role.rl;
+                    user_get.image = Some(user_images);
+                    user_get.role = role.role;
                     users.push(user_get);
                 } else {
                     let user_images =
                         get_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
 
-                    user.im = Some(user_images);
+                    user.image = Some(user_images);
                     users.push(user.clone());
                 }
             }
@@ -502,7 +508,7 @@ pub async fn controller_users_get_all_by_role(
                     if let Ok(role) = state
                         .db
                         .user_role
-                        .get_user_role_by_id(ObjectId::from_str(&user.rl).unwrap())
+                        .get_user_role_by_id(ObjectId::from_str(&user.role).unwrap())
                         .await
                     {
                         let mut user_get = user.clone();
@@ -510,14 +516,14 @@ pub async fn controller_users_get_all_by_role(
                         let user_images =
                             get_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
 
-                        user_get.im = Some(user_images);
-                        user_get.rl = role.rl;
+                        user_get.image = Some(user_images);
+                        user_get.role = role.role;
                         users.push(user_get);
                     } else {
                         let user_images =
                             get_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
 
-                        user.im = Some(user_images);
+                        user.image = Some(user_images);
                         users.push(user.clone());
                     }
                 }

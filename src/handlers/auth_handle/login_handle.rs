@@ -33,7 +33,7 @@ pub async fn user_login_handle(
     }
     let get_user = get_user.unwrap();
 
-    if get_user.pw.unwrap() != digest(user.password.clone()) {
+    if get_user.password.unwrap() != digest(user.password.clone()) {
         return HttpResponse::Unauthorized().json(ReqErrModel {
             message: "Invalid credentials".to_string(),
         });
@@ -41,9 +41,9 @@ pub async fn user_login_handle(
 
     let user_claim = UserLoginClaimsModel {
         id: get_user.id.unwrap().to_string(),
-        name: get_user.nm,
-        email: get_user.em,
-        role: Some(get_user.rl.unwrap().to_string()),
+        name: get_user.name,
+        email: get_user.email,
+        role: Some(get_user.role.unwrap().to_string()),
     };
 
     let token = user_encode_jwt(user_claim).unwrap();
@@ -55,7 +55,7 @@ pub async fn user_register_handle(
     state: Data<AppState>,
     user: Json<UserModelNew>,
 ) -> impl Responder {
-    if let Err(e) = is_valid_email(&user.em.clone()) {
+    if let Err(e) = is_valid_email(&user.email.clone()) {
         return HttpResponse::BadRequest().json(ReqErrModel { message: e });
     }
 
@@ -64,9 +64,9 @@ pub async fn user_register_handle(
         Ok(res) => {
             let user_claim = UserLoginClaimsModel {
                 id: res.id,
-                name: res.nm,
-                email: res.em,
-                role: Some(res.rl),
+                name: res.name,
+                email: res.email,
+                role: Some(res.role),
             };
 
             let token = user_encode_jwt(user_claim).unwrap();

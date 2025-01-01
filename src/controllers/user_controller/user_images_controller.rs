@@ -19,7 +19,7 @@ pub async fn get_user_images(
         .get_many(
             Some(GetManyByField {
                 value: *user_id,
-                field: "ui".to_string(),
+                field: "user_id".to_string(),
             }),
             Some("Avatar".to_string()),
         )
