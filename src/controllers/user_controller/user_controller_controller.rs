@@ -25,32 +25,28 @@ pub async fn controller_create_user(
     user: UserModelNew,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if ObjectId::from_str(&user.role).is_err() {
-        return Err(UserError::InvalidUserRoleId);
+    if let Some(role) = user.role.clone() {
+        if state
+            .db
+            .user_role
+            .get_user_role_by_rl(role.clone())
+            .await
+            .is_err()
+        {
+            return Err(UserError::InvalidUserRoleId);
+        }
     }
 
-    match state
-        .db
-        .user_role
-        .get_user_role_by_id(ObjectId::from_str(&user.role).unwrap())
-        .await
-    {
-        Err(_) => Err(UserError::InvalidId),
-        Ok(role) => match state.db.user.create_user(user).await {
+    match state.db.user.create_user(user).await {
+        Err(err) => Err(err),
+        Ok(insert_id) => match state
+            .db
+            .user
+            .get_user_by_id(change_insertoneresult_into_object_id(insert_id))
+            .await
+        {
             Err(err) => Err(err),
-            Ok(insert_id) => match state
-                .db
-                .user
-                .get_user_by_id(change_insertoneresult_into_object_id(insert_id))
-                .await
-            {
-                Err(err) => Err(err),
-                Ok(res) => {
-                    let mut user_get = UserModelGet::format(res);
-                    user_get.role = role.role;
-                    Ok(user_get)
-                }
-            },
+            Ok(res) => Ok(UserModelGet::format(res)),
         },
     }
 }
