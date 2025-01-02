@@ -26,13 +26,12 @@ pub async fn controller_create_user(
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
     if let Some(role) = user.role.clone() {
-        if state
-            .db
-            .user_role
-            .get_user_role_by_rl(role.clone())
-            .await
-            .is_err()
-        {
+        let role = match ObjectId::from_str(&role) {
+            Err(_) => return Err(UserError::InvalidUserRoleId),
+            Ok(role) => role,
+        };
+
+        if state.db.user_role.get_user_role_by_id(role).await.is_err() {
             return Err(UserError::InvalidUserRoleId);
         }
     }
