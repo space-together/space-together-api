@@ -45,7 +45,7 @@ pub async fn user_login_handle(
         id: get_user.id.to_string(),
         name: get_user.name.clone(),
         email: get_user.email.clone(),
-        role: Some(get_user.role.to_string()),
+        role: get_user.role.to_string(),
     };
 
     let token = user_encode_jwt(user_claim).unwrap();
@@ -71,7 +71,7 @@ pub async fn user_register_handle(
                 id: res.id.clone(),
                 name: res.name.clone(),
                 email: res.email.clone(),
-                role: Some(res.role.clone()),
+                role: res.role.clone(),
             };
 
             let token = user_encode_jwt(user_claim).unwrap();

@@ -37,6 +37,7 @@ pub struct UserModel {
     pub email: String,               // email
     pub phone: Option<String>,       //phone number
     pub gender: Option<Gender>,      // gender
+    pub age: Option<DateTime>,       // age
     pub disable: Option<bool>,       // disable
     pub password: Option<String>,    // password
     pub create_on: DateTime,         // created on
@@ -64,6 +65,7 @@ pub struct UserModelPut {
     pub password: Option<String>,
     pub image: Option<String>,
     pub gender: Option<Gender>,
+    pub age: Option<DateTime>,
     pub disable: Option<bool>,
 }
 
@@ -94,6 +96,7 @@ impl UserModel {
             name: user.name.clone(),
             email: user.email,
             gender: user.gender,
+            age: None,
             phone: user.phone,
             disable: Some(false),
             username: Some(
@@ -123,6 +126,7 @@ impl UserModel {
                 .map(|role| bson::Bson::ObjectId(ObjectId::from_str(&role).unwrap())),
         );
         insert_if_some("image", user.image.map(bson::Bson::String));
+        insert_if_some("age", user.age.map(bson::Bson::DateTime));
         insert_if_some("name", user.name.map(bson::Bson::String));
         insert_if_some("disable", user.disable.map(bson::Bson::Boolean));
         insert_if_some("username", user.username.map(bson::Bson::String));
@@ -146,7 +150,7 @@ impl UserModel {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelGet {
     pub id: String,
-    pub role: String,
+    pub role: Option<String>,
     pub name: String,
     pub image: Option<Vec<ProfileImageModelGet>>,
     pub username: Option<String>,
@@ -163,7 +167,7 @@ impl UserModelGet {
     pub fn format(user: UserModel) -> Self {
         UserModelGet {
             id: user.id.map_or("".to_string(), |id| id.to_string()),
-            role: user.role.map_or("".to_string(), |role| role.to_string()),
+            role: Some(user.role.map_or("".to_string(), |role| role.to_string())),
             name: user.name,
             username: user.username,
             email: user.email,
