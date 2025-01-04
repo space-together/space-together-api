@@ -5,7 +5,9 @@ use actix_web::{
 use sha256::digest;
 
 use crate::{
-    controllers::user_controller::user_controller_controller::controller_create_user,
+    controllers::user_controller::user_controller_controller::{
+        controller_create_user, controller_user_get_user_by_email,
+    },
     libs::{functions::characters_fn::is_valid_email, utils::jwt::jwt_login::user_encode_jwt},
     models::{
         auth::login_model::{UserLoginClaimsModel, UserLoginModule},
@@ -24,7 +26,7 @@ pub async fn user_login_handle(
         return HttpResponse::BadRequest().json(ReqErrModel { message: e });
     }
 
-    let get_user = state.db.user.get_user_by_email(user.email.clone()).await;
+    let get_user = controller_user_get_user_by_email(state.into_inner(), user.email.clone()).await;
 
     if let Err(e) = get_user {
         return HttpResponse::BadRequest().json(ReqErrModel {
@@ -40,10 +42,10 @@ pub async fn user_login_handle(
     }
 
     let user_claim = UserLoginClaimsModel {
-        id: get_user.id.unwrap().to_string(),
+        id: get_user.id.to_string(),
         name: get_user.name,
         email: get_user.email,
-        role: Some(get_user.role.unwrap().to_string()),
+        role: Some(get_user.role.to_string()),
     };
 
     let token = user_encode_jwt(user_claim).unwrap();

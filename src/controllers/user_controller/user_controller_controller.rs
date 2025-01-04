@@ -274,41 +274,61 @@ pub async fn controller_user_get_user_by_email(
     email: String,
 ) -> UserResult<UserModelGet> {
     match state.db.user.get_user_by_email(email).await {
+        Err(err) => Err(err),
         Ok(res) => {
-            let role = state
-                .db
-                .user_role
-                .get_user_role_by_id(res.role.unwrap())
-                .await;
-            match role {
-                Ok(role) => {
-                    let user_images: Vec<ProfileImageModelGet> = match state
-                        .db
-                        .avatars
-                        .get_many(
-                            Some(GetManyByField {
-                                value: res.id.unwrap(),
-                                field: "user_id".to_string(),
-                            }),
-                            Some("Avatar".to_string()),
-                        )
-                        .await
-                    {
-                        Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                        Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-                    };
+            if let Some(role) = res.role {
+                let role = state.db.user_role.get_user_role_by_id(role).await;
+                match role {
+                    Ok(role) => {
+                        let user_images: Vec<ProfileImageModelGet> = match state
+                            .db
+                            .avatars
+                            .get_many(
+                                Some(GetManyByField {
+                                    value: res.id.unwrap(),
+                                    field: "user_id".to_string(),
+                                }),
+                                Some("Avatar".to_string()),
+                            )
+                            .await
+                        {
+                            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
+                            Ok(images) => {
+                                images.into_iter().map(ProfileImageModel::format).collect()
+                            }
+                        };
 
-                    let mut user_get = UserModelGet::format(res);
-                    user_get.role = role.role;
-                    user_get.image = Some(user_images);
-                    Ok(user_get)
+                        let mut user_get = UserModelGet::format(res);
+                        user_get.role = role.role;
+                        user_get.image = Some(user_images);
+                        Ok(user_get)
+                    }
+                    Err(err) => Err(UserError::CanNotGetRole {
+                        error: err.to_string(),
+                    }),
                 }
-                Err(err) => Err(UserError::CanNotGetRole {
-                    error: err.to_string(),
-                }),
+            } else {
+                let user_images: Vec<ProfileImageModelGet> = match state
+                    .db
+                    .avatars
+                    .get_many(
+                        Some(GetManyByField {
+                            value: res.id.unwrap(),
+                            field: "user_id".to_string(),
+                        }),
+                        Some("Avatar".to_string()),
+                    )
+                    .await
+                {
+                    Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
+                    Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
+                };
+
+                let mut user_get = UserModelGet::format(res);
+                user_get.image = Some(user_images);
+                Ok(user_get)
             }
         }
-        Err(err) => Err(err),
     }
 }
 
