@@ -45,7 +45,7 @@ pub async fn user_login_handle(
         id: get_user.id.to_string(),
         name: get_user.name.clone(),
         email: get_user.email.clone(),
-        role: get_user.role.to_string(),
+        role: get_user.role.clone(),
     };
 
     let token = user_encode_jwt(user_claim).unwrap();
