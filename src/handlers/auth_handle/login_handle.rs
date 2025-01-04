@@ -35,7 +35,7 @@ pub async fn user_login_handle(
     }
     let get_user = get_user.unwrap();
 
-    if get_user.password.unwrap() != digest(user.password.clone()) {
+    if get_user.password.clone().unwrap() != digest(user.password.clone()) {
         return HttpResponse::Unauthorized().json(ReqErrModel {
             message: "Invalid credentials".to_string(),
         });
@@ -43,14 +43,17 @@ pub async fn user_login_handle(
 
     let user_claim = UserLoginClaimsModel {
         id: get_user.id.to_string(),
-        name: get_user.name,
-        email: get_user.email,
+        name: get_user.name.clone(),
+        email: get_user.email.clone(),
         role: Some(get_user.role.to_string()),
     };
 
     let token = user_encode_jwt(user_claim).unwrap();
 
-    HttpResponse::Ok().json(TokenModel { token })
+    HttpResponse::Ok().json(TokenModel {
+        token,
+        user: Some(get_user),
+    })
 }
 
 pub async fn user_register_handle(
@@ -65,15 +68,18 @@ pub async fn user_register_handle(
     match create {
         Ok(res) => {
             let user_claim = UserLoginClaimsModel {
-                id: res.id,
-                name: res.name,
-                email: res.email,
-                role: Some(res.role),
+                id: res.id.clone(),
+                name: res.name.clone(),
+                email: res.email.clone(),
+                role: Some(res.role.clone()),
             };
 
             let token = user_encode_jwt(user_claim).unwrap();
 
-            HttpResponse::Ok().json(TokenModel { token })
+            HttpResponse::Ok().json(TokenModel {
+                token,
+                user: Some(res),
+            })
         }
         Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
             message: err.to_string(),
