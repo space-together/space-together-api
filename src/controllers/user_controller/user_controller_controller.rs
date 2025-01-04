@@ -4,50 +4,30 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
-    libs::{
-        classes::db_crud::GetManyByField,
-        functions::object_id::change_insertoneresult_into_object_id,
-    },
-    models::{
-        images_model::profile_images_model::{
-            ProfileImageModel, ProfileImageModelGet, ProfileImageModelNew,
-        },
-        user_model::user_model_model::{
-            UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
-        },
+    libs::functions::object_id::change_insertoneresult_into_object_id,
+    models::user_model::user_model_model::{
+        UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
     },
     AppState,
 };
 
-use super::user_images_controller::get_user_images;
+use super::{
+    user_images_controller::{fetch_user_images, process_user_avatar},
+    user_role_controller::validate_user_role,
+};
 
 pub async fn controller_create_user(
     user: UserModelNew,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if let Some(role) = user.role.clone() {
-        let role = match ObjectId::from_str(&role) {
-            Err(_) => return Err(UserError::InvalidUserRoleId),
-            Ok(role) => role,
-        };
-
-        if state.db.user_role.get_user_role_by_id(role).await.is_err() {
-            return Err(UserError::InvalidUserRoleId);
-        }
-    }
-
-    match state.db.user.create_user(user).await {
-        Err(err) => Err(err),
-        Ok(insert_id) => match state
-            .db
-            .user
-            .get_user_by_id(change_insertoneresult_into_object_id(insert_id))
-            .await
-        {
-            Err(err) => Err(err),
-            Ok(res) => Ok(UserModelGet::format(res)),
-        },
-    }
+    let _ = validate_user_role(&state, user.role.clone()).await?;
+    let user_id = state.db.user.create_user(user).await?;
+    let user_data = state
+        .db
+        .user
+        .get_user_by_id(change_insertoneresult_into_object_id(user_id))
+        .await?;
+    Ok(UserModelGet::format(user_data))
 }
 
 pub async fn controller_user_update_by_id(
@@ -55,58 +35,17 @@ pub async fn controller_user_update_by_id(
     id: ObjectId,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if let Some(role) = user.role.clone() {
-        if state
-            .db
-            .user_role
-            .get_user_role_by_rl(role.clone())
-            .await
-            .is_err()
-        {
-            return Err(UserError::InvalidUserRoleId);
-        }
-    }
-
-    let mut user_images = get_user_images(&state, &id).await?;
-
-    if let Some(image) = user.image.clone() {
-        let avatar = ProfileImageModelNew {
-            src: image,
-            user_id: id,
-        };
-
-        let avatar_new = state
-            .db
-            .avatars
-            .create(ProfileImageModel::new(avatar), Some("Avatar".to_string()))
-            .await;
-
-        match avatar_new {
-            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-            Ok(i) => match state
-                .db
-                .avatars
-                .get_one_by_id(i, Some("Avatar".to_string()))
-                .await
-            {
-                Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                Ok(image) => user_images.push(ProfileImageModel::format(image)),
-            },
-        }
-    }
-
-    match state.db.user.update_user_by_id(user, id).await {
-        Err(err) => Err(err),
-        Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
-            Ok(u) => {
-                let mut my_user = UserModelGet::format(u);
-                my_user.image = Some(user_images);
-
-                Ok(my_user)
-            }
-            Err(err) => Err(err),
-        },
-    }
+    let _ = validate_user_role(&state, user.role.clone()).await?;
+    let user_images = process_user_avatar(&state, &id, user.image.clone()).await?;
+    let updated_user = state.db.user.update_user_by_id(user, id).await?;
+    let user_data = state
+        .db
+        .user
+        .get_user_by_id(updated_user.id.unwrap())
+        .await?;
+    let mut formatted_user = UserModelGet::format(user_data);
+    formatted_user.image = Some(user_images);
+    Ok(formatted_user)
 }
 
 pub async fn controller_user_update_by_username(
@@ -114,348 +53,138 @@ pub async fn controller_user_update_by_username(
     username: String,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    if let Some(role) = user.role.clone() {
-        if state
-            .db
-            .user_role
-            .get_user_role_by_rl(role.clone())
-            .await
-            .is_err()
-        {
-            return Err(UserError::InvalidUserRoleId);
-        }
-    }
-
-    let image_collection = Some("Avatar".to_string());
-
-    let get_user_user = state.db.user.get_user_by_username(username.clone()).await;
-
-    let id = get_user_user?.id.unwrap();
-
-    let mut user_images: Vec<ProfileImageModelGet> = match state
+    let _ = validate_user_role(&state, user.role.clone()).await?;
+    let get_user = state.db.user.get_user_by_username(username.clone()).await?;
+    let id = get_user.id.unwrap();
+    let user_images = process_user_avatar(&state, &id, user.image.clone()).await?;
+    let updated_user = state
         .db
-        .avatars
-        .get_many(
-            Some(GetManyByField {
-                value: id,
-                field: "user_id".to_string(),
-            }),
-            image_collection.clone(),
-        )
-        .await
-    {
-        Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-        Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-    };
-
-    if let Some(image) = user.image.clone() {
-        let avatar = ProfileImageModelNew {
-            src: image,
-            user_id: id,
-        };
-
-        let avatar_new = state
-            .db
-            .avatars
-            .create(ProfileImageModel::new(avatar), image_collection.clone())
-            .await;
-
-        match avatar_new {
-            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-            Ok(i) => match state.db.avatars.get_one_by_id(i, image_collection).await {
-                Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                Ok(image) => user_images.push(ProfileImageModel::format(image)),
-            },
-        }
-    }
-
-    match state.db.user.update_user_by_username(user, username).await {
-        Err(err) => Err(err),
-        Ok(doc) => match state.db.user.get_user_by_id(doc.id.unwrap()).await {
-            Ok(u) => {
-                let mut my_user = UserModelGet::format(u);
-                my_user.image = Some(user_images);
-
-                Ok(my_user)
-            }
-            Err(err) => Err(err),
-        },
-    }
+        .user
+        .update_user_by_username(user, username)
+        .await?;
+    let user_data = state
+        .db
+        .user
+        .get_user_by_id(updated_user.id.unwrap())
+        .await?;
+    let mut formatted_user = UserModelGet::format(user_data);
+    formatted_user.image = Some(user_images);
+    Ok(formatted_user)
 }
 
 pub async fn controller_get_user_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> UserResult<UserModelGet> {
-    match state.db.user.get_user_by_id(id).await {
-        Ok(res) => {
-            if let Some(role) = res.role {
-                match state.db.user_role.get_user_role_by_id(role).await {
-                    Ok(role) => {
-                        let user_images: Vec<ProfileImageModelGet> = match state
-                            .db
-                            .avatars
-                            .get_many(
-                                Some(GetManyByField {
-                                    value: id,
-                                    field: "user_id".to_string(),
-                                }),
-                                Some("Avatar".to_string()),
-                            )
-                            .await
-                        {
-                            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                            Ok(images) => {
-                                images.into_iter().map(ProfileImageModel::format).collect()
-                            }
-                        };
-
-                        let mut user_get = UserModelGet::format(res);
-                        user_get.role = Some(role.role);
-                        user_get.image = Some(user_images);
-                        Ok(user_get)
-                    }
-                    Err(err) => Err(UserError::CanNotGetRole {
-                        error: err.to_string(),
-                    }),
-                }
-            } else {
-                let user_images: Vec<ProfileImageModelGet> = match state
-                    .db
-                    .avatars
-                    .get_many(
-                        Some(GetManyByField {
-                            value: id,
-                            field: "user_id".to_string(),
-                        }),
-                        Some("Avatar".to_string()),
-                    )
-                    .await
-                {
-                    Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                    Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-                };
-
-                let mut user_get = UserModelGet::format(res);
-                user_get.image = Some(user_images);
-                Ok(user_get)
-            }
-        }
-        Err(err) => Err(err),
-    }
+    let user_data = state.db.user.get_user_by_id(id).await?;
+    let role = if let Some(role_id) = user_data.role {
+        Some(
+            state
+                .db
+                .user_role
+                .get_user_role_by_id(role_id)
+                .await
+                .map_err(|e| UserError::SomeError { err: e.to_string() })?
+                .role,
+        )
+    } else {
+        None
+    };
+    let user_images = fetch_user_images(&state, &id).await?;
+    let mut formatted_user = UserModelGet::format(user_data);
+    formatted_user.role = role;
+    formatted_user.image = Some(user_images);
+    Ok(formatted_user)
 }
 
 pub async fn controller_user_get_by_username(
     state: Arc<AppState>,
     username: String,
 ) -> UserResult<UserModelGet> {
-    match state.db.user.get_user_by_username(username).await {
-        Ok(res) => {
-            if let Some(role) = res.role {
-                match state.db.user_role.get_user_role_by_id(role).await {
-                    Ok(role) => {
-                        let user_images: Vec<ProfileImageModelGet> = match state
-                            .db
-                            .avatars
-                            .get_many(
-                                Some(GetManyByField {
-                                    value: res.clone().id.unwrap(),
-                                    field: "user_id".to_string(),
-                                }),
-                                Some("Avatar".to_string()),
-                            )
-                            .await
-                        {
-                            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                            Ok(images) => {
-                                images.into_iter().map(ProfileImageModel::format).collect()
-                            }
-                        };
-
-                        let mut user_get = UserModelGet::format(res);
-                        user_get.role = Some(role.role);
-                        user_get.image = Some(user_images);
-                        Ok(user_get)
-                    }
-                    Err(err) => Err(UserError::CanNotGetRole {
-                        error: err.to_string(),
-                    }),
-                }
-            } else {
-                let user_images: Vec<ProfileImageModelGet> = match state
-                    .db
-                    .avatars
-                    .get_many(
-                        Some(GetManyByField {
-                            value: res.clone().id.unwrap(),
-                            field: "user_id".to_string(),
-                        }),
-                        Some("Avatar".to_string()),
-                    )
-                    .await
-                {
-                    Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                    Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-                };
-
-                let mut user_get = UserModelGet::format(res);
-                user_get.image = Some(user_images);
-                Ok(user_get)
-            }
-        }
-        Err(err) => Err(err),
-    }
+    let user_data = state.db.user.get_user_by_username(username).await?;
+    let role = if let Some(role_id) = user_data.role {
+        Some(
+            state
+                .db
+                .user_role
+                .get_user_role_by_id(role_id)
+                .await
+                .map_err(|e| UserError::SomeError { err: e.to_string() })?
+                .role,
+        )
+    } else {
+        None
+    };
+    let user_images = fetch_user_images(&state, &user_data.id.unwrap()).await?;
+    let mut formatted_user = UserModelGet::format(user_data);
+    formatted_user.role = role;
+    formatted_user.image = Some(user_images);
+    Ok(formatted_user)
 }
 
 pub async fn controller_user_get_user_by_email(
     state: Arc<AppState>,
     email: String,
 ) -> UserResult<UserModelGet> {
-    match state.db.user.get_user_by_email(email).await {
-        Err(err) => Err(err),
-        Ok(res) => {
-            if let Some(role) = res.role {
-                let role = state.db.user_role.get_user_role_by_id(role).await;
-                match role {
-                    Ok(role) => {
-                        let user_images: Vec<ProfileImageModelGet> = match state
-                            .db
-                            .avatars
-                            .get_many(
-                                Some(GetManyByField {
-                                    value: res.id.unwrap(),
-                                    field: "user_id".to_string(),
-                                }),
-                                Some("Avatar".to_string()),
-                            )
-                            .await
-                        {
-                            Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                            Ok(images) => {
-                                images.into_iter().map(ProfileImageModel::format).collect()
-                            }
-                        };
+    let user_data = state.db.user.get_user_by_email(email.clone()).await?;
+    let user_id = user_data.id.unwrap();
 
-                        let mut user_get = UserModelGet::format(res);
-                        user_get.role = Some(role.role);
-                        user_get.image = Some(user_images);
-                        Ok(user_get)
-                    }
-                    Err(err) => Err(UserError::CanNotGetRole {
-                        error: err.to_string(),
-                    }),
-                }
-            } else {
-                let user_images: Vec<ProfileImageModelGet> = match state
-                    .db
-                    .avatars
-                    .get_many(
-                        Some(GetManyByField {
-                            value: res.id.unwrap(),
-                            field: "user_id".to_string(),
-                        }),
-                        Some("Avatar".to_string()),
-                    )
-                    .await
-                {
-                    Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                    Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-                };
+    let role = if let Some(role_id) = user_data.role {
+        let role_data = state.db.user_role.get_user_role_by_id(role_id).await.ok();
+        role_data.map(|r| r.role)
+    } else {
+        None
+    };
 
-                let mut user_get = UserModelGet::format(res);
-                user_get.image = Some(user_images);
-                Ok(user_get)
-            }
-        }
-    }
+    let user_images = fetch_user_images(&state, &user_id).await?;
+    let mut formatted_user = UserModelGet::format(user_data);
+    formatted_user.role = role;
+    formatted_user.image = Some(user_images);
+
+    Ok(formatted_user)
 }
 
 pub async fn controller_user_delete_by_id(
     id: ObjectId,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    match state.db.user.delete_user_by_id(id).await {
-        Ok(res) => {
-            let user_images: Vec<ProfileImageModelGet> = match state
-                .db
-                .avatars
-                .get_many(
-                    Some(GetManyByField {
-                        value: id,
-                        field: "user_id".to_string(),
-                    }),
-                    Some("Avatar".to_string()),
-                )
-                .await
-            {
-                Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-            };
-
-            for image in user_images {
-                let delete_image = state
-                    .db
-                    .avatars
-                    .delete(
-                        ObjectId::from_str(&image.id).unwrap(),
-                        Some("Avatar".to_string()),
-                    )
-                    .await;
-
-                if let Err(e) = delete_image {
-                    return Err(UserError::SomeError { err: e.to_string() });
-                }
-            }
-
-            let user_get = UserModelGet::format(res);
-            Ok(user_get)
-        }
-        Err(err) => Err(err),
+    let user_images = fetch_user_images(&state, &id).await?;
+    for image in user_images {
+        let _ = state
+            .db
+            .avatars
+            .delete(
+                ObjectId::from_str(&image.id).unwrap(),
+                Some("Avatar".to_string()),
+            )
+            .await;
     }
+    let user_data = state.db.user.delete_user_by_id(id).await?;
+    Ok(UserModelGet::format(user_data))
 }
 
 pub async fn controller_user_delete_many(
-    users: Vec<ObjectId>,
+    user_ids: Vec<ObjectId>,
     state: Arc<AppState>,
 ) -> UserResult<Vec<UserModelGet>> {
-    match state.db.user.delete_users(users).await {
-        Ok(res) => {
-            for user in res.clone() {
-                let user_images: Vec<ProfileImageModelGet> = match state
-                    .db
-                    .avatars
-                    .get_many(
-                        Some(GetManyByField {
-                            value: ObjectId::from_str(&user.id).unwrap(),
-                            field: "user_id".to_string(),
-                        }),
-                        Some("Avatar".to_string()),
-                    )
-                    .await
-                {
-                    Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                    Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-                };
+    let users_to_delete = state.db.user.delete_users(user_ids.clone()).await?;
 
-                for image in user_images {
-                    let delete_image = state
-                        .db
-                        .avatars
-                        .delete(
-                            ObjectId::from_str(&image.id).unwrap(),
-                            Some("Avatar".to_string()),
-                        )
-                        .await;
-
-                    if let Err(e) = delete_image {
-                        return Err(UserError::SomeError { err: e.to_string() });
-                    }
-                }
-            }
-            Ok(res)
+    for user in users_to_delete.clone() {
+        let user_id = ObjectId::from_str(&user.id).unwrap();
+        let user_images = fetch_user_images(&state, &user_id).await?;
+        for image in user_images {
+            let _ = state
+                .db
+                .avatars
+                .delete(
+                    ObjectId::from_str(&image.id).unwrap(),
+                    Some("Avatar".to_string()),
+                )
+                .await;
         }
-        Err(err) => Err(err),
     }
+
+    Ok(users_to_delete)
 }
 
 pub async fn controller_user_update_many(
@@ -472,137 +201,71 @@ pub async fn controller_user_delete_by_username(
     state: Arc<AppState>,
     username: String,
 ) -> UserResult<UserModelGet> {
-    match state.db.user.delete_user_by_username(username).await {
-        Ok(res) => {
-            let user_images: Vec<ProfileImageModelGet> = match state
-                .db
-                .avatars
-                .get_many(
-                    Some(GetManyByField {
-                        value: res.id.unwrap(),
-                        field: "user_id".to_string(),
-                    }),
-                    Some("Avatar".to_string()),
-                )
-                .await
-            {
-                Err(e) => return Err(UserError::SomeError { err: e.to_string() }),
-                Ok(images) => images.into_iter().map(ProfileImageModel::format).collect(),
-            };
+    let user_data = state.db.user.get_user_by_username(username.clone()).await?;
+    let user_id = user_data.id.unwrap();
 
-            for image in user_images {
-                let delete_image = state
-                    .db
-                    .avatars
-                    .delete(
-                        ObjectId::from_str(&image.id).unwrap(),
-                        Some("Avatar".to_string()),
-                    )
-                    .await;
-
-                if let Err(e) = delete_image {
-                    return Err(UserError::SomeError { err: e.to_string() });
-                }
-            }
-            Ok(UserModelGet::format(res))
-        }
-        Err(err) => Err(err),
+    let user_images = fetch_user_images(&state, &user_id).await?;
+    for image in user_images {
+        let _ = state
+            .db
+            .avatars
+            .delete(
+                ObjectId::from_str(&image.id).unwrap(),
+                Some("Avatar".to_string()),
+            )
+            .await;
     }
+
+    let deleted_user = state.db.user.delete_user_by_username(username).await?;
+    Ok(UserModelGet::format(deleted_user))
 }
 
 pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<UserModelGet>> {
-    let get_all = state.db.user.get_all_users().await;
-    match get_all {
-        Ok(res) => {
-            let mut users: Vec<UserModelGet> = Vec::new();
+    let users = state.db.user.get_all_users().await?;
 
-            for mut user in res {
-                if let Some(role) = &user.role {
-                    let happy = match ObjectId::from_str(role) {
-                        Err(_) => return Err(UserError::InvalidUserRoleId),
-                        Ok(role) => role,
-                    };
-                    match state.db.user_role.get_user_role_by_id(happy).await {
-                        Ok(role) => {
-                            let user_images =
-                                get_user_images(&state, &ObjectId::from_str(&user.id).unwrap())
-                                    .await?;
-
-                            user.role = Some(role.role);
-                            user.image = Some(user_images);
-                            users.push(user);
-                        }
-                        Err(_) => {
-                            let user_images =
-                                get_user_images(&state, &ObjectId::from_str(&user.id).unwrap())
-                                    .await?;
-
-                            user.image = Some(user_images);
-                            users.push(user);
-                        }
-                    }
-                } else {
-                    let user_images =
-                        get_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
-
-                    user.image = Some(user_images);
-                    users.push(user);
-                }
-            }
-            Ok(users)
+    let mut formatted_users = Vec::new();
+    for mut user in users {
+        if let Some(role_id) = &user.role {
+            let role = ObjectId::from_str(role_id).map_err(|_| UserError::InvalidUserRoleId)?;
+            let role_data = state.db.user_role.get_user_role_by_id(role).await.ok();
+            user.role = role_data.map(|r| r.role.clone());
         }
-        Err(err) => Err(err),
+
+        let user_images = fetch_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
+        user.image = Some(user_images);
+        formatted_users.push(user);
     }
+
+    Ok(formatted_users)
 }
 
 pub async fn controller_users_get_all_by_role(
     state: Arc<AppState>,
     role: String,
 ) -> UserResult<Vec<UserModelGet>> {
-    match state.db.user_role.get_user_role_by_rl(role).await {
-        Err(err) => Err(UserError::CanNotGetRole {
+    let role_data = state
+        .db
+        .user_role
+        .get_user_role_by_rl(role.clone())
+        .await
+        .map_err(|err| UserError::CanNotGetRole {
             error: err.to_string(),
-        }),
-        Ok(res) => match state.db.user.get_users_by_rl(res.id.unwrap()).await {
-            Ok(res) => {
-                let mut users: Vec<UserModelGet> = Vec::new();
+        })?;
 
-                for mut user in res {
-                    if let Some(role) = &user.role {
-                        let happy = match ObjectId::from_str(role) {
-                            Err(_) => return Err(UserError::InvalidUserRoleId),
-                            Ok(role) => role,
-                        };
-                        match state.db.user_role.get_user_role_by_id(happy).await {
-                            Ok(role) => {
-                                let user_images =
-                                    get_user_images(&state, &ObjectId::from_str(&user.id).unwrap())
-                                        .await?;
+    let users = state.db.user.get_users_by_rl(role_data.id.unwrap()).await?;
 
-                                user.role = Some(role.role);
-                                user.image = Some(user_images);
-                                users.push(user);
-                            }
-                            Err(_) => {
-                                let user_images =
-                                    get_user_images(&state, &ObjectId::from_str(&user.id).unwrap())
-                                        .await?;
+    let mut formatted_users = Vec::new();
+    for mut user in users {
+        if let Some(role_id) = &user.role {
+            let role = ObjectId::from_str(role_id).map_err(|_| UserError::InvalidUserRoleId)?;
+            let role_data = state.db.user_role.get_user_role_by_id(role).await.ok();
+            user.role = role_data.map(|r| r.role.clone());
+        }
 
-                                user.image = Some(user_images);
-                                users.push(user);
-                            }
-                        }
-                    } else {
-                        let user_images =
-                            get_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
-
-                        user.image = Some(user_images);
-                        users.push(user);
-                    }
-                }
-                Ok(users)
-            }
-            Err(err) => Err(err),
-        },
+        let user_images = fetch_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
+        user.image = Some(user_images);
+        formatted_users.push(user);
     }
+
+    Ok(formatted_users)
 }

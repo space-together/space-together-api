@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::bson::oid::ObjectId;
 
 use crate::{
-    error::user_error::user_role_error::UserRoleResult,
+    error::user_error::{user_error_err::UserError, user_role_error::UserRoleResult},
     libs::functions::object_id::change_insertoneresult_into_object_id,
     models::user_model::user_role_model::{UserRoleModelGet, UserRoleModelNew},
     AppState,
@@ -87,5 +87,24 @@ pub async fn controller_get_all_user_roles(
     match get_all {
         Ok(roles) => Ok(roles),
         Err(err) => Err(err),
+    }
+}
+
+/// Validates and retrieves the user role
+pub async fn validate_user_role(
+    state: &AppState,
+    role: Option<String>,
+) -> Result<Option<ObjectId>, UserError> {
+    if let Some(role) = role {
+        let role_id = ObjectId::from_str(&role).map_err(|_| UserError::InvalidUserRoleId)?;
+        state
+            .db
+            .user_role
+            .get_user_role_by_id(role_id)
+            .await
+            .map_err(|_| UserError::InvalidUserRoleId)?;
+        Ok(Some(role_id))
+    } else {
+        Ok(None)
     }
 }
