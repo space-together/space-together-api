@@ -48,7 +48,7 @@ impl UserDb {
     }
 
     pub async fn get_user_by_username(&self, username: String) -> UserResult<UserModel> {
-        match self.find_one_by_field("un", username).await {
+        match self.find_one_by_field("username", username).await {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound {
                 field: "username".to_string(),

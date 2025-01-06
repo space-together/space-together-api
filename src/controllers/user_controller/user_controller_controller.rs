@@ -225,8 +225,8 @@ pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<Us
 
     let mut formatted_users = Vec::new();
     for mut user in users {
-        if let Some(role_id) = &user.role {
-            let role = ObjectId::from_str(role_id).map_err(|_| UserError::InvalidUserRoleId)?;
+        if let Some(role_id) = user.role {
+            let role = ObjectId::from_str(&role_id).map_err(|_| UserError::InvalidUserRoleId)?;
             let role_data = state.db.user_role.get_user_role_by_id(role).await.ok();
             user.role = role_data.map(|r| r.role.clone());
         }
@@ -256,11 +256,16 @@ pub async fn controller_users_get_all_by_role(
 
     let mut formatted_users = Vec::new();
     for mut user in users {
-        if let Some(role_id) = &user.role {
-            let role = ObjectId::from_str(role_id).map_err(|_| UserError::InvalidUserRoleId)?;
-            let role_data = state.db.user_role.get_user_role_by_id(role).await.ok();
-            user.role = role_data.map(|r| r.role.clone());
-        }
+        // if let Some(role_id) = user.role {
+        //     if !role_id.is_empty() {
+        //         let role =
+        //             ObjectId::from_str(&role_id).map_err(|_| UserError::InvalidUserRoleId)?;
+        //         let role_data = state.db.user_role.get_user_role_by_id(role).await.ok();
+        //         user.role = role_data.map(|r| r.role.clone());
+        //     } else {
+        //         user.role = None;
+        //     }
+        // }
 
         let user_images = fetch_user_images(&state, &ObjectId::from_str(&user.id).unwrap()).await?;
         user.image = Some(user_images);
