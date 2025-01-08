@@ -12,6 +12,24 @@ pub struct AccountModel {
     pub provider_account_id: String,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AccountModelNew {
+    provider: String,
+    provider_account_id: String,
+    user_id: String,
+}
+
+impl AccountModel {
+    pub fn new(account: AccountModelNew) -> Self {
+        AccountModel {
+            id: None,
+            user_id: ObjectId::from_str(&account.user_id).unwrap(),
+            provider: account.provider,
+            provider_account_id: account.provider_account_id,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SessionModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]

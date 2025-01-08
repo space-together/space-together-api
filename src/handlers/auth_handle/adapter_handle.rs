@@ -6,7 +6,7 @@ use mongodb::bson::doc;
 use serde_json::json;
 
 use crate::{
-    models::auth::adapter_model::{SessionModel, SessionModelNew},
+    models::auth::adapter_model::{AccountModel, AccountModelNew, SessionModel, SessionModelNew},
     AppState,
 };
 
@@ -42,3 +42,21 @@ pub async fn get_session(state: Data<AppState>, session_token: Path<String>) -> 
         Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e.to_string() })),
     }
 }
+
+pub async fn link_account(state: Data<AppState>, account: Json<AccountModelNew>) -> impl Responder {
+    let create = state
+        .db
+        .account
+        .create(
+            AccountModel::new(account.into_inner()),
+            Some("collection".to_string()),
+        )
+        .await;
+
+    match create {
+        Err(e) => HttpResponse::InternalServerError().json(json!({"error" : e.to_string()})),
+        Ok(_) => HttpResponse::Created().json(json!({"status" : "account created"})),
+    }
+}
+
+// pub async fn
