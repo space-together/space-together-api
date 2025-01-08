@@ -159,6 +159,7 @@ pub struct UserModelGet {
     pub phone: Option<String>,
     pub password: Option<String>,
     pub gender: Option<Gender>,
+    pub age: Option<String>,
     pub create_on: String,
     pub update_on: Option<String>,
 }
@@ -173,6 +174,10 @@ impl UserModelGet {
             email: user.email,
             image: None,
             gender: user.gender,
+            age: user.age.map(|age| {
+                age.try_to_rfc3339_string()
+                    .unwrap_or_else(|_| "".to_string())
+            }),
             phone: user.phone,
             disable: user.disable,
             password: user.password,
