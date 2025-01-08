@@ -48,6 +48,10 @@ pub async fn get_session(state: Data<AppState>, session_token: Path<String>) -> 
     }
 }
 
+// async fn update_session(state: Data<AppState>, user_id : Path<String>, session : Json<SessionModelNew>) -> impl Responder {
+//     let update = state.db.session.collection.find_one_and_update(doc! {"user_id"}, update)
+// }
+
 pub async fn link_account(state: Data<AppState>, account: Json<AccountModelNew>) -> impl Responder {
     let create = state
         .db

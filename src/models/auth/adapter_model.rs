@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -46,6 +46,13 @@ pub struct SessionModelNew {
     pub session_token: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SessionModelPut {
+    pub user_id: Option<String>,
+    pub expires: Option<String>,
+    pub session_token: Option<String>,
+}
+
 impl SessionModel {
     pub fn new(session: SessionModelNew) -> Self {
         SessionModel {
@@ -54,5 +61,10 @@ impl SessionModel {
             expires: session.expires,
             session_token: session.session_token,
         }
+    }
+    pub fn put(session: SessionModelPut) -> Document {
+        let mut set_doc = Document::new();
+
+        set_doc
     }
 }
