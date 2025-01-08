@@ -65,7 +65,7 @@ pub struct UserModelPut {
     pub password: Option<String>,
     pub image: Option<String>,
     pub gender: Option<Gender>,
-    pub age: Option<DateTime>,
+    pub age: Option<String>,
     pub disable: Option<bool>,
 }
 
@@ -126,7 +126,11 @@ impl UserModel {
                 .map(|role| bson::Bson::ObjectId(ObjectId::from_str(&role).unwrap())),
         );
         insert_if_some("image", user.image.map(bson::Bson::String));
-        insert_if_some("age", user.age.map(bson::Bson::DateTime));
+        insert_if_some(
+            "age",
+            user.age
+                .map(|age| bson::Bson::DateTime(DateTime::parse_rfc3339_str(&age).unwrap())),
+        );
         insert_if_some("name", user.name.map(bson::Bson::String));
         insert_if_some("disable", user.disable.map(bson::Bson::Boolean));
         insert_if_some("username", user.username.map(bson::Bson::String));
