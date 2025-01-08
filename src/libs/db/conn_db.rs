@@ -17,6 +17,7 @@ use crate::{
         },
     },
     models::{
+        auth::adapter_model::SessionModel,
         database_model::collection_model::DatabaseStats,
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
@@ -45,6 +46,8 @@ pub struct ConnDb {
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
     pub school_logo: MongoCrud<SchoolLogoModel>,
+    // auth
+    pub session: MongoCrud<SessionModel>,
 }
 
 impl ConnDb {
@@ -114,6 +117,11 @@ impl ConnDb {
                     collection: st_image.collection("school_logo"),
                 };
 
+                // auth model
+                let session = MongoCrud {
+                    collection: st_data.collection("session"),
+                };
+
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
@@ -132,6 +140,8 @@ impl ConnDb {
                     // images
                     avatars,
                     school_logo,
+                    // auth
+                    session,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {
