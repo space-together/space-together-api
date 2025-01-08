@@ -1,12 +1,17 @@
+use std::collections::HashMap;
+
 use actix_web::{
-    web::{Data, Json, Path},
+    web::{Data, Json, Path, Query},
     HttpResponse, Responder,
 };
 use mongodb::bson::doc;
 use serde_json::json;
 
 use crate::{
-    models::auth::adapter_model::{AccountModel, AccountModelNew, SessionModel, SessionModelNew},
+    models::{
+        auth::adapter_model::{AccountModel, AccountModelNew, SessionModel, SessionModelNew},
+        request_error_model::ReqErrModel,
+    },
     AppState,
 };
 
@@ -59,4 +64,28 @@ pub async fn link_account(state: Data<AppState>, account: Json<AccountModelNew>)
     }
 }
 
-// pub async fn
+pub async fn unlink_account(
+    state: Data<AppState>,
+    query: Query<HashMap<String, String>>,
+) -> impl Responder {
+    if let (Some(provider), Some(provider_account_id)) =
+        (query.get("provider"), query.get("providerAccountId"))
+    {
+        let delete = state
+            .db
+            .account
+            .collection
+            .find_one_and_delete(doc! {provider: provider_account_id})
+            .await;
+
+        match delete {
+            Ok(Some(e)) => HttpResponse::Ok().json(e),
+            Ok(None) => HttpResponse::NotFound().json(json!({ "error": "account not found" })),
+            Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e.to_string() })),
+        }
+    } else {
+        HttpResponse::BadRequest().json(ReqErrModel {
+            message: "Can not delete account".to_string(),
+        })
+    }
+}
