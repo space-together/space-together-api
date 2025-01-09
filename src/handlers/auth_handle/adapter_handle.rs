@@ -43,7 +43,15 @@ pub async fn create_session(
 
     match create {
         Err(e) => HttpResponse::InternalServerError().json(json!({"error" : e.to_string()})),
-        Ok(e) => HttpResponse::Created().json(json!({"status" : "Session created"})),
+        Ok(id) => match state
+            .db
+            .session
+            .get_one_by_id(id, Some("Sessions".to_string()))
+            .await
+        {
+            Err(e) => HttpResponse::Created().json(json!({"error" : e.to_string()})),
+            Ok(r) => HttpResponse::Created().json(SessionModel::format(r)),
+        },
     }
 }
 
