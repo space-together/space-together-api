@@ -120,7 +120,7 @@ impl ConnDb {
 
                 // auth model
                 let session = MongoCrud {
-                    collection: st_data.collection("session"),
+                    collection: st_data.collection("--session"),
                 };
                 let account = MongoCrud {
                     collection: st_data.collection("account"),
