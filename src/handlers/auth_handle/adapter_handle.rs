@@ -73,17 +73,12 @@ pub async fn get_session_and_user(
 
     match session_result {
         Ok(Some(session)) => {
-            let user_result = state
-                .db
-                .user
-                .user
-                .find_one(doc! { "_id": session.user_id })
-                .await;
+            let user_result =
+                controller_get_user_by_id(state.clone().into_inner(), session.user_id).await;
 
             match user_result {
-                Ok(Some(user)) => HttpResponse::Ok().json((session, user)),
-                Ok(None) => HttpResponse::NotFound().body("User not found"),
-                Err(_) => HttpResponse::InternalServerError().finish(),
+                Ok(r) => HttpResponse::Ok().json(r),
+                Err(e) => HttpResponse::BadRequest().json(json!({"error" : e.to_string()})),
             }
         }
         Ok(None) => HttpResponse::NotFound().body("Session not found"),
@@ -96,11 +91,12 @@ pub async fn delete_session(state: Data<AppState>, session_token: Path<String>) 
         .db
         .session
         .collection
-        .delete_one(doc! {"token" : &session_token.into_inner()})
+        .find_one_and_delete(doc! {"session_token" : &session_token.into_inner()})
         .await
     {
-        Ok(_) => HttpResponse::Ok().json(json!({"status" : "session deleted" })),
-        Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e.to_string() })),
+        Ok(Some(r)) => HttpResponse::Ok().json(SessionModel::format(r)),
+        Ok(None) => HttpResponse::NotFound().body("session not found"),
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
