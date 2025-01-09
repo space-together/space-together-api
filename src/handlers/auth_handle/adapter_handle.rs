@@ -9,7 +9,7 @@ use serde_json::json;
 
 use crate::{
     controllers::user_controller::user_controller_controller::controller_get_user_by_id,
-    libs::functions::object_id::change_string_into_object_id,
+    libs::functions::{characters_fn::is_date_string, object_id::change_string_into_object_id},
     models::{
         auth::adapter_model::{
             AccountModel, AccountModelNew, SessionModel, SessionModelNew, SessionModelPut,
@@ -23,6 +23,11 @@ pub async fn create_session(
     state: Data<AppState>,
     session: Json<SessionModelNew>,
 ) -> impl Responder {
+    if !is_date_string(&session.expires) {
+        return HttpResponse::BadRequest()
+            .json(json!({"error" : "expires is not date please use real date example: [2025-01-15T12:00:00Z] "}));
+    }
+
     let user_id = match change_string_into_object_id(session.user_id.clone()) {
         Err(e) => return HttpResponse::BadRequest().json(e),
         Ok(i) => i,

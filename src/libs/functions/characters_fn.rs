@@ -183,3 +183,8 @@ pub fn hash_password(password: &str) -> String {
 pub fn verify_password(hashed_password: &str, password: &str) -> bool {
     verify(password, hashed_password).unwrap_or(false)
 }
+
+pub fn is_date_string(date: &str) -> bool {
+    let datetime_regex = Regex::new(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$").unwrap();
+    datetime_regex.is_match(date)
+}
