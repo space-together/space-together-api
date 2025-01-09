@@ -125,7 +125,15 @@ pub async fn link_account(state: Data<AppState>, account: Json<AccountModelNew>)
 
     match create {
         Err(e) => HttpResponse::InternalServerError().json(json!({"error" : e.to_string()})),
-        Ok(_) => HttpResponse::Created().json(json!({"status" : "account created"})),
+        Ok(id) => match state
+            .db
+            .account
+            .get_one_by_id(id, Some("accounts".to_string()))
+            .await
+        {
+            Err(e) => HttpResponse::Created().json(json!({"error" : e.to_string()})),
+            Ok(r) => HttpResponse::Created().json(AccountModel::format(r)),
+        },
     }
 }
 
