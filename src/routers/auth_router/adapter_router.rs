@@ -19,6 +19,6 @@ pub fn routers_adapter(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut Se
             .route("/sessions", post().to(create_session))
             .route("/sessions/{token}", get().to(get_session_and_user))
             .route("/sessions/{user_id}", put().to(update_session))
-            .route("/sessions/{token}", delete().to(delete_session)),
+            .route("/sessions/{session_token}", delete().to(delete_session)),
     )
 }
