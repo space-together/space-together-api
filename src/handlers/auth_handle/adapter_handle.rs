@@ -77,7 +77,7 @@ pub async fn get_session_and_user(
                 controller_get_user_by_id(state.clone().into_inner(), session.user_id).await;
 
             match user_result {
-                Ok(r) => HttpResponse::Ok().json(r),
+                Ok(r) => HttpResponse::Ok().json((SessionModel::format(session), r)),
                 Err(e) => HttpResponse::BadRequest().json(json!({"error" : e.to_string()})),
             }
         }
