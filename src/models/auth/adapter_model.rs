@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use mongodb::bson::{self, oid::ObjectId, Document};
+use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -10,13 +10,23 @@ pub struct AccountModel {
     pub user_id: ObjectId,
     pub provider: String,
     pub provider_account_id: String,
+    pub create_on: DateTime,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AccountModelGet {
+    pub id: String,
+    pub user_id: String,
+    pub provider: String,
+    pub provider_account_id: String,
+    pub create_on: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AccountModelNew {
-    provider: String,
-    provider_account_id: String,
-    user_id: String,
+    pub provider: String,
+    pub provider_account_id: String,
+    pub user_id: String,
 }
 
 impl AccountModel {
@@ -26,6 +36,20 @@ impl AccountModel {
             user_id: ObjectId::from_str(&account.user_id).unwrap(),
             provider: account.provider,
             provider_account_id: account.provider_account_id,
+            create_on: DateTime::now(),
+        }
+    }
+
+    pub fn format(account: Self) -> AccountModelGet {
+        AccountModelGet {
+            id: account.id.map_or("".to_string(), |id| id.to_string()),
+            provider_account_id: account.provider_account_id,
+            user_id: account.user_id.to_string(),
+            provider: account.provider,
+            create_on: account
+                .create_on
+                .try_to_rfc3339_string()
+                .unwrap_or_else(|_| "".to_string()),
         }
     }
 }

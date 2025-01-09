@@ -8,6 +8,8 @@ use mongodb::bson::doc;
 use serde_json::json;
 
 use crate::{
+    controllers::user_controller::user_controller_controller::controller_get_user_by_id,
+    libs::functions::object_id::change_string_into_object_id,
     models::{
         auth::adapter_model::{
             AccountModel, AccountModelNew, SessionModel, SessionModelNew, SessionModelPut,
@@ -103,6 +105,15 @@ pub async fn update_session(
 }
 
 pub async fn link_account(state: Data<AppState>, account: Json<AccountModelNew>) -> impl Responder {
+    let user_id = match change_string_into_object_id(account.clone().user_id.clone()) {
+        Err(e) => return HttpResponse::BadRequest().json(e),
+        Ok(i) => i,
+    };
+
+    if let Err(e) = controller_get_user_by_id(state.clone().into_inner(), user_id).await {
+        return HttpResponse::BadRequest().json(json!({"error" : e.to_string()}));
+    }
+
     let create = state
         .db
         .account
