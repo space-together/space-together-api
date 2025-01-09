@@ -23,6 +23,15 @@ pub async fn create_session(
     state: Data<AppState>,
     session: Json<SessionModelNew>,
 ) -> impl Responder {
+    let user_id = match change_string_into_object_id(session.user_id.clone()) {
+        Err(e) => return HttpResponse::BadRequest().json(e),
+        Ok(i) => i,
+    };
+
+    if let Err(e) = controller_get_user_by_id(state.clone().into_inner(), user_id).await {
+        return HttpResponse::BadRequest().json(json!({"error" : e.to_string()}));
+    }
+
     let create = state
         .db
         .session
@@ -34,7 +43,7 @@ pub async fn create_session(
 
     match create {
         Err(e) => HttpResponse::InternalServerError().json(json!({"error" : e.to_string()})),
-        Ok(_) => HttpResponse::Created().json(json!({"status" : "Session created"})),
+        Ok(e) => HttpResponse::Created().json(json!({"status" : "Session created"})),
     }
 }
 
@@ -46,7 +55,7 @@ pub async fn get_session_and_user(
         .db
         .session
         .collection
-        .find_one(doc! { "token": session_token.into_inner() })
+        .find_one(doc! { "session_token": session_token.into_inner() })
         .await;
 
     match session_result {
