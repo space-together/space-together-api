@@ -1,7 +1,8 @@
+use bcrypt::{hash, verify, DEFAULT_COST};
 use regex::Regex;
 
-use itertools::Itertools; // Import permutations
-use rand::seq::SliceRandom; // Import random shuffling
+use itertools::Itertools;
+use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 pub fn is_valid_name(name: &str) -> Result<String, String> {
@@ -173,4 +174,12 @@ pub fn generate_code() -> String {
         .chars()
         .collect();
     (0..5).map(|_| *chars.choose(&mut rng).unwrap()).collect()
+}
+
+pub fn hash_password(password: &str) -> String {
+    hash(password, DEFAULT_COST).expect("Failed to hash password")
+}
+
+pub fn verify_password(hashed_password: &str, password: &str) -> bool {
+    verify(password, hashed_password).unwrap_or(false)
 }

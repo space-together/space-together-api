@@ -1,14 +1,11 @@
-use actix_web::{
-    web::{Data, Json},
-    HttpResponse, Responder,
-};
-use sha256::digest;
-
 use crate::{
     controllers::user_controller::user_controller_controller::{
         controller_create_user, controller_user_get_user_by_email,
     },
-    libs::{functions::characters_fn::is_valid_email, utils::jwt::jwt_login::user_encode_jwt},
+    libs::{
+        functions::characters_fn::{is_valid_email, verify_password},
+        utils::jwt::jwt_login::user_encode_jwt,
+    },
     models::{
         auth::login_model::{UserLoginClaimsModel, UserLoginModule},
         jwt_model::token_model::TokenModel,
@@ -16,6 +13,10 @@ use crate::{
         user_model::user_model_model::UserModelNew,
     },
     AppState,
+};
+use actix_web::{
+    web::{Data, Json},
+    HttpResponse, Responder,
 };
 
 pub async fn user_login_handle(
@@ -35,7 +36,7 @@ pub async fn user_login_handle(
     }
     let get_user = get_user.unwrap();
 
-    if get_user.password.clone().unwrap() != digest(user.password.clone()) {
+    if verify_password(&get_user.password.clone().unwrap(), &user.password) {
         return HttpResponse::Unauthorized().json(ReqErrModel {
             message: "Invalid credentials".to_string(),
         });

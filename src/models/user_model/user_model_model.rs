@@ -2,10 +2,9 @@ use std::str::FromStr;
 
 use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
-use sha256::digest;
 
 use crate::{
-    libs::functions::characters_fn::generate_username,
+    libs::functions::characters_fn::{generate_username, hash_password},
     models::images_model::profile_images_model::ProfileImageModelGet,
 };
 
@@ -51,7 +50,7 @@ pub struct UserModelNew {
     pub role: Option<String>,
     pub email: String,
     pub phone: Option<String>,
-    pub password: String,
+    pub password: Option<String>,
     pub gender: Option<Gender>,
 }
 
@@ -103,7 +102,7 @@ impl UserModel {
                 user.username
                     .unwrap_or_else(|| generate_username(&user.name)),
             ),
-            password: Some(digest(user.password)),
+            password: user.password.as_deref().map(hash_password),
             create_on: DateTime::now(),
             update_on: None,
         }
