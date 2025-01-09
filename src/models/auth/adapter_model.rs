@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use mongodb::bson::{oid::ObjectId, Document};
+use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -64,6 +64,19 @@ impl SessionModel {
     }
     pub fn put(session: SessionModelPut) -> Document {
         let mut set_doc = Document::new();
+
+        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                set_doc.insert(key, v);
+            }
+        };
+
+        insert_if_some("user_id", session.user_id.map(bson::Bson::String));
+        insert_if_some("expires", session.expires.map(bson::Bson::String));
+        insert_if_some(
+            "session_token",
+            session.session_token.map(bson::Bson::String),
+        );
 
         set_doc
     }

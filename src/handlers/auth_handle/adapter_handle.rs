@@ -9,7 +9,9 @@ use serde_json::json;
 
 use crate::{
     models::{
-        auth::adapter_model::{AccountModel, AccountModelNew, SessionModel, SessionModelNew},
+        auth::adapter_model::{
+            AccountModel, AccountModelNew, SessionModel, SessionModelNew, SessionModelPut,
+        },
         request_error_model::ReqErrModel,
     },
     AppState,
@@ -34,23 +36,71 @@ pub async fn create_session(
     }
 }
 
-pub async fn get_session(state: Data<AppState>, session_token: Path<String>) -> impl Responder {
+pub async fn get_session_and_user(
+    state: Data<AppState>,
+    session_token: Path<String>,
+) -> impl Responder {
+    let session_result = state
+        .db
+        .session
+        .collection
+        .find_one(doc! { "token": session_token.into_inner() })
+        .await;
+
+    match session_result {
+        Ok(Some(session)) => {
+            let user_result = state
+                .db
+                .user
+                .user
+                .find_one(doc! { "_id": session.user_id })
+                .await;
+
+            match user_result {
+                Ok(Some(user)) => HttpResponse::Ok().json((session, user)),
+                Ok(None) => HttpResponse::NotFound().body("User not found"),
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
+        }
+        Ok(None) => HttpResponse::NotFound().body("Session not found"),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+pub async fn delete_session(state: Data<AppState>, session_token: Path<String>) -> impl Responder {
     match state
         .db
         .session
         .collection
-        .find_one(doc! {"session_token": &session_token.into_inner()})
+        .delete_one(doc! {"token" : &session_token.into_inner()})
         .await
     {
+        Ok(_) => HttpResponse::Ok().json(json!({"status" : "session deleted" })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e.to_string() })),
+    }
+}
+
+pub async fn update_session(
+    state: Data<AppState>,
+    user_id: Path<String>,
+    session: Json<SessionModelPut>,
+) -> impl Responder {
+    let update = state
+        .db
+        .session
+        .collection
+        .find_one_and_update(
+            doc! {"user_id" : user_id.into_inner()},
+            SessionModel::put(session.into_inner()),
+        )
+        .await;
+
+    match update {
         Ok(Some(session)) => HttpResponse::Ok().json(session),
         Ok(None) => HttpResponse::NotFound().json(json!({ "error": "Session not found" })),
         Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e.to_string() })),
     }
 }
-
-// async fn update_session(state: Data<AppState>, user_id : Path<String>, session : Json<SessionModelNew>) -> impl Responder {
-//     let update = state.db.session.collection.find_one_and_update(doc! {"user_id"}, update)
-// }
 
 pub async fn link_account(state: Data<AppState>, account: Json<AccountModelNew>) -> impl Responder {
     let create = state

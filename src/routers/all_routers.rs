@@ -30,7 +30,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .route("/", web::get().to(manual_hello))
             .route("/endpoints", web::get().to(list_all_endpoints)) // Debug route
             .app_data(web::Data::new(state.clone()))
-            .service(web::scope("/session").configure(|user_cfg| {
+            .service(web::scope("").configure(|user_cfg| {
                 routers_adapter(user_cfg, state.clone());
             }))
             .service(web::scope("/auth").configure(|user_cfg| {
