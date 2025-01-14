@@ -76,7 +76,7 @@ pub async fn get_all_school_section(
         .collect())
 }
 
-pub async fn get_all_school_section_by_id(
+pub async fn get_school_section_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<SchoolSectionModelGet> {
