@@ -6,6 +6,7 @@ pub struct SchoolSectionModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub description: Option<String>,
     pub create_on: DateTime,
     pub updated_on: Option<DateTime>,
 }
@@ -14,6 +15,7 @@ pub struct SchoolSectionModel {
 pub struct SchoolSectionModelGet {
     pub id: String,
     pub name: String,
+    pub description: Option<String>,
     pub create_on: String,
     pub updated_on: Option<String>,
 }
@@ -21,11 +23,13 @@ pub struct SchoolSectionModelGet {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SchoolSectionModelNew {
     pub name: String,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SchoolSectionModelPut {
     pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 impl SchoolSectionModel {
@@ -33,6 +37,7 @@ impl SchoolSectionModel {
         SchoolSectionModel {
             id: None,
             name: section.name,
+            description: section.description,
             create_on: DateTime::now(),
             updated_on: None,
         }
@@ -42,6 +47,7 @@ impl SchoolSectionModel {
         SchoolSectionModelGet {
             id: section.id.map_or("".to_string(), |id| id.to_string()),
             name: section.name,
+            description: section.description,
             create_on: section
                 .create_on
                 .try_to_rfc3339_string()
@@ -64,6 +70,7 @@ impl SchoolSectionModel {
         };
 
         insert_if_some("name", section.name.map(bson::Bson::String));
+        insert_if_some("description", section.description.map(bson::Bson::String));
 
         if is_updated {
             set_doc.insert("update_on", bson::Bson::DateTime(DateTime::now()));

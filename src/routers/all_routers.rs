@@ -61,9 +61,9 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_request(user_cfg, state.clone());
             }))
             .service(web::scope("/school").configure(|user_cfg| {
+                routers_school_section(user_cfg, state.clone());
                 routers_school_auth(user_cfg, state.clone());
                 routers_school(user_cfg, state.clone());
-                routers_school_section(user_cfg, state.clone());
             })),
     );
 }
