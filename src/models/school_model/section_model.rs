@@ -23,6 +23,11 @@ pub struct SectionModelNew {
     pub name: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SectionModelPut {
+    pub name: Option<String>,
+}
+
 impl SectionModel {
     pub fn new(section: SectionModelNew) -> Self {
         SectionModel {
@@ -47,7 +52,7 @@ impl SectionModel {
         }
     }
 
-    pub fn put(section: SectionModelNew) -> Document {
+    pub fn put(section: SectionModelPut) -> Document {
         let mut set_doc = Document::new();
         let mut is_updated = false;
 
