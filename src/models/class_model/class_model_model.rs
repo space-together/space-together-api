@@ -11,10 +11,11 @@ pub struct ClassModel {
     pub class_teacher_id: ObjectId,      // teacher id
     pub students: Option<Vec<ObjectId>>, // Student
     pub teachers: Option<Vec<ObjectId>>, //teachers
-    pub section: Option<ObjectId>,
+    pub sections: Option<Vec<ObjectId>>,
     pub code: Option<String>,
     pub subjects: Option<Vec<ObjectId>>,
-    pub room: Option<ObjectId>,
+    pub rooms: Option<Vec<ObjectId>>,
+    pub class_type_id: Option<ObjectId>,
     pub image: Option<ObjectId>,
     pub create_on: DateTime,         // create on
     pub update_on: Option<DateTime>, // update on
@@ -25,10 +26,13 @@ pub struct ClassModelNew {
     pub name: String,
     pub class_teacher_id: String,
     pub code: Option<String>,
-    pub section: Option<String>,
+    pub sections: Option<Vec<String>>,
     pub subjects: Option<Vec<String>>,
-    pub room: Option<String>,
+    pub rooms: Option<Vec<String>>,
     pub image: Option<String>,
+    pub teachers: Option<Vec<String>>,
+    pub students: Option<Vec<String>>,
+    pub class_type_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,6 +41,12 @@ pub struct ClassModelPut {
     pub class_teacher_id: Option<String>, // teacher id
     pub students: Option<Vec<String>>,    // student id
     pub teachers: Option<Vec<String>>,    // teachers id
+    pub sections: Option<Vec<String>>,
+    pub rooms: Option<Vec<String>>,
+    pub image: Option<String>,
+    pub subjects: Option<Vec<String>>,
+    pub code: Option<String>,
+    pub class_type_id: Option<String>,
 }
 
 impl ClassModel {
@@ -45,17 +55,34 @@ impl ClassModel {
             id: None,
             name: class.name,
             image: class.image.map(|r| ObjectId::from_str(&r).unwrap()),
+            class_type_id: class.class_type_id.map(|r| ObjectId::from_str(&r).unwrap()),
             class_teacher_id: ObjectId::from_str(&class.class_teacher_id).unwrap(),
-            room: class.room.map(|r| ObjectId::from_str(&r).unwrap()),
             code: class.code,
             subjects: class.subjects.map(|ids| {
                 ids.iter()
                     .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
                     .collect()
             }),
-            section: class.section.map(|s| ObjectId::from_str(&s).unwrap()),
-            teachers: Some(Vec::new()),
-            students: Some(Vec::new()),
+            sections: class.sections.map(|ids| {
+                ids.iter()
+                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .collect()
+            }),
+            rooms: class.rooms.map(|ids| {
+                ids.iter()
+                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .collect()
+            }),
+            teachers: class.teachers.map(|ids| {
+                ids.iter()
+                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .collect()
+            }),
+            students: class.students.map(|ids| {
+                ids.iter()
+                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .collect()
+            }),
             create_on: DateTime::now(),
             update_on: None,
         }
@@ -70,18 +97,62 @@ impl ClassModel {
             }
         };
 
-        // Handle updates for `name` (name) and `class_teacher_id` (class teacher)
         insert_if_some("name", class.name.map(bson::Bson::String));
         insert_if_some(
             "class_teacher_id",
-            class.class_teacher_id.map(|class_teacher_id| {
-                bson::Bson::ObjectId(ObjectId::from_str(&class_teacher_id).unwrap())
-            }),
+            class
+                .class_teacher_id
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+        insert_if_some(
+            "image",
+            class
+                .image
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+        insert_if_some(
+            "class_type_id",
+            class
+                .class_type_id
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
 
         insert_if_some(
             "students",
             class.students.map(|students| {
+                bson::Bson::Array(
+                    students
+                        .into_iter()
+                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
+                        .collect(),
+                )
+            }),
+        );
+        insert_if_some(
+            "rooms",
+            class.rooms.map(|students| {
+                bson::Bson::Array(
+                    students
+                        .into_iter()
+                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
+                        .collect(),
+                )
+            }),
+        );
+        insert_if_some(
+            "subjects",
+            class.subjects.map(|students| {
+                bson::Bson::Array(
+                    students
+                        .into_iter()
+                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
+                        .collect(),
+                )
+            }),
+        );
+        insert_if_some(
+            "sections",
+            class.sections.map(|students| {
                 bson::Bson::Array(
                     students
                         .into_iter()
@@ -114,6 +185,12 @@ pub struct ClassModelGet {
     pub class_teacher_id: String,
     pub students: Option<Vec<String>>,
     pub teachers: Option<Vec<String>>,
+    pub image: Option<String>,
+    pub sections: Option<Vec<String>>,
+    pub subjects: Option<Vec<String>>,
+    pub rooms: Option<String>,
+    pub class_type_id: Option<String>,
+    pub code: Option<String>,
     pub create_on: String,
     pub update_on: Option<String>,
 }
@@ -123,6 +200,18 @@ impl ClassModelGet {
         ClassModelGet {
             id: class.id.map_or("".to_string(), |id| id.to_string()),
             name: class.name,
+            image: class.image.map(|i| i.to_string()),
+            class_type_id: class.class_type_id.map(|i| i.to_string()),
+            code: class.code,
+            subjects: class
+                .subjects
+                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
+            rooms: class
+                .rooms
+                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
+            sections: class
+                .sections
+                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
             class_teacher_id: class.class_teacher_id.to_string(),
             students: class
                 .students

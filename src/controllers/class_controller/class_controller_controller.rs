@@ -30,10 +30,9 @@ pub async fn controller_create_class(
         if let Some(i) = u.role {
             let get_user_role = state.db.user_role.get_user_role_by_id(i).await;
             if let Ok(r) = get_user_role {
-                if r.role != *"Teacher" || r.role != *"School Staff" {
+                if r.role == *"Student" {
                     return Err(ClassError::OtherError {
-                        err: "Can't create class because your role is not allowed to create class"
-                            .to_string(),
+                        err: format!("Can't create class because your role [{}] is not allowed to create class", r.role)
                     });
                 };
             }
