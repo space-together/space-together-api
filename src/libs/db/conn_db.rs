@@ -22,7 +22,7 @@ use crate::{
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
-        school_model::school_model_model::SchoolModel,
+        school_model::{school_model_model::SchoolModel, school_section_model::SchoolSectionModel},
     },
 };
 use dotenv::dotenv;
@@ -43,6 +43,7 @@ pub struct ConnDb {
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
     pub school: MongoCrud<SchoolModel>,
+    pub school_section: MongoCrud<SchoolSectionModel>,
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
     pub school_logo: MongoCrud<SchoolLogoModel>,
@@ -126,6 +127,10 @@ impl ConnDb {
                     collection: st_data.collection("account"),
                 };
 
+                let school_section = MongoCrud {
+                    collection: st_data.collection("shool_section.role"),
+                };
+
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
@@ -147,6 +152,7 @@ impl ConnDb {
                     // auth
                     session,
                     account,
+                    school_section,
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {

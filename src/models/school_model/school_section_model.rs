@@ -2,7 +2,7 @@ use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SectionModel {
+pub struct SchoolSectionModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
@@ -11,7 +11,7 @@ pub struct SectionModel {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SectionModelGet {
+pub struct SchoolSectionModelGet {
     pub id: String,
     pub name: String,
     pub create_on: String,
@@ -19,18 +19,18 @@ pub struct SectionModelGet {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SectionModelNew {
+pub struct SchoolSectionModelNew {
     pub name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SectionModelPut {
+pub struct SchoolSectionModelPut {
     pub name: Option<String>,
 }
 
-impl SectionModel {
-    pub fn new(section: SectionModelNew) -> Self {
-        SectionModel {
+impl SchoolSectionModel {
+    pub fn new(section: SchoolSectionModelNew) -> Self {
+        SchoolSectionModel {
             id: None,
             name: section.name,
             create_on: DateTime::now(),
@@ -38,8 +38,8 @@ impl SectionModel {
         }
     }
 
-    pub fn format(section: Self) -> SectionModelGet {
-        SectionModelGet {
+    pub fn format(section: Self) -> SchoolSectionModelGet {
+        SchoolSectionModelGet {
             id: section.id.map_or("".to_string(), |id| id.to_string()),
             name: section.name,
             create_on: section
@@ -52,7 +52,7 @@ impl SectionModel {
         }
     }
 
-    pub fn put(section: SectionModelPut) -> Document {
+    pub fn put(section: SchoolSectionModelPut) -> Document {
         let mut set_doc = Document::new();
         let mut is_updated = false;
 
