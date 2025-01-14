@@ -22,19 +22,12 @@ pub struct ClassDb {
 
 impl ClassDb {
     pub async fn create_class(&self, class: ClassModelNew) -> ClassResult<InsertOneResult> {
-        let new = ClassModel::new(class);
-
-        match new {
-            Ok(res) => {
-                let create = self.class.insert_one(res).await;
-                match create {
-                    Ok(result) => Ok(result),
-                    Err(err) => Err(ClassError::CanCreateClass {
-                        err: err.to_string(),
-                    }),
-                }
-            }
-            Err(err) => Err(err),
+        let create = self.class.insert_one(ClassModel::new(class)).await;
+        match create {
+            Ok(result) => Ok(result),
+            Err(err) => Err(ClassError::CanCreateClass {
+                err: err.to_string(),
+            }),
         }
     }
 

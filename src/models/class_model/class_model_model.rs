@@ -3,8 +3,6 @@ use std::str::FromStr;
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::error::class_error::class_error_error::{ClassError, ClassResult};
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -13,14 +11,24 @@ pub struct ClassModel {
     pub class_teacher_id: ObjectId,      // teacher id
     pub students: Option<Vec<ObjectId>>, // Student
     pub teachers: Option<Vec<ObjectId>>, //teachers
-    pub create_on: DateTime,             // create on
-    pub update_on: Option<DateTime>,     // update on
+    pub section: Option<ObjectId>,
+    pub code: Option<String>,
+    pub subjects: Option<Vec<ObjectId>>,
+    pub room: Option<ObjectId>,
+    pub image: Option<ObjectId>,
+    pub create_on: DateTime,         // create on
+    pub update_on: Option<DateTime>, // update on
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelNew {
     pub name: String,
     pub class_teacher_id: String,
+    pub code: Option<String>,
+    pub section: Option<String>,
+    pub subjects: Option<Vec<String>>,
+    pub room: Option<String>,
+    pub image: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,20 +40,24 @@ pub struct ClassModelPut {
 }
 
 impl ClassModel {
-    pub fn new(class: ClassModelNew) -> ClassResult<ClassModel> {
-        let teacher_id =
-            ObjectId::from_str(&class.class_teacher_id).map_err(|_| ClassError::InvalidId);
-        match teacher_id {
-            Ok(id) => Ok(ClassModel {
-                id: None,
-                name: class.name,
-                class_teacher_id: id,
-                teachers: Some(Vec::new()),
-                students: Some(Vec::new()),
-                create_on: DateTime::now(),
-                update_on: None,
+    pub fn new(class: ClassModelNew) -> Self {
+        ClassModel {
+            id: None,
+            name: class.name,
+            image: class.image.map(|r| ObjectId::from_str(&r).unwrap()),
+            class_teacher_id: ObjectId::from_str(&class.class_teacher_id).unwrap(),
+            room: class.room.map(|r| ObjectId::from_str(&r).unwrap()),
+            code: class.code,
+            subjects: class.subjects.map(|ids| {
+                ids.iter()
+                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .collect()
             }),
-            Err(err) => Err(err),
+            section: class.section.map(|s| ObjectId::from_str(&s).unwrap()),
+            teachers: Some(Vec::new()),
+            students: Some(Vec::new()),
+            create_on: DateTime::now(),
+            update_on: None,
         }
     }
 
