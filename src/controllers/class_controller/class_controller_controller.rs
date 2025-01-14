@@ -13,16 +13,35 @@ pub async fn controller_create_class(
     state: Arc<AppState>,
     class: ClassModelNew,
 ) -> ClassResult<ClassModelGet> {
-    let find_user = state
-        .db
-        .user
-        .get_user_by_id(ObjectId::from_str(&class.class_teacher_id).unwrap())
-        .await;
+    let class_teacher_id = match ObjectId::from_str(&class.class_teacher_id) {
+        Err(_) => return Err(ClassError::InvalidId),
+        Ok(i) => i,
+    };
+
+    let find_user = state.db.user.get_user_by_id(class_teacher_id).await;
 
     if find_user.is_err() {
         return Err(ClassError::ClassTeacherIsNotExit {
             id: class.class_teacher_id.clone(),
         });
+    }
+
+    if let Ok(u) = find_user {
+        if let Some(i) = u.role {
+            let get_user_role = state.db.user_role.get_user_role_by_id(i).await;
+            if let Ok(r) = get_user_role {
+                if r.role != *"Teacher" || r.role != *"School Staff" {
+                    return Err(ClassError::OtherError {
+                        err: "Can't create class because your role is not allowed to create class"
+                            .to_string(),
+                    });
+                };
+            }
+        } else {
+            return Err(ClassError::OtherError {
+                err: "To create school you must have role".to_string(),
+            });
+        }
     }
 
     match state.db.class.create_class(class).await {

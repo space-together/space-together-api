@@ -10,12 +10,14 @@ pub enum ClassError {
     CanNotGetAllClass { err: String },
     CanNotGetAllClassBy { field: String, err: String },
     CanNotDoActionClass { err: String, action: String },
+    OtherError { err: String },
 }
 
 impl std::fmt::Display for ClassError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ClassError::InvalidId => write!(f, "Invalid ID"),
+            ClassError::OtherError { err } => write!(f, "{err}"),
             ClassError::CanCreateClass { err } => write!(f, "Can create class bcs 😡 {} 😡 ", err),
             ClassError::CanNotGetClass { err } => write!(f, "Can not get class bcs 😡 {} 😡 ", err),
             ClassError::ClassNotFoundById => {

@@ -42,7 +42,10 @@ pub async fn create_school_section(
 
     if let Some(r) = get {
         return Err(DbClassError::OtherError {
-            err: format!("School Section name already exists [{}]", r.name),
+            err: format!(
+                "School Section name already exists [{}], try other name",
+                r.name
+            ),
         });
     }
 
@@ -94,7 +97,7 @@ pub async fn update_school_section_by_id(
     id: ObjectId,
     section: SchoolSectionModelPut,
 ) -> DbClassResult<SchoolSectionModelGet> {
-    let put = state
+    let _ = state
         .db
         .school_section
         .update(
@@ -103,7 +106,14 @@ pub async fn update_school_section_by_id(
             Some("School Section".to_string()),
         )
         .await?;
-    Ok(SchoolSectionModel::format(put))
+
+    let get = state
+        .db
+        .school_section
+        .get_one_by_id(id, Some("School section".to_string()))
+        .await?;
+
+    Ok(SchoolSectionModel::format(get))
 }
 
 pub async fn delete_school_section_by_id(
