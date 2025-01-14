@@ -3,7 +3,7 @@ use actix_web_lab::middleware::from_fn;
 use std::sync::Arc;
 
 use crate::{
-    handlers::school_handle::handle_school_create,
+    handlers::school_handle::school_handle_handle::handle_school_create,
     middleware::user_auth_middleware::check_user_auth_middleware, AppState,
 };
 

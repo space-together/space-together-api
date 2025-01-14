@@ -2,7 +2,7 @@ use actix_web::web::{self, get};
 use std::sync::Arc;
 
 use crate::{
-    handlers::school_handle::{handle_school_get, handle_school_get_by_id},
+    handlers::school_handle::school_handle_handle::{handle_school_get, handle_school_get_by_id},
     AppState,
 };
 
