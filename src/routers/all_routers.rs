@@ -19,6 +19,7 @@ use super::{
     },
     school_router::{
         school_router_auth::routers_school_auth, school_router_router::routers_school,
+        school_section_router::routers_school_section,
     },
     user_router::{user_role_router::routers_user_role, user_router_router::routers_user},
 };
@@ -62,6 +63,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/school").configure(|user_cfg| {
                 routers_school_auth(user_cfg, state.clone());
                 routers_school(user_cfg, state.clone());
+                routers_school_section(user_cfg, state.clone());
             })),
     );
 }
