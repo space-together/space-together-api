@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    error::{db_class_error::DbClassResult, db_error::DbResult},
+    error::db_class_error::DbClassResult,
     models::school_model::school_section_model::{
         SchoolSectionModel, SchoolSectionModelGet, SchoolSectionModelNew,
     },
