@@ -8,6 +8,7 @@ pub struct ClassRoomModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username: Option<String>,
     pub school_section_id: Option<ObjectId>,
     pub class_room_type_id: Option<ObjectId>,
     pub description: Option<String>,
@@ -19,6 +20,7 @@ pub struct ClassRoomModel {
 pub struct ClassRoomModelGet {
     pub id: String,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub school_section_id: Option<String>,
     pub class_room_type_id: Option<String>,
@@ -29,6 +31,7 @@ pub struct ClassRoomModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassRoomModelNew {
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub school_section_id: Option<String>,
     pub class_room_type_id: Option<String>,
@@ -37,6 +40,7 @@ pub struct ClassRoomModelNew {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassRoomModelPut {
     pub name: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub school_section_id: Option<String>,
     pub class_room_type_id: Option<String>,
@@ -47,6 +51,7 @@ impl ClassRoomModel {
         ClassRoomModel {
             id: None,
             name: class_room.name,
+            username: class_room.username,
             class_room_type_id: class_room.class_room_type_id.map(|id| {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
@@ -65,6 +70,7 @@ impl ClassRoomModel {
             class_room_type_id: class_room.class_room_type_id.map(|id| id.to_string()),
             school_section_id: class_room.school_section_id.map(|id| id.to_string()),
             name: class_room.name,
+            username: class_room.username,
             description: class_room.description,
             created_on: class_room
                 .created_on
@@ -88,6 +94,7 @@ impl ClassRoomModel {
         };
 
         insert_if_some("name", class_room.name.map(bson::Bson::String));
+        insert_if_some("username", class_room.username.map(bson::Bson::String));
         insert_if_some(
             "description",
             class_room.description.map(bson::Bson::String),
