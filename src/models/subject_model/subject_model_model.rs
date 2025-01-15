@@ -10,6 +10,7 @@ pub struct SubjectModel {
     pub name: String,
     pub books: Option<Vec<ObjectId>>,
     pub subject_type_id: Option<ObjectId>,
+    pub code: Option<String>,
     pub room_id: Option<ObjectId>,
     pub description: Option<String>,
     pub created_on: DateTime,
@@ -21,6 +22,7 @@ pub struct SubjectModelGet {
     pub id: String,
     pub name: String,
     pub books: Option<Vec<String>>,
+    pub code: Option<String>,
     pub subject_type_id: Option<String>,
     pub room_id: Option<String>,
     pub description: Option<String>,
@@ -32,6 +34,7 @@ pub struct SubjectModelGet {
 pub struct SubjectModelNew {
     pub name: String,
     pub books: Option<Vec<String>>,
+    pub code: Option<String>,
     pub subject_type_id: Option<String>,
     pub room_id: Option<String>,
     pub description: Option<String>,
@@ -42,6 +45,7 @@ pub struct SubjectModelPut {
     pub name: Option<String>,
     pub description: Option<String>,
     pub books: Option<Vec<String>>,
+    pub code: Option<String>,
     pub subject_type_id: Option<String>,
     pub room_id: Option<String>,
 }
@@ -52,6 +56,7 @@ impl SubjectModel {
             id: None,
             name: subject.name,
             description: subject.description,
+            code: subject.code,
             books: subject.books.map(|ids| {
                 ids.iter()
                     .map(|id| ObjectId::from_str(id).unwrap())
@@ -70,6 +75,7 @@ impl SubjectModel {
         SubjectModelGet {
             id: subject.id.map_or("".to_string(), |id| id.to_string()),
             name: subject.name,
+            code: subject.code,
             description: subject.description,
             room_id: subject.room_id.map(|id| id.to_string()),
             subject_type_id: subject.subject_type_id.map(|id| id.to_string()),
@@ -111,6 +117,7 @@ impl SubjectModel {
         );
 
         insert_if_some("name", subject.name.map(bson::Bson::String));
+        insert_if_some("code", subject.code.map(bson::Bson::String));
         insert_if_some("description", subject.description.map(bson::Bson::String));
         insert_if_some(
             "books",
