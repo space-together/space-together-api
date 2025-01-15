@@ -14,7 +14,7 @@ pub fn routers_subject(
     state: Arc<AppState>,
 ) -> &mut actix_web::web::ServiceConfig {
     cfg.service(
-        web::scope("type")
+        web::scope("")
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(create_subject_handle))
             .route("", get().to(get_all_subject_handle))
