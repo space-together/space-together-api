@@ -16,6 +16,7 @@ pub struct ClassModel {
     pub subjects: Option<Vec<ObjectId>>,
     pub rooms: Option<Vec<ObjectId>>,
     pub class_type_id: Option<ObjectId>,
+    pub is_public: Option<bool>,
     pub image: Option<ObjectId>,
     pub create_on: DateTime,         // create on
     pub update_on: Option<DateTime>, // update on
@@ -33,6 +34,7 @@ pub struct ClassModelNew {
     pub teachers: Option<Vec<String>>,
     pub students: Option<Vec<String>>,
     pub class_type_id: Option<String>,
+    pub is_public: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,6 +49,7 @@ pub struct ClassModelPut {
     pub subjects: Option<Vec<String>>,
     pub code: Option<String>,
     pub class_type_id: Option<String>,
+    pub is_public: Option<bool>,
 }
 
 impl ClassModel {
@@ -54,6 +57,7 @@ impl ClassModel {
         ClassModel {
             id: None,
             name: class.name,
+            is_public: class.is_public,
             image: class.image.map(|r| ObjectId::from_str(&r).unwrap()),
             class_type_id: class.class_type_id.map(|r| ObjectId::from_str(&r).unwrap()),
             class_teacher_id: ObjectId::from_str(&class.class_teacher_id).unwrap(),
@@ -97,6 +101,7 @@ impl ClassModel {
             }
         };
 
+        insert_if_some("is_public", class.is_public.map(bson::Bson::Boolean));
         insert_if_some("name", class.name.map(bson::Bson::String));
         insert_if_some(
             "class_teacher_id",
@@ -186,6 +191,7 @@ pub struct ClassModelGet {
     pub students: Option<Vec<String>>,
     pub teachers: Option<Vec<String>>,
     pub image: Option<String>,
+    pub is_public: Option<bool>,
     pub sections: Option<Vec<String>>,
     pub subjects: Option<Vec<String>>,
     pub rooms: Option<String>,
@@ -200,6 +206,7 @@ impl ClassModelGet {
         ClassModelGet {
             id: class.id.map_or("".to_string(), |id| id.to_string()),
             name: class.name,
+            is_public: class.is_public,
             image: class.image.map(|i| i.to_string()),
             class_type_id: class.class_type_id.map(|i| i.to_string()),
             code: class.code,
