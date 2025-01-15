@@ -60,27 +60,27 @@ impl ClassModel {
             code: class.code,
             subjects: class.subjects.map(|ids| {
                 ids.iter()
-                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .map(|id| ObjectId::from_str(id).unwrap())
                     .collect()
             }),
             sections: class.sections.map(|ids| {
                 ids.iter()
-                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .map(|id| ObjectId::from_str(id).unwrap())
                     .collect()
             }),
             rooms: class.rooms.map(|ids| {
                 ids.iter()
-                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .map(|id| ObjectId::from_str(id).unwrap())
                     .collect()
             }),
             teachers: class.teachers.map(|ids| {
                 ids.iter()
-                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .map(|id| ObjectId::from_str(id).unwrap())
                     .collect()
             }),
             students: class.students.map(|ids| {
                 ids.iter()
-                    .filter_map(|id| Some(ObjectId::from_str(id).unwrap()))
+                    .map(|id| ObjectId::from_str(id).unwrap())
                     .collect()
             }),
             create_on: DateTime::now(),
