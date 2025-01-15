@@ -18,7 +18,9 @@ use crate::{
     },
     models::{
         auth::adapter_model::{AccountModel, SessionModel},
-        class_model::class_type_model::ClassTypeModel,
+        class_model::{
+            class_room_type_model::ClassRoomTypeModel, class_type_model::ClassTypeModel,
+        },
         database_model::collection_model::DatabaseStats,
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
@@ -47,6 +49,7 @@ pub struct ConnDb {
     pub school: MongoCrud<SchoolModel>,
     pub school_section: MongoCrud<SchoolSectionModel>,
     pub class_type: MongoCrud<ClassTypeModel>,
+    pub class_room_type: MongoCrud<ClassRoomTypeModel>,
     pub subject_type: MongoCrud<SubjectTypeModel>,
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
@@ -139,6 +142,9 @@ impl ConnDb {
                     collection: st_data.collection("class_type.role"),
                 };
 
+                let class_room_type = MongoCrud {
+                    collection: st_data.collection("class_room_type.role"),
+                };
                 let subject_type = MongoCrud {
                     collection: st_data.collection("subject_type.role"),
                 };
@@ -161,6 +167,7 @@ impl ConnDb {
                     school_section,
                     class_type,
                     subject_type,
+                    class_room_type,
                     // images
                     avatars,
                     school_logo,
