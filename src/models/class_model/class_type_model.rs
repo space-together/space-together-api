@@ -1,7 +1,7 @@
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassTypeModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
@@ -12,6 +12,7 @@ pub struct ClassTypeModel {
     pub updated_on: Option<DateTime>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassTypeModelGet {
     pub id: String,
     pub name: String,
@@ -21,12 +22,14 @@ pub struct ClassTypeModelGet {
     pub updated_on: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassTypeModelNew {
     pub name: String,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassTypeModelPut {
     pub name: Option<String>,
     pub description: Option<String>,
