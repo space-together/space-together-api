@@ -80,7 +80,7 @@ impl ConversationDb {
         let mut cursor = self
             .conversation
             .find(query)
-            .sort(doc! {"co" : -1})
+            .sort(doc! {"create_on" : -1})
             .await
             .map_err(|err| ConversationErr::CanNotGetAllByField {
                 err: err.to_string(),

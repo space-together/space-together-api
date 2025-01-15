@@ -73,7 +73,7 @@ impl SchoolSectionModel {
         insert_if_some("description", section.description.map(bson::Bson::String));
 
         if is_updated {
-            set_doc.insert("update_on", bson::Bson::DateTime(DateTime::now()));
+            set_doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
         }
 
         set_doc

@@ -120,10 +120,22 @@ pub async fn delete_school_section_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<SchoolSectionModelGet> {
-    let put = state
+    if (state
+        .db
+        .class
+        .class
+        .find(doc! {"sections" : {"$in" : [id]}})
+        .await)
+        .is_ok()
+    {
+        return Err(DbClassError::OtherError {
+            err: "You can not delete section bcs they are class using it".to_string(),
+        });
+    }
+    let delete = state
         .db
         .school_section
         .delete(id, Some("School Section".to_string()))
         .await?;
-    Ok(SchoolSectionModel::format(put))
+    Ok(SchoolSectionModel::format(delete))
 }
