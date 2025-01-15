@@ -4,7 +4,7 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::db_class_error::DbClassResult,
-    models::subject_model::subject_model_model::{
+    models::subject_model::subject_type_model::{
         SubjectTypeModel, SubjectTypeModelGet, SubjectTypeModelNew, SubjectTypeModelPut,
     },
     AppState,

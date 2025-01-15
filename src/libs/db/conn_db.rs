@@ -26,7 +26,7 @@ use crate::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
         school_model::{school_model_model::SchoolModel, school_section_model::SchoolSectionModel},
-        subject_model::subject_model_model::SubjectTypeModel,
+        subject_model::subject_type_model::SubjectTypeModel,
     },
 };
 use dotenv::dotenv;

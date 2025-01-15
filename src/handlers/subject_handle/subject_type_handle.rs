@@ -11,7 +11,7 @@ use crate::{
     libs::functions::object_id::change_string_into_object_id,
     models::{
         request_error_model::ReqErrModel,
-        subject_model::subject_model_model::{SubjectTypeModelNew, SubjectTypeModelPut},
+        subject_model::subject_type_model::{SubjectTypeModelNew, SubjectTypeModelPut},
     },
     AppState,
 };
