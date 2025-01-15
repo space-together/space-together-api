@@ -8,4 +8,5 @@ pub mod other_model;
 pub mod request_error_model;
 pub mod request_model;
 pub mod school_model;
+pub mod subject_model;
 pub mod user_model;
