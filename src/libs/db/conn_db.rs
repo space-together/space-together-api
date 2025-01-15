@@ -26,7 +26,7 @@ use crate::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
         school_model::{school_model_model::SchoolModel, school_section_model::SchoolSectionModel},
-        subject_model::subject_type_model::SubjectTypeModel,
+        subject_model::{subject_model_model::SubjectModel, subject_type_model::SubjectTypeModel},
     },
 };
 use dotenv::dotenv;
@@ -51,6 +51,7 @@ pub struct ConnDb {
     pub class_type: MongoCrud<ClassTypeModel>,
     pub class_room_type: MongoCrud<ClassRoomTypeModel>,
     pub subject_type: MongoCrud<SubjectTypeModel>,
+    pub subject: MongoCrud<SubjectModel>,
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
     pub school_logo: MongoCrud<SchoolLogoModel>,
@@ -145,8 +146,13 @@ impl ConnDb {
                 let class_room_type = MongoCrud {
                     collection: st_data.collection("class_room_type.role"),
                 };
+
                 let subject_type = MongoCrud {
                     collection: st_data.collection("subject_type.role"),
+                };
+
+                let subject = MongoCrud {
+                    collection: st_data.collection("subjects"),
                 };
 
                 println!("Database connected successfully 🌼");
@@ -167,6 +173,7 @@ impl ConnDb {
                     school_section,
                     class_type,
                     subject_type,
+                    subject,
                     class_room_type,
                     // images
                     avatars,
