@@ -8,8 +8,9 @@ use super::{
     auth_router::{adapter_router::routers_adapter, user_auth_router::routers_user_auth_router},
     class_router::{
         activities_type_router::routers_activities_type, activity_router::routers_activity,
-        class_group_router::routers_class_group, class_room_type_router::routers_class_room_type,
-        class_router_router::routers_class, class_type_router::routers_class_type,
+        class_group_router::routers_class_group, class_room_router::routers_class_room,
+        class_room_type_router::routers_class_room_type, class_router_router::routers_class,
+        class_type_router::routers_class_type,
     },
     conversation_router::{
         conversation_router_router::routers_conversation, message_router::routers_message,
@@ -47,6 +48,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             }))
             .service(web::scope("/classes/room").configure(|user_cfg| {
                 routers_class_room_type(user_cfg, state.clone());
+                routers_class_room(user_cfg, state.clone());
             }))
             .service(scope("/classes/activities").configure(|user_cfg| {
                 routers_activities_type(user_cfg, state.clone());

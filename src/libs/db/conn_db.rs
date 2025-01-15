@@ -19,7 +19,8 @@ use crate::{
     models::{
         auth::adapter_model::{AccountModel, SessionModel},
         class_model::{
-            class_room_type_model::ClassRoomTypeModel, class_type_model::ClassTypeModel,
+            class_room_model::ClassRoomModel, class_room_type_model::ClassRoomTypeModel,
+            class_type_model::ClassTypeModel,
         },
         database_model::collection_model::DatabaseStats,
         images_model::{
@@ -39,6 +40,8 @@ pub struct ConnDb {
     pub user: UserDb,
     pub class: ClassDb,
     pub class_group: ClassGroupDb,
+    pub class_room_type: MongoCrud<ClassRoomTypeModel>,
+    pub class_room: MongoCrud<ClassRoomModel>,
     pub conversation: ConversationDb,
     pub message: MessageDb,
     pub activities_type: ActivitiesTypeDb,
@@ -49,7 +52,6 @@ pub struct ConnDb {
     pub school: MongoCrud<SchoolModel>,
     pub school_section: MongoCrud<SchoolSectionModel>,
     pub class_type: MongoCrud<ClassTypeModel>,
-    pub class_room_type: MongoCrud<ClassRoomTypeModel>,
     pub subject_type: MongoCrud<SubjectTypeModel>,
     pub subject: MongoCrud<SubjectModel>,
     // images
@@ -94,6 +96,19 @@ impl ConnDb {
                 let class_group = ClassGroupDb {
                     class_group: st_data.collection("--classes_groups"), // private
                 };
+
+                let class_type = MongoCrud {
+                    collection: st_data.collection("class_type.role"),
+                };
+
+                let class_room_type = MongoCrud {
+                    collection: st_data.collection("class_room_type.role"),
+                };
+
+                let class_room = MongoCrud {
+                    collection: st_data.collection("class_room"),
+                };
+
                 let conversation = ConversationDb {
                     conversation: st_data.collection("--conversations"), // private
                 };
@@ -126,25 +141,8 @@ impl ConnDb {
                 let school_logo = MongoCrud {
                     collection: st_image.collection("school_logo"),
                 };
-
-                // auth model
-                let session = MongoCrud {
-                    collection: st_data.collection("--session"),
-                };
-                let account = MongoCrud {
-                    collection: st_data.collection("account"),
-                };
-
                 let school_section = MongoCrud {
                     collection: st_data.collection("shool_section.role"),
-                };
-
-                let class_type = MongoCrud {
-                    collection: st_data.collection("class_type.role"),
-                };
-
-                let class_room_type = MongoCrud {
-                    collection: st_data.collection("class_room_type.role"),
                 };
 
                 let subject_type = MongoCrud {
@@ -153,6 +151,14 @@ impl ConnDb {
 
                 let subject = MongoCrud {
                     collection: st_data.collection("subjects"),
+                };
+
+                // auth model
+                let session = MongoCrud {
+                    collection: st_data.collection("--session"),
+                };
+                let account = MongoCrud {
+                    collection: st_data.collection("account"),
                 };
 
                 println!("Database connected successfully 🌼");
@@ -171,9 +177,10 @@ impl ConnDb {
                     request,
                     school,
                     school_section,
-                    class_type,
                     subject_type,
                     subject,
+                    class_type,
+                    class_room,
                     class_room_type,
                     // images
                     avatars,
