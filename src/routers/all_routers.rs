@@ -9,6 +9,7 @@ use super::{
     class_router::{
         activities_type_router::routers_activities_type, activity_router::routers_activity,
         class_group_router::routers_class_group, class_router_router::routers_class,
+        class_type_router::routers_class_type,
     },
     conversation_router::{
         conversation_router_router::routers_conversation, message_router::routers_message,
@@ -42,6 +43,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_user(user_cfg, state.clone());
             }))
             .service(web::scope("/classes").configure(|user_cfg| {
+                routers_class_type(user_cfg, state.clone());
                 routers_class_group(user_cfg, state.clone());
                 routers_class(user_cfg, state.clone());
             }))
