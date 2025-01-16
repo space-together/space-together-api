@@ -14,7 +14,7 @@ pub fn routers_sector(
     state: Arc<AppState>,
 ) -> &mut actix_web::web::ServiceConfig {
     cfg.service(
-        web::scope("type")
+        web::scope("sector")
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(create_sector_handle))
             .route("", get().to(get_all_sector_handle))

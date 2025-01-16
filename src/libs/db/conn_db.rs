@@ -23,6 +23,7 @@ use crate::{
             class_type_model::ClassTypeModel,
         },
         database_model::collection_model::DatabaseStats,
+        education_model::education_model_model::EducationModel,
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
@@ -51,6 +52,7 @@ pub struct ConnDb {
     pub stats: Option<DatabaseStats>,
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
+    pub education: MongoCrud<EducationModel>,
     pub school: MongoCrud<SchoolModel>,
     pub trade: MongoCrud<TradeModel>,
     pub sector: MongoCrud<SectorModel>,
@@ -135,6 +137,9 @@ impl ConnDb {
                 let school = MongoCrud {
                     collection: st_data.collection("schools"),
                 };
+                let education = MongoCrud {
+                    collection: st_data.collection("educations"),
+                };
 
                 // image collections
                 let avatars = MongoCrud {
@@ -182,6 +187,7 @@ impl ConnDb {
                     stats,
                     request_type,
                     request,
+                    education,
                     school,
                     sector,
                     trade,
