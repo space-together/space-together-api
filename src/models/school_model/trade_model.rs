@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
@@ -7,6 +9,7 @@ pub struct TradeModel {
     pub id: Option<ObjectId>,
     pub name: String,
     pub description: Option<String>,
+    pub sector_id: Option<ObjectId>,
     pub create_on: DateTime,
     pub updated_on: Option<DateTime>,
 }
@@ -16,6 +19,7 @@ pub struct TradeModelGet {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
+    pub sector_id: Option<String>,
     pub create_on: String,
     pub updated_on: Option<String>,
 }
@@ -23,6 +27,7 @@ pub struct TradeModelGet {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TradeModelNew {
     pub name: String,
+    pub sector_id: Option<String>,
     pub description: Option<String>,
 }
 
@@ -30,6 +35,7 @@ pub struct TradeModelNew {
 pub struct TradeModelPut {
     pub name: Option<String>,
     pub description: Option<String>,
+    pub sector_id: Option<String>,
 }
 
 impl TradeModel {
@@ -37,6 +43,7 @@ impl TradeModel {
         TradeModel {
             id: None,
             name: section.name,
+            sector_id: section.sector_id.map(|id| ObjectId::from_str(&id).unwrap()),
             description: section.description,
             create_on: DateTime::now(),
             updated_on: None,
@@ -48,6 +55,7 @@ impl TradeModel {
             id: section.id.map_or("".to_string(), |id| id.to_string()),
             name: section.name,
             description: section.description,
+            sector_id: section.sector_id.map(|id| id.to_string()),
             create_on: section
                 .create_on
                 .try_to_rfc3339_string()
