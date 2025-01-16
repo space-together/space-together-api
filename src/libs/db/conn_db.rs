@@ -26,7 +26,7 @@ use crate::{
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
-        school_model::{school_model_model::SchoolModel, school_section_model::SchoolSectionModel},
+        school_model::{school_model_model::SchoolModel, trade_model::TradeModel},
         subject_model::{subject_model_model::SubjectModel, subject_type_model::SubjectTypeModel},
     },
 };
@@ -50,7 +50,7 @@ pub struct ConnDb {
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
     pub school: MongoCrud<SchoolModel>,
-    pub school_section: MongoCrud<SchoolSectionModel>,
+    pub trade: MongoCrud<TradeModel>,
     pub class_type: MongoCrud<ClassTypeModel>,
     pub subject_type: MongoCrud<SubjectTypeModel>,
     pub subject: MongoCrud<SubjectModel>,
@@ -141,7 +141,7 @@ impl ConnDb {
                 let school_logo = MongoCrud {
                     collection: st_image.collection("school_logo"),
                 };
-                let school_section = MongoCrud {
+                let trade = MongoCrud {
                     collection: st_data.collection("shool_section.role"),
                 };
 
@@ -176,7 +176,7 @@ impl ConnDb {
                     request_type,
                     request,
                     school,
-                    school_section,
+                    trade,
                     subject_type,
                     subject,
                     class_type,

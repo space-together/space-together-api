@@ -8,28 +8,26 @@ use mongodb::{
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    models::school_model::school_section_model::{
-        SchoolSectionModel, SchoolSectionModelGet, SchoolSectionModelNew, SchoolSectionModelPut,
-    },
+    models::school_model::trade_model::{TradeModel, TradeModelGet, TradeModelNew, TradeModelPut},
     AppState,
 };
 
-pub async fn create_school_section(
+pub async fn create_trade(
     state: Arc<AppState>,
-    section: SchoolSectionModelNew,
-) -> DbClassResult<SchoolSectionModelGet> {
+    section: TradeModelNew,
+) -> DbClassResult<TradeModelGet> {
     let index = IndexModel::builder()
         .keys(doc! {"name" : 1})
         .options(IndexOptions::builder().unique(true).build())
         .build();
 
-    if let Err(e) = state.db.school_section.collection.create_index(index).await {
+    if let Err(e) = state.db.trade.collection.create_index(index).await {
         return Err(DbClassError::OtherError { err: e.to_string() });
     }
 
     let get = state
         .db
-        .school_section
+        .trade
         .collection
         .find_one(doc! {"name" : section.name.clone()})
         .await
@@ -51,75 +49,64 @@ pub async fn create_school_section(
 
     let create = state
         .db
-        .school_section
-        .create(
-            SchoolSectionModel::new(section),
-            Some("School section".to_string()),
-        )
+        .trade
+        .create(TradeModel::new(section), Some("School section".to_string()))
         .await?;
     let get = state
         .db
-        .school_section
+        .trade
         .get_one_by_id(create, Some("School section".to_string()))
         .await?;
-    Ok(SchoolSectionModel::format(get))
+    Ok(TradeModel::format(get))
 }
 
-pub async fn get_all_school_section(
-    state: Arc<AppState>,
-) -> DbClassResult<Vec<SchoolSectionModelGet>> {
+pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModelGet>> {
     let get_all = state
         .db
-        .school_section
+        .trade
         .get_many(None, Some("School section".to_string()))
         .await?;
-    Ok(get_all
-        .into_iter()
-        .map(SchoolSectionModel::format)
-        .collect())
+    Ok(get_all.into_iter().map(TradeModel::format).collect())
 }
 
-pub async fn get_school_section_by_id(
-    state: Arc<AppState>,
-    id: ObjectId,
-) -> DbClassResult<SchoolSectionModelGet> {
+pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<TradeModelGet> {
     let get = state
         .db
-        .school_section
+        .trade
         .get_one_by_id(id, Some("School section".to_string()))
         .await?;
 
-    Ok(SchoolSectionModel::format(get))
+    Ok(TradeModel::format(get))
 }
 
-pub async fn update_school_section_by_id(
+pub async fn update_trade_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-    section: SchoolSectionModelPut,
-) -> DbClassResult<SchoolSectionModelGet> {
+    section: TradeModelPut,
+) -> DbClassResult<TradeModelGet> {
     let _ = state
         .db
-        .school_section
+        .trade
         .update(
             id,
-            SchoolSectionModel::put(section),
+            TradeModel::put(section),
             Some("School Section".to_string()),
         )
         .await?;
 
     let get = state
         .db
-        .school_section
+        .trade
         .get_one_by_id(id, Some("School section".to_string()))
         .await?;
 
-    Ok(SchoolSectionModel::format(get))
+    Ok(TradeModel::format(get))
 }
 
-pub async fn delete_school_section_by_id(
+pub async fn delete_trade_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-) -> DbClassResult<SchoolSectionModelGet> {
+) -> DbClassResult<TradeModelGet> {
     if (state
         .db
         .class
@@ -134,8 +121,8 @@ pub async fn delete_school_section_by_id(
     }
     let delete = state
         .db
-        .school_section
+        .trade
         .delete(id, Some("School Section".to_string()))
         .await?;
-    Ok(SchoolSectionModel::format(delete))
+    Ok(TradeModel::format(delete))
 }
