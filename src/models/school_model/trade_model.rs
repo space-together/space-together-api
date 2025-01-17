@@ -8,6 +8,7 @@ pub struct TradeModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub sector_id: Option<ObjectId>,
     pub create_on: DateTime,
@@ -18,8 +19,9 @@ pub struct TradeModel {
 pub struct TradeModelGet {
     pub id: String,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
-    pub sector_id: Option<String>,
+    pub sector: Option<String>,
     pub create_on: String,
     pub updated_on: Option<String>,
 }
@@ -27,15 +29,17 @@ pub struct TradeModelGet {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TradeModelNew {
     pub name: String,
-    pub sector_id: Option<String>,
+    pub username: Option<String>,
+    pub sector: Option<String>,
     pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TradeModelPut {
     pub name: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
-    pub sector_id: Option<String>,
+    pub sector: Option<String>,
 }
 
 impl TradeModel {
@@ -43,7 +47,8 @@ impl TradeModel {
         TradeModel {
             id: None,
             name: section.name,
-            sector_id: section.sector_id.map(|id| ObjectId::from_str(&id).unwrap()),
+            username: section.username,
+            sector_id: section.sector.map(|id| ObjectId::from_str(&id).unwrap()),
             description: section.description,
             create_on: DateTime::now(),
             updated_on: None,
@@ -54,8 +59,9 @@ impl TradeModel {
         TradeModelGet {
             id: section.id.map_or("".to_string(), |id| id.to_string()),
             name: section.name,
+            username: section.username,
             description: section.description,
-            sector_id: section.sector_id.map(|id| id.to_string()),
+            sector: section.sector_id.map(|id| id.to_string()),
             create_on: section
                 .create_on
                 .try_to_rfc3339_string()
@@ -78,6 +84,13 @@ impl TradeModel {
         };
 
         insert_if_some("name", section.name.map(bson::Bson::String));
+        insert_if_some("username", section.username.map(bson::Bson::String));
+        insert_if_some(
+            "sector_id",
+            section
+                .sector
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
         insert_if_some("description", section.description.map(bson::Bson::String));
 
         if is_updated {
