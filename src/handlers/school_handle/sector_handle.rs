@@ -5,7 +5,8 @@ use actix_web::{
 
 use crate::{
     controllers::school_controller::sector_controller::{
-        create_sector, delete_sector_by_id, get_all_sector, get_sector_by_id, update_sector_by_id,
+        create_sector, delete_sector_by_id, get_all_sector, get_sector_by_id,
+        get_sector_by_username, update_sector_by_id,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{
@@ -30,6 +31,19 @@ pub async fn create_sector_handle(
 
 pub async fn get_all_sector_handle(state: Data<AppState>) -> impl Responder {
     let get = get_all_sector(state.into_inner()).await;
+    match get {
+        Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
+            message: e.to_string(),
+        }),
+        Ok(r) => HttpResponse::Ok().json(r),
+    }
+}
+
+pub async fn get_sector_by_username_handle(
+    state: Data<AppState>,
+    username: Path<String>,
+) -> impl Responder {
+    let get = get_sector_by_username(state.into_inner(), username.into_inner()).await;
     match get {
         Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
             message: e.to_string(),
