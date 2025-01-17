@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -8,16 +8,19 @@ use mongodb::{
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
+    libs::functions::characters_fn::is_valid_username,
     models::school_model::trade_model::{TradeModel, TradeModelGet, TradeModelNew, TradeModelPut},
     AppState,
 };
 
+use super::sector_controller::get_sector_by_id;
+
 pub async fn create_trade(
     state: Arc<AppState>,
-    section: TradeModelNew,
+    trade: TradeModelNew,
 ) -> DbClassResult<TradeModelGet> {
     let index = IndexModel::builder()
-        .keys(doc! {"name" : 1})
+        .keys(doc! {"username" : 1})
         .options(IndexOptions::builder().unique(true).build())
         .build();
 
@@ -25,48 +28,87 @@ pub async fn create_trade(
         return Err(DbClassError::OtherError { err: e.to_string() });
     }
 
-    let get = state
-        .db
-        .trade
-        .collection
-        .find_one(doc! {"name" : section.name.clone()})
-        .await
-        .map_err(|e| DbClassError::OtherError {
-            err: format!(
-                "Some thing went wrong to get school section error is : 😡 [{}] 😡",
-                e
-            ),
-        })?;
+    if let Some(ref username) = trade.username {
+        if let Err(err) = is_valid_username(username) {
+            return Err(DbClassError::OtherError {
+                err: err.to_string(),
+            });
+        }
 
-    if let Some(r) = get {
+        let get_username = get_trade_by_username(state.clone(), username.clone()).await;
+        if get_username.is_ok() {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Username sector is ready exit [{}], please try other",
+                    &username
+                ),
+            });
+        }
+    } else {
         return Err(DbClassError::OtherError {
-            err: format!(
-                "School Section name already exists [{}], try other name",
-                r.name
-            ),
+            err: "Username is missing".to_string(),
         });
+    }
+
+    if let Some(ref sector) = trade.sector {
+        let id = match ObjectId::from_str(sector) {
+            Err(_) => {
+                return Err(DbClassError::OtherError {
+                    err: format!("Invalid trade id [{}], please try other id", sector),
+                })
+            }
+            Ok(i) => i,
+        };
+
+        let get_sector = get_sector_by_id(state.clone(), id).await;
+
+        if get_sector.is_err() {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Sector id is not found [{}], please try other id",
+                    sector
+                ),
+            });
+        }
     }
 
     let create = state
         .db
         .trade
-        .create(TradeModel::new(section), Some("School section".to_string()))
+        .create(TradeModel::new(trade), Some("School section".to_string()))
         .await?;
+    let get = get_trade_by_id(state, create).await?;
+    Ok(get)
+}
+
+pub async fn get_trade_by_username(
+    state: Arc<AppState>,
+    username: String,
+) -> DbClassResult<TradeModelGet> {
     let get = state
         .db
         .trade
-        .get_one_by_id(create, Some("School section".to_string()))
-        .await?;
-    Ok(TradeModel::format(get))
-}
+        .collection
+        .find_one(doc! {"username" : &username})
+        .await?
+        .ok_or(DbClassError::OtherError {
+            err: format!("Sector not found by username [{}]", &username),
+        })?;
 
-pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModelGet>> {
-    let get_all = state
-        .db
-        .trade
-        .get_many(None, Some("School section".to_string()))
-        .await?;
-    Ok(get_all.into_iter().map(TradeModel::format).collect())
+    let mut sector_name: Option<String> = None;
+
+    if let Some(ref education_id) = get.sector_id {
+        let get_education = get_sector_by_id(state.clone(), *education_id).await?;
+
+        if let Some(education_username) = get_education.username {
+            sector_name = Some(education_username);
+        } else {
+            sector_name = Some(get_education.name);
+        }
+    }
+    let mut sector = TradeModel::format(get);
+    sector.sector = sector_name;
+    Ok(sector)
 }
 
 pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<TradeModelGet> {
@@ -76,7 +118,29 @@ pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResul
         .get_one_by_id(id, Some("School section".to_string()))
         .await?;
 
-    Ok(TradeModel::format(get))
+    let mut sector_name: Option<String> = None;
+
+    if let Some(ref education_id) = get.sector_id {
+        let get_education = get_sector_by_id(state.clone(), *education_id).await?;
+
+        if let Some(education_username) = get_education.username {
+            sector_name = Some(education_username);
+        } else {
+            sector_name = Some(get_education.name);
+        }
+    }
+    let mut sector = TradeModel::format(get);
+    sector.sector = sector_name;
+    Ok(sector)
+}
+
+pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModelGet>> {
+    let get_all = state
+        .db
+        .trade
+        .get_many(None, Some("School section".to_string()))
+        .await?;
+    Ok(get_all.into_iter().map(TradeModel::format).collect())
 }
 
 pub async fn update_trade_by_id(

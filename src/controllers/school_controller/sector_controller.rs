@@ -104,7 +104,20 @@ pub async fn get_sector_by_username(
             err: format!("Sector not found by username [{}]", &username),
         })?;
 
-    Ok(SectorModel::format(get))
+        let mut education_name: Option<String> = None;
+
+        if let Some(ref education_id) = get.education_id {
+            let get_education = get_education_by_id(state.clone(), *education_id).await?;
+    
+            if let Some(education_username) = get_education.username {
+                education_name = Some(education_username);
+            } else {
+                education_name = Some(get_education.name);
+            }
+        }
+        let mut sector = SectorModel::format(get);
+        sector.education = education_name;
+        Ok(sector)
 }
 
 pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorModelGet>> {
