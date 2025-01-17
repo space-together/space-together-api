@@ -190,10 +190,12 @@ pub async fn delete_sector_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<SectorModelGet> {
-    let delete = state
+    let _ = state
         .db
         .sector
         .delete(id, Some("sector".to_string()))
         .await?;
-    Ok(SectorModel::format(delete))
+
+    let get = get_sector_by_id(state, id).await?;
+    Ok(get)
 }
