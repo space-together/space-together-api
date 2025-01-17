@@ -8,7 +8,7 @@ use mongodb::{
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::is_valid_name,
+    libs::functions::characters_fn::is_valid_username,
     models::education_model::education_model_model::{
         EducationModel, EducationModelGet, EducationModelNew, EducationModelPut,
     },
@@ -36,7 +36,7 @@ pub async fn create_education(
     }
 
     if let Some(ref username) = education.username {
-        if let Err(err) = is_valid_name(username) {
+        if let Err(err) = is_valid_username(username) {
             return Err(DbClassError::OtherError {
                 err: err.to_string(),
             });
