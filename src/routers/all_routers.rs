@@ -16,6 +16,7 @@ use super::{
         conversation_router_router::routers_conversation, message_router::routers_message,
     },
     database_router::database_status_router::routers_database,
+    education_router::education_router_router::routers_education,
     request_router::{
         request_router_router::routers_request, request_type_router::routers_request_type,
     },
@@ -73,6 +74,9 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/requests").configure(|user_cfg| {
                 routers_request_type(user_cfg, state.clone());
                 routers_request(user_cfg, state.clone());
+            }))
+            .service(web::scope("/education").configure(|user_cfg| {
+                routers_education(user_cfg, state.clone());
             }))
             .service(web::scope("/school").configure(|user_cfg| {
                 routers_sector(user_cfg, state.clone());
