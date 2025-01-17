@@ -6,7 +6,7 @@ use actix_web::{
 use crate::{
     controllers::education_controller::education_controller_controller::{
         create_education, delete_education_by_id, get_all_education, get_education_by_id,
-        update_education_by_id,
+        get_education_by_username, update_education_by_id,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{
@@ -48,6 +48,18 @@ pub async fn get_education_by_id_handle(state: Data<AppState>, id: Path<String>)
             }),
             Ok(r) => HttpResponse::Ok().json(r),
         },
+    }
+}
+
+pub async fn get_education_by_username_handle(
+    state: Data<AppState>,
+    username: Path<String>,
+) -> impl Responder {
+    match get_education_by_username(state.into_inner(), username.into_inner()).await {
+        Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
+            message: e.to_string(),
+        }),
+        Ok(r) => HttpResponse::Ok().json(r),
     }
 }
 
