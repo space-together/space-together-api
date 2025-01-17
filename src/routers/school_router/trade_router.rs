@@ -14,7 +14,7 @@ pub fn routers_trade(
     state: Arc<AppState>,
 ) -> &mut actix_web::web::ServiceConfig {
     cfg.service(
-        web::scope("section")
+        web::scope("trade")
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(create_trade_handle))
             .route("", get().to(get_all_trade_handle))
