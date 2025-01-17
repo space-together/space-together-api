@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
@@ -5,6 +7,8 @@ use serde::{Deserialize, Serialize};
 pub struct SectorModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
+    pub education_id: Option<ObjectId>,
+    pub username: Option<String>,
     pub name: String,
     pub description: Option<String>,
     pub create_on: DateTime,
@@ -15,6 +19,8 @@ pub struct SectorModel {
 pub struct SectorModelGet {
     pub id: String,
     pub name: String,
+    pub education_id: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub create_on: String,
     pub updated_on: Option<String>,
@@ -23,12 +29,16 @@ pub struct SectorModelGet {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SectorModelNew {
     pub name: String,
+    pub education_id: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SectorModelPut {
     pub name: Option<String>,
+    pub education_id: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
 }
 
@@ -36,6 +46,10 @@ impl SectorModel {
     pub fn new(section: SectorModelNew) -> Self {
         SectorModel {
             id: None,
+            education_id: section
+                .education_id
+                .map(|id| ObjectId::from_str(&id).unwrap()),
+            username: section.username,
             name: section.name,
             description: section.description,
             create_on: DateTime::now(),
@@ -47,6 +61,8 @@ impl SectorModel {
         SectorModelGet {
             id: section.id.map_or("".to_string(), |id| id.to_string()),
             name: section.name,
+            education_id: section.education_id.map(|id| id.to_string()),
+            username: section.username,
             description: section.description,
             create_on: section
                 .create_on
@@ -70,6 +86,13 @@ impl SectorModel {
         };
 
         insert_if_some("name", section.name.map(bson::Bson::String));
+        insert_if_some("username", section.username.map(bson::Bson::String));
+        insert_if_some(
+            "education_id",
+            section
+                .education_id
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
         insert_if_some("description", section.description.map(bson::Bson::String));
 
         if is_updated {
