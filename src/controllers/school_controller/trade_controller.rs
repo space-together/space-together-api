@@ -64,10 +64,7 @@ pub async fn create_trade(
 
         if get_sector.is_err() {
             return Err(DbClassError::OtherError {
-                err: format!(
-                    "Sector id is not found [{}], please try other id",
-                    sector
-                ),
+                err: format!("Sector id is not found [{}], please try other id", sector),
             });
         }
     }
@@ -171,22 +168,11 @@ pub async fn delete_trade_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<TradeModelGet> {
-    if (state
-        .db
-        .class
-        .class
-        .find(doc! {"sections" : {"$in" : [id]}})
-        .await)
-        .is_ok()
-    {
-        return Err(DbClassError::OtherError {
-            err: "You can not delete section bcs they are class using it".to_string(),
-        });
-    }
-    let delete = state
+    let _ = state
         .db
         .trade
         .delete(id, Some("School Section".to_string()))
         .await?;
-    Ok(TradeModel::format(delete))
+    let get = get_trade_by_id(state, id).await?;
+    Ok(get)
 }

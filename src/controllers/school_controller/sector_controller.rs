@@ -9,7 +9,7 @@ use mongodb::{
 use crate::{
     controllers::education_controller::education_controller_controller::get_education_by_id,
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::is_valid_username,
+    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
     models::school_model::sector_model::{
         SectorModel, SectorModelGet, SectorModelNew, SectorModelPut,
     },
@@ -203,12 +203,31 @@ pub async fn delete_sector_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<SectorModelGet> {
+    let get_trade = state
+    .db
+    .sector
+    .get_many(
+        Some(GetManyByField {
+            field: "trade_id".to_string(),
+            value: id,
+        }),
+        Some("trade".to_string()),
+    )
+    .await;
+
+if let Ok(sectors) = get_trade {
+    if !sectors.is_empty() {
+        return Err(DbClassError::OtherError { 
+            err: "You cannot delete sector account because there are trades associated with it. If you need to delete it, delete those trade accounts first.".to_string() 
+        });
+    }
+}
+let get = get_sector_by_id(state.clone(), id).await?;
     let _ = state
         .db
         .sector
         .delete(id, Some("sector".to_string()))
         .await?;
 
-    let get = get_sector_by_id(state, id).await?;
     Ok(get)
 }

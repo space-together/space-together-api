@@ -8,7 +8,7 @@ use mongodb::{
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::is_valid_username,
+    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
     models::education_model::education_model_model::{
         EducationModel, EducationModelGet, EducationModelNew, EducationModelPut,
     },
@@ -142,10 +142,31 @@ pub async fn delete_education_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<EducationModelGet> {
-    let delete = state
+    let get_sectors = state
+        .db
+        .sector
+        .get_many(
+            Some(GetManyByField {
+                field: "education_id".to_string(),
+                value: id,
+            }),
+            Some("education".to_string()),
+        )
+        .await;
+
+    if let Ok(sectors) = get_sectors {
+        if !sectors.is_empty() {
+            return Err(DbClassError::OtherError { 
+                err: "You cannot delete education account because there are trades associated with it. If you need to delete it, delete those sectors accounts first.".to_string() 
+            });
+        }
+    }
+
+    let get = get_education_by_id(state.clone(), id).await?;
+    let _ = state
         .db
         .education
         .delete(id, Some("education".to_string()))
         .await?;
-    Ok(EducationModel::format(delete))
+    Ok(get)
 }
