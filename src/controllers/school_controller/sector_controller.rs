@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -7,6 +7,7 @@ use mongodb::{
 };
 
 use crate::{
+    controllers::education_controller::education_controller_controller::get_education_by_id,
     error::db_class_error::{DbClassError, DbClassResult},
     libs::functions::characters_fn::is_valid_username,
     models::school_model::sector_model::{
@@ -57,12 +58,35 @@ pub async fn create_sector(
         });
     }
 
+    if let Some(ref education) = sector.education {
+        let id = match ObjectId::from_str(education) {
+            Err(_) => {
+                return Err(DbClassError::OtherError {
+                    err: format!("Invalid education id [{}], please try other id", education),
+                })
+            }
+            Ok(i) => i,
+        };
+
+        let get_education = get_education_by_id(state.clone(), id).await;
+
+        if get_education.is_err() {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Education id is not found [{}], please try other id",
+                    education
+                ),
+            });
+        }
+    }
+
     let create = state
         .db
         .sector
         .create(SectorModel::new(sector), Some("sector".to_string()))
         .await?;
     let get = get_sector_by_id(state.clone(), create).await?;
+
     Ok(get)
 }
 
@@ -89,7 +113,24 @@ pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorMod
         .sector
         .get_many(None, Some("sector".to_string()))
         .await?;
-    Ok(get.into_iter().map(SectorModel::format).collect())
+
+    let mut sectors: Vec<SectorModelGet> = Vec::new();
+
+    for sector in get {
+        if let Some(ref education_id) = sector.education_id {
+            let get_education = get_education_by_id(state.clone(), *education_id).await?;
+            if let Some(education_username) = get_education.username {
+                let mut fol_sector = SectorModel::format(sector);
+                fol_sector.education = Some(education_username);
+                sectors.push(fol_sector);
+            } else {
+                let mut fol_sector = SectorModel::format(sector);
+                fol_sector.education = Some(get_education.name);
+                sectors.push(fol_sector);
+            }
+        }
+    }
+    Ok(sectors)
 }
 
 pub async fn get_sector_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<SectorModelGet> {
@@ -98,7 +139,20 @@ pub async fn get_sector_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResu
         .sector
         .get_one_by_id(id, Some("sector".to_string()))
         .await?;
-    Ok(SectorModel::format(get))
+    let mut education_name: Option<String> = None;
+
+    if let Some(ref education_id) = get.education_id {
+        let get_education = get_education_by_id(state.clone(), *education_id).await?;
+
+        if let Some(education_username) = get_education.username {
+            education_name = Some(education_username);
+        } else {
+            education_name = Some(get_education.name);
+        }
+    }
+    let mut sector = SectorModel::format(get);
+    sector.education = education_name;
+    Ok(sector)
 }
 
 pub async fn update_sector_by_id(

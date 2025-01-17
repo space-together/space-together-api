@@ -19,7 +19,7 @@ pub struct SectorModel {
 pub struct SectorModelGet {
     pub id: String,
     pub name: String,
-    pub education_id: Option<String>,
+    pub education: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
     pub create_on: String,
@@ -29,7 +29,7 @@ pub struct SectorModelGet {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SectorModelNew {
     pub name: String,
-    pub education_id: Option<String>,
+    pub education: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
 }
@@ -37,7 +37,7 @@ pub struct SectorModelNew {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SectorModelPut {
     pub name: Option<String>,
-    pub education_id: Option<String>,
+    pub education: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
 }
@@ -46,9 +46,7 @@ impl SectorModel {
     pub fn new(section: SectorModelNew) -> Self {
         SectorModel {
             id: None,
-            education_id: section
-                .education_id
-                .map(|id| ObjectId::from_str(&id).unwrap()),
+            education_id: section.education.map(|id| ObjectId::from_str(&id).unwrap()),
             username: section.username,
             name: section.name,
             description: section.description,
@@ -61,7 +59,7 @@ impl SectorModel {
         SectorModelGet {
             id: section.id.map_or("".to_string(), |id| id.to_string()),
             name: section.name,
-            education_id: section.education_id.map(|id| id.to_string()),
+            education: section.education_id.map(|id| id.to_string()),
             username: section.username,
             description: section.description,
             create_on: section
@@ -90,7 +88,7 @@ impl SectorModel {
         insert_if_some(
             "education_id",
             section
-                .education_id
+                .education
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
         insert_if_some("description", section.description.map(bson::Bson::String));
