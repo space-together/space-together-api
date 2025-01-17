@@ -6,6 +6,7 @@ pub struct EducationModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: DateTime,
@@ -16,6 +17,7 @@ pub struct EducationModel {
 pub struct EducationModelGet {
     pub id: String,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: String,
@@ -25,6 +27,7 @@ pub struct EducationModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct EducationModelNew {
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
@@ -32,6 +35,7 @@ pub struct EducationModelNew {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct EducationModelPut {
     pub name: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
@@ -41,6 +45,7 @@ impl EducationModel {
         EducationModel {
             id: None,
             name: education.name,
+            username: education.username,
             description: education.description,
             roles: education.roles,
             created_on: DateTime::now(),
@@ -52,6 +57,7 @@ impl EducationModel {
         EducationModelGet {
             id: education.id.map_or("".to_string(), |id| id.to_string()),
             name: education.name,
+            username: education.username,
             description: education.description,
             roles: education.roles,
             created_on: education
@@ -76,6 +82,7 @@ impl EducationModel {
         };
 
         insert_if_some("name", education.name.map(bson::Bson::String));
+        insert_if_some("username", education.username.map(bson::Bson::String));
         insert_if_some("description", education.description.map(bson::Bson::String));
 
         if is_update {
