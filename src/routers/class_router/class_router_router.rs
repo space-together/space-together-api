@@ -14,7 +14,7 @@ pub fn routers_class(
     state: Arc<AppState>,
 ) -> &mut actix_web::web::ServiceConfig {
     cfg.service(
-        web::scope("type")
+        web::scope("")
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(create_class_handle))
             .route("", get().to(get_all_class_handle))

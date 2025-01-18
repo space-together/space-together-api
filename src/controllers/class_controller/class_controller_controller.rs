@@ -1,10 +1,10 @@
-use std::sync::Arc;
-
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::IndexOptions,
     IndexModel,
 };
+use serde::{Deserialize, Serialize};
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     controllers::school_controller::{
@@ -18,43 +18,93 @@ use crate::{
     AppState,
 };
 
+#[derive(Debug, Serialize, Deserialize)]
+struct CheckOtherExitModel {
+    username: Option<String>,
+    sector: Option<String>,
+    trade: Option<String>,
+}
+
+async fn check_other_exit(state: Arc<AppState>, exits: CheckOtherExitModel) -> DbClassResult<()> {
+    if let Some(ref username) = exits.username {
+        is_valid_username(username).map_err(|err| DbClassError::OtherError {
+            err: err.to_string(),
+        })?;
+
+        if get_class_by_username(state.clone(), username.clone())
+            .await
+            .is_ok()
+        {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Username sector already exists [{}], please try another",
+                    username
+                ),
+            });
+        }
+    }
+
+    if let Some(ref sector_id) = exits.sector {
+        let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
+            err: format!("Sector ID is invalid [{}], please try another", sector_id),
+        })?;
+
+        get_sector_by_id(state.clone(), id)
+            .await
+            .map_err(|_| DbClassError::OtherError {
+                err: format!("Sector ID not found [{}], please try another", sector_id),
+            })?;
+    }
+
+    if let Some(ref trade_id) = exits.trade {
+        let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
+            err: format!("Trade ID is invalid [{}], please try another", trade_id),
+        })?;
+
+        get_trade_by_id(state.clone(), id)
+            .await
+            .map_err(|_| DbClassError::OtherError {
+                err: format!("Trade ID not found [{}], please try another", trade_id),
+            })?;
+    }
+
+    Ok(())
+}
+
 pub async fn create_class(
     state: Arc<AppState>,
     class: ClassModelNew,
 ) -> DbClassResult<ClassModelGet> {
     let index = IndexModel::builder()
-        .keys(doc! {"username" : 1,"code" : 1})
+        .keys(doc! {"username": 1, "code": 1})
         .options(IndexOptions::builder().unique(true).build())
         .build();
 
-    if let Err(e) = state.db.trade.collection.create_index(index).await {
-        return Err(DbClassError::OtherError { err: e.to_string() });
-    }
+    state
+        .db
+        .class
+        .collection
+        .create_index(index)
+        .await
+        .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
 
-    if let Some(ref username) = class.username {
-        if let Err(err) = is_valid_username(username) {
-            return Err(DbClassError::OtherError {
-                err: err.to_string(),
-            });
-        }
+    check_other_exit(
+        state.clone(),
+        CheckOtherExitModel {
+            username: class.username.clone(),
+            sector: class.sector.clone(),
+            trade: class.trade.clone(),
+        },
+    )
+    .await?;
 
-        let get_username = get_class_by_username(state.clone(), username.clone()).await;
-        if get_username.is_ok() {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username sector is ready exit [{}], please try other",
-                    &username
-                ),
-            });
-        }
-    }
     let create = state
         .db
         .class
         .create(ClassModel::new(class), Some("class".to_string()))
         .await?;
-    let get = get_class_by_id(state, create).await?;
-    Ok(get)
+
+    get_class_by_id(state, create).await
 }
 
 pub async fn get_class_by_username(
@@ -65,35 +115,25 @@ pub async fn get_class_by_username(
         .db
         .class
         .collection
-        .find_one(doc! {"username" : &username})
+        .find_one(doc! {"username": &username})
         .await?
         .ok_or(DbClassError::OtherError {
-            err: format!("Sector not found by username [{}]", &username),
+            err: format!("Class not found by username [{}]", &username),
         })?;
 
-    let mut trade_name: Option<String> = None;
+    let trade_name = if let Some(ref trade_id) = get.trade_id {
+        let trade = get_trade_by_id(state.clone(), *trade_id).await?;
+        trade.username.or_else(|| Some(trade.name))
+    } else {
+        None
+    };
 
-    if let Some(ref trade_id) = get.trade_id {
-        let get_trade = get_trade_by_id(state.clone(), *trade_id).await?;
-
-        if let Some(trade_username) = get_trade.username {
-            trade_name = Some(trade_username);
-        } else {
-            trade_name = Some(get_trade.name);
-        }
-    }
-
-    let mut sector_name: Option<String> = None;
-
-    if let Some(ref sector_id) = get.sector_id {
-        let get_sector = get_sector_by_id(state.clone(), *sector_id).await?;
-
-        if let Some(sector_username) = get_sector.username {
-            sector_name = Some(sector_username);
-        } else {
-            sector_name = Some(get_sector.name);
-        }
-    }
+    let sector_name = if let Some(ref sector_id) = get.sector_id {
+        let sector = get_sector_by_id(state.clone(), *sector_id).await?;
+        sector.username.or_else(|| Some(sector.name))
+    } else {
+        None
+    };
 
     let mut class = ClassModel::format(get);
     class.trade = trade_name;
@@ -124,13 +164,21 @@ pub async fn update_class_by_id(
     id: ObjectId,
     class: ClassModelPut,
 ) -> DbClassResult<ClassModelGet> {
-    let _ = state
+    check_other_exit(
+        state.clone(),
+        CheckOtherExitModel {
+            username: class.username.clone(),
+            sector: class.sector.clone(),
+            trade: class.trade.clone(),
+        },
+    )
+    .await?;
+    state
         .db
         .class
         .update(id, ClassModel::put(class), Some("class".to_string()))
-        .await;
-    let get = get_class_by_id(state, id).await?;
-    Ok(get)
+        .await?;
+    get_class_by_id(state, id).await
 }
 
 pub async fn delete_class_by_id(

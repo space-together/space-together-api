@@ -26,8 +26,8 @@ pub struct ClassModelNew {
     pub name: String,
      pub username : Option<String>,
     pub class_teacher_id: Option<String>,
-    pub trade_id: Option<String>,
-    pub sector_id: Option<String>,
+    pub trade: Option<String>,
+    pub sector: Option<String>,
     pub code: Option<String>,
     pub class_type_id: Option<String>,
     pub is_public: Option<bool>,
@@ -57,8 +57,8 @@ pub struct ClassModelPut {
     pub name: Option<String>,
     pub username : Option<String>,
     pub class_teacher_id: Option<String>,
-    pub trade_id: Option<String>,
-    pub sector_id: Option<String>,
+    pub trade: Option<String>,
+    pub sector: Option<String>,
     pub code: Option<String>,
     pub class_type_id: Option<String>,
     pub is_public: Option<bool>,
@@ -76,10 +76,10 @@ impl ClassModel {
                 .class_teacher_id
                 .and_then(|id| ObjectId::from_str(&id).ok()),
             trade_id: class_model_new
-                .trade_id
+                .trade
                 .and_then(|id| ObjectId::from_str(&id).ok()),
             sector_id: class_model_new
-                .sector_id
+                .sector
                 .and_then(|id| ObjectId::from_str(&id).ok()),
             code: class_model_new.code,
             class_type_id: class_model_new
@@ -141,14 +141,14 @@ impl ClassModel {
         insert_if_some(
             "trade_id",
             class_model_put
-                .trade_id
+                .trade
                 .and_then(|id| ObjectId::from_str(&id).ok())
                 .map(bson::Bson::ObjectId),
         );
         insert_if_some(
             "sector_id",
             class_model_put
-                .sector_id
+                .sector
                 .and_then(|id| ObjectId::from_str(&id).ok())
                 .map(bson::Bson::ObjectId),
         );
