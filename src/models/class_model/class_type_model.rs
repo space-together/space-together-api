@@ -6,6 +6,7 @@ pub struct ClassTypeModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username : Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: DateTime,
@@ -16,6 +17,7 @@ pub struct ClassTypeModel {
 pub struct ClassTypeModelGet {
     pub id: String,
     pub name: String,
+    pub username : Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: String,
@@ -25,6 +27,7 @@ pub struct ClassTypeModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassTypeModelNew {
     pub name: String,
+    pub username : Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
@@ -32,6 +35,7 @@ pub struct ClassTypeModelNew {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassTypeModelPut {
     pub name: Option<String>,
+    pub username : Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
@@ -41,6 +45,7 @@ impl ClassTypeModel {
         ClassTypeModel {
             id: None,
             name: class_type.name,
+            username : class_type.username,
             description: class_type.description,
             roles: class_type.roles,
             created_on: DateTime::now(),
@@ -52,6 +57,7 @@ impl ClassTypeModel {
         ClassTypeModelGet {
             id: class_type.id.map_or("".to_string(), |id| id.to_string()),
             name: class_type.name,
+            username: class_type.username,
             description: class_type.description,
             roles: class_type.roles,
             created_on: class_type
@@ -76,6 +82,7 @@ impl ClassTypeModel {
         };
 
         insert_if_some("name", class_type.name.map(bson::Bson::String));
+        insert_if_some("username", class_type.username.map(bson::Bson::String));
         insert_if_some(
             "description",
             class_type.description.map(bson::Bson::String),

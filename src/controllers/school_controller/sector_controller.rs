@@ -30,7 +30,7 @@ pub async fn create_sector(
     if let Err(err) = state.db.education.collection.create_index(index).await {
         return Err(DbClassError::OtherError {
             err: format!(
-                "Can't create education bcs username is leady exit 😡 [{}]😡 ",
+                "Can't create education bcs username is leady exit [{}] ",
                 err
             ),
         });
