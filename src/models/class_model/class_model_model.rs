@@ -8,6 +8,7 @@ pub struct ClassModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username : Option<String>,
     pub class_teacher_id: Option<ObjectId>,
     pub trade_id: Option<ObjectId>,
     pub sector_id: Option<ObjectId>,
@@ -23,6 +24,7 @@ pub struct ClassModel {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelNew {
     pub name: String,
+     pub username : Option<String>,
     pub class_teacher_id: Option<String>,
     pub trade_id: Option<String>,
     pub sector_id: Option<String>,
@@ -37,6 +39,7 @@ pub struct ClassModelNew {
 pub struct ClassModelGet {
     pub id: String,
     pub name: String,
+     pub username : Option<String>,
     pub class_teacher: Option<String>,
     pub trade: Option<String>,
     pub sector: Option<String>,
@@ -52,6 +55,7 @@ pub struct ClassModelGet {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelPut {
     pub name: Option<String>,
+    pub username : Option<String>,
     pub class_teacher_id: Option<String>,
     pub trade_id: Option<String>,
     pub sector_id: Option<String>,
@@ -67,6 +71,7 @@ impl ClassModel {
         ClassModel {
             id: None,
             name: class_model_new.name,
+            username : class_model_new.username,
             class_teacher_id: class_model_new
                 .class_teacher_id
                 .and_then(|id| ObjectId::from_str(&id).ok()),
@@ -94,6 +99,7 @@ impl ClassModel {
         ClassModelGet {
             id: class.id.map_or("".to_string(), |id| id.to_string()),
             name: class.name.clone(),
+            username: class.username.clone(),
             description: class.description.clone(),
             class_teacher: class.class_teacher_id.map(|id| id.to_string()),
             image: class.image.map(|id| id.to_string()),
@@ -124,6 +130,7 @@ impl ClassModel {
         };
 
         insert_if_some("name", class_model_put.name.map(bson::Bson::String));
+        insert_if_some("username", class_model_put.username.map(bson::Bson::String));
         insert_if_some(
             "class_teacher_id",
             class_model_put

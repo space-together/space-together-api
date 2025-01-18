@@ -39,7 +39,7 @@ pub async fn create_trade(
         if get_username.is_ok() {
             return Err(DbClassError::OtherError {
                 err: format!(
-                    "Username sector is ready exit [{}], please try other",
+                    "Username trade is ready exit [{}], please try other",
                     &username
                 ),
             });
