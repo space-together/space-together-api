@@ -7,232 +7,172 @@ use serde::{Deserialize, Serialize};
 pub struct ClassModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub name: String,                    // name
-    pub class_teacher_id: ObjectId,      // teacher id
-    pub students: Option<Vec<ObjectId>>, // Student
-    pub teachers: Option<Vec<ObjectId>>, //teachers
-    pub sections: Option<Vec<ObjectId>>,
+    pub name: String,
+    pub class_teacher_id: Option<ObjectId>,
+    pub trade_id: Option<ObjectId>,
+    pub sector_id: Option<ObjectId>,
     pub code: Option<String>,
-    pub subjects: Option<Vec<ObjectId>>,
-    pub rooms: Option<Vec<ObjectId>>,
     pub class_type_id: Option<ObjectId>,
     pub is_public: Option<bool>,
     pub image: Option<ObjectId>,
-    pub create_on: DateTime,         // create on
-    pub update_on: Option<DateTime>, // update on
+    pub description: Option<String>,
+    pub created_on: DateTime,
+    pub updated_on: Option<DateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelNew {
     pub name: String,
-    pub class_teacher_id: String,
-    pub code: Option<String>,
-    pub sections: Option<Vec<String>>,
-    pub subjects: Option<Vec<String>>,
-    pub rooms: Option<Vec<String>>,
-    pub image: Option<String>,
-    pub teachers: Option<Vec<String>>,
-    pub students: Option<Vec<String>>,
-    pub class_type_id: Option<String>,
-    pub is_public: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ClassModelPut {
-    pub name: Option<String>,
-    pub class_teacher_id: Option<String>, // teacher id
-    pub students: Option<Vec<String>>,    // student id
-    pub teachers: Option<Vec<String>>,    // teachers id
-    pub sections: Option<Vec<String>>,
-    pub rooms: Option<Vec<String>>,
-    pub image: Option<String>,
-    pub subjects: Option<Vec<String>>,
+    pub class_teacher_id: Option<String>,
+    pub trade_id: Option<String>,
+    pub sector_id: Option<String>,
     pub code: Option<String>,
     pub class_type_id: Option<String>,
     pub is_public: Option<bool>,
-}
-
-impl ClassModel {
-    pub fn new(class: ClassModelNew) -> Self {
-        ClassModel {
-            id: None,
-            name: class.name,
-            is_public: class.is_public,
-            image: class.image.map(|r| ObjectId::from_str(&r).unwrap()),
-            class_type_id: class.class_type_id.map(|r| ObjectId::from_str(&r).unwrap()),
-            class_teacher_id: ObjectId::from_str(&class.class_teacher_id).unwrap(),
-            code: class.code,
-            subjects: class.subjects.map(|ids| {
-                ids.iter()
-                    .map(|id| ObjectId::from_str(id).unwrap())
-                    .collect()
-            }),
-            sections: class.sections.map(|ids| {
-                ids.iter()
-                    .map(|id| ObjectId::from_str(id).unwrap())
-                    .collect()
-            }),
-            rooms: class.rooms.map(|ids| {
-                ids.iter()
-                    .map(|id| ObjectId::from_str(id).unwrap())
-                    .collect()
-            }),
-            teachers: class.teachers.map(|ids| {
-                ids.iter()
-                    .map(|id| ObjectId::from_str(id).unwrap())
-                    .collect()
-            }),
-            students: class.students.map(|ids| {
-                ids.iter()
-                    .map(|id| ObjectId::from_str(id).unwrap())
-                    .collect()
-            }),
-            create_on: DateTime::now(),
-            update_on: None,
-        }
-    }
-
-    pub fn put(class: ClassModelPut) -> Document {
-        let mut doc = Document::new();
-
-        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
-            if let Some(v) = value {
-                doc.insert(key, v);
-            }
-        };
-
-        insert_if_some("is_public", class.is_public.map(bson::Bson::Boolean));
-        insert_if_some("name", class.name.map(bson::Bson::String));
-        insert_if_some(
-            "class_teacher_id",
-            class
-                .class_teacher_id
-                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
-        );
-        insert_if_some(
-            "image",
-            class
-                .image
-                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
-        );
-        insert_if_some(
-            "class_type_id",
-            class
-                .class_type_id
-                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
-        );
-
-        insert_if_some(
-            "students",
-            class.students.map(|students| {
-                bson::Bson::Array(
-                    students
-                        .into_iter()
-                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
-                        .collect(),
-                )
-            }),
-        );
-        insert_if_some(
-            "rooms",
-            class.rooms.map(|students| {
-                bson::Bson::Array(
-                    students
-                        .into_iter()
-                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
-                        .collect(),
-                )
-            }),
-        );
-        insert_if_some(
-            "subjects",
-            class.subjects.map(|students| {
-                bson::Bson::Array(
-                    students
-                        .into_iter()
-                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
-                        .collect(),
-                )
-            }),
-        );
-        insert_if_some(
-            "sections",
-            class.sections.map(|students| {
-                bson::Bson::Array(
-                    students
-                        .into_iter()
-                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
-                        .collect(),
-                )
-            }),
-        );
-
-        insert_if_some(
-            "teachers",
-            class.teachers.map(|teachers| {
-                bson::Bson::Array(
-                    teachers
-                        .into_iter()
-                        .filter_map(|id| ObjectId::from_str(&id).ok().map(bson::Bson::ObjectId))
-                        .collect(),
-                )
-            }),
-        );
-
-        doc
-    }
+    pub image: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelGet {
     pub id: String,
     pub name: String,
-    pub class_teacher_id: String,
-    pub students: Option<Vec<String>>,
-    pub teachers: Option<Vec<String>>,
-    pub image: Option<String>,
-    pub is_public: Option<bool>,
-    pub sections: Option<Vec<String>>,
-    pub subjects: Option<Vec<String>>,
-    pub rooms: Option<String>,
-    pub class_type_id: Option<String>,
+    pub class_teacher: Option<String>,
+    pub trade: Option<String>,
+    pub sector: Option<String>,
     pub code: Option<String>,
-    pub create_on: String,
-    pub update_on: Option<String>,
+    pub class_type: Option<String>,
+    pub is_public: Option<bool>,
+    pub image: Option<String>,
+    pub description: Option<String>,
+    pub created_on: String,
+    pub updated_on: Option<String>,
 }
 
-impl ClassModelGet {
-    pub fn format(class: ClassModel) -> ClassModelGet {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClassModelPut {
+    pub name: Option<String>,
+    pub class_teacher_id: Option<String>,
+    pub trade_id: Option<String>,
+    pub sector_id: Option<String>,
+    pub code: Option<String>,
+    pub class_type_id: Option<String>,
+    pub is_public: Option<bool>,
+    pub image: Option<String>,
+    pub description: Option<String>,
+}
+
+impl ClassModel {
+    pub fn new(class_model_new: ClassModelNew) -> Self {
+        ClassModel {
+            id: None,
+            name: class_model_new.name,
+            class_teacher_id: class_model_new
+                .class_teacher_id
+                .and_then(|id| ObjectId::from_str(&id).ok()),
+            trade_id: class_model_new
+                .trade_id
+                .and_then(|id| ObjectId::from_str(&id).ok()),
+            sector_id: class_model_new
+                .sector_id
+                .and_then(|id| ObjectId::from_str(&id).ok()),
+            code: class_model_new.code,
+            class_type_id: class_model_new
+                .class_type_id
+                .and_then(|id| ObjectId::from_str(&id).ok()),
+            is_public: class_model_new.is_public,
+            image: class_model_new
+                .image
+                .and_then(|id| ObjectId::from_str(&id).ok()),
+            description: class_model_new.description,
+            created_on: DateTime::now(),
+            updated_on: None,
+        }
+    }
+
+    pub fn format(class : Self) -> ClassModelGet {
         ClassModelGet {
             id: class.id.map_or("".to_string(), |id| id.to_string()),
-            name: class.name,
+            name: class.name.clone(),
+            description: class.description.clone(),
+            class_teacher: class.class_teacher_id.map(|id| id.to_string()),
+            image: class.image.map(|id| id.to_string()),
+            trade: class.trade_id.map(|id| id.to_string()),
+            sector: class.sector_id.map(|id| id.to_string()),
+            class_type: class.class_type_id.map(|id| id.to_string()),
             is_public: class.is_public,
-            image: class.image.map(|i| i.to_string()),
-            class_type_id: class.class_type_id.map(|i| i.to_string()),
-            code: class.code,
-            subjects: class
-                .subjects
-                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
-            rooms: class
-                .rooms
-                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
-            sections: class
-                .sections
-                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
-            class_teacher_id: class.class_teacher_id.to_string(),
-            students: class
-                .students
-                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
-            teachers: class
-                .teachers
-                .map(|ids| ids.iter().map(|id| id.to_string()).collect()),
-            create_on: class
-                .create_on
+            code: class.code.clone(),
+            created_on: class
+                .created_on
                 .try_to_rfc3339_string()
-                .unwrap_or_else(|_| "".to_string()),
-            update_on: Some(class.update_on.map_or("".to_string(), |date| {
+                .unwrap_or("".to_string()),
+            updated_on: Some(class.updated_on.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }
+    }
+
+    pub fn put(class_model_put: ClassModelPut) -> Document {
+        let mut doc = Document::new();
+        let mut is_updated = false;
+
+        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                doc.insert(key, v);
+                is_updated = true;
+            }
+        };
+
+        insert_if_some("name", class_model_put.name.map(bson::Bson::String));
+        insert_if_some(
+            "class_teacher_id",
+            class_model_put
+                .class_teacher_id
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
+        insert_if_some(
+            "trade_id",
+            class_model_put
+                .trade_id
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
+        insert_if_some(
+            "sector_id",
+            class_model_put
+                .sector_id
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
+        insert_if_some("code", class_model_put.code.map(bson::Bson::String));
+        insert_if_some(
+            "class_type_id",
+            class_model_put
+                .class_type_id
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
+        insert_if_some(
+            "is_public",
+            class_model_put.is_public.map(bson::Bson::Boolean),
+        );
+        insert_if_some(
+            "image",
+            class_model_put
+                .image
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
+        insert_if_some(
+            "description",
+            class_model_put.description.map(bson::Bson::String),
+        );
+
+        if is_updated {
+            doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
+        }
+
+        doc
     }
 }

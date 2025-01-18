@@ -1,6 +1,6 @@
 use super::{
     class_db::{
-        activities_db::ActivityDb, activities_type_db::ActivitiesTypeDb, class_db_db::ClassDb,
+        activities_db::ActivityDb, activities_type_db::ActivitiesTypeDb,
         class_group_db::ClassGroupDb,
     },
     conversation_db::message_db::MessageDb,
@@ -19,8 +19,7 @@ use crate::{
     models::{
         auth::adapter_model::{AccountModel, SessionModel},
         class_model::{
-            class_room_model::ClassRoomModel, class_room_type_model::ClassRoomTypeModel,
-            class_type_model::ClassTypeModel,
+            class_model_model::ClassModel, class_room_model::ClassRoomModel, class_room_type_model::ClassRoomTypeModel, class_type_model::ClassTypeModel
         },
         database_model::collection_model::DatabaseStats,
         education_model::education_model_model::EducationModel,
@@ -41,7 +40,7 @@ use std::env;
 pub struct ConnDb {
     pub user_role: UserRoleDb,
     pub user: UserDb,
-    pub class: ClassDb,
+    pub class: MongoCrud<ClassModel>,
     pub class_group: ClassGroupDb,
     pub class_room_type: MongoCrud<ClassRoomTypeModel>,
     pub class_room: MongoCrud<ClassRoomModel>,
@@ -95,8 +94,8 @@ impl ConnDb {
                 let user = UserDb {
                     user: st_data.collection("users"),
                 };
-                let class = ClassDb {
-                    class: st_data.collection("classes"),
+                let class = MongoCrud {
+                    collection: st_data.collection("classes"),
                 };
                 let class_group = ClassGroupDb {
                     class_group: st_data.collection("--classes_groups"), // private
