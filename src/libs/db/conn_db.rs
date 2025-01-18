@@ -102,11 +102,11 @@ impl ConnDb {
                 };
 
                 let class_type = MongoCrud {
-                    collection: st_data.collection("class_type.role"),
+                    collection: st_data.collection("classes.role"),
                 };
 
                 let class_room_type = MongoCrud {
-                    collection: st_data.collection("class_room_type.role"),
+                    collection: st_data.collection("class_room.role"),
                 };
 
                 let class_room = MongoCrud {
@@ -149,11 +149,11 @@ impl ConnDb {
                     collection: st_image.collection("school_logo"),
                 };
                 let trade = MongoCrud {
-                    collection: st_data.collection("shool_section.role"),
+                    collection: st_data.collection("trade.role"),
                 };
 
                 let subject_type = MongoCrud {
-                    collection: st_data.collection("subject_type.role"),
+                    collection: st_data.collection("subjects.role"),
                 };
 
                 let subject = MongoCrud {

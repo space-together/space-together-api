@@ -39,7 +39,7 @@ pub async fn update_trade_handle(
             Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: e.to_string(),
             }),
-            Ok(r) => HttpResponse::Created().json(r),
+            Ok(r) => HttpResponse::Ok().json(r),
         },
     }
 }
@@ -51,7 +51,7 @@ pub async fn get_trade_by_id_handle(state: Data<AppState>, id: Path<String>) -> 
             Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: e.to_string(),
             }),
-            Ok(r) => HttpResponse::Created().json(r),
+            Ok(r) => HttpResponse::Ok().json(r),
         },
     }
 }
@@ -63,7 +63,7 @@ pub async fn delete_trade_by_id_handle(state: Data<AppState>, id: Path<String>) 
             Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: e.to_string(),
             }),
-            Ok(r) => HttpResponse::Created().json(r),
+            Ok(r) => HttpResponse::Ok().json(r),
         },
     }
 }
@@ -74,6 +74,6 @@ pub async fn get_all_trade_handle(state: Data<AppState>) -> impl Responder {
         Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
             message: e.to_string(),
         }),
-        Ok(r) => HttpResponse::Created().json(r),
+        Ok(r) => HttpResponse::Ok().json(r),
     }
 }
