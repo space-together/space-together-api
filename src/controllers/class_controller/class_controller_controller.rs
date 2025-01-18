@@ -11,7 +11,7 @@ use crate::{
         sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
     },
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::is_valid_username,
+    libs::functions::characters_fn::{generate_code, generate_username, is_valid_username},
     models::class_model::class_model_model::{
         ClassModel, ClassModelGet, ClassModelNew, ClassModelPut,
     },
@@ -73,7 +73,7 @@ async fn check_other_exit(state: Arc<AppState>, exits: CheckOtherExitModel) -> D
 
 pub async fn create_class(
     state: Arc<AppState>,
-    class: ClassModelNew,
+    mut class: ClassModelNew,
 ) -> DbClassResult<ClassModelGet> {
     let index = IndexModel::builder()
         .keys(doc! {"username": 1, "code": 1})
@@ -97,6 +97,14 @@ pub async fn create_class(
         },
     )
     .await?;
+
+    if class.username.is_none() {
+        class.username = Some(generate_username(&class.name));
+    }
+
+    if class.code.is_none() {
+        class.code = Some(generate_code());
+    }
 
     let create = state
         .db
@@ -123,14 +131,14 @@ pub async fn get_class_by_username(
 
     let trade_name = if let Some(ref trade_id) = get.trade_id {
         let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-        trade.username.or_else(|| Some(trade.name))
+        trade.username.or(Some(trade.name))
     } else {
         None
     };
 
     let sector_name = if let Some(ref sector_id) = get.sector_id {
         let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-        sector.username.or_else(|| Some(sector.name))
+        sector.username.or(Some(sector.name))
     } else {
         None
     };
