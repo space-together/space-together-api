@@ -19,7 +19,8 @@ use crate::{
     models::{
         auth::adapter_model::{AccountModel, SessionModel},
         class_model::{
-            class_model_model::ClassModel, class_room_model::ClassRoomModel, class_room_type_model::ClassRoomTypeModel, class_type_model::ClassTypeModel
+            class_model_model::ClassModel, class_room_model::ClassRoomModel,
+            class_room_type_model::ClassRoomTypeModel, class_type_model::ClassTypeModel,
         },
         database_model::collection_model::DatabaseStats,
         education_model::education_model_model::EducationModel,
@@ -149,7 +150,7 @@ impl ConnDb {
                     collection: st_image.collection("school_logo"),
                 };
                 let trade = MongoCrud {
-                    collection: st_data.collection("trade.role"),
+                    collection: st_data.collection("trade"),
                 };
 
                 let subject_type = MongoCrud {
