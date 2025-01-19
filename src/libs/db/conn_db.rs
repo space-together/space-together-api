@@ -150,7 +150,7 @@ impl ConnDb {
                     collection: st_image.collection("school_logo"),
                 };
                 let trade = MongoCrud {
-                    collection: st_data.collection("trade"),
+                    collection: st_data.collection("trades"),
                 };
 
                 let subject_type = MongoCrud {
