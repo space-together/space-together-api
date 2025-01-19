@@ -117,13 +117,13 @@ pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResul
 
     let mut sector_name: Option<String> = None;
 
-    if let Some(ref education_id) = get.sector_id {
-        let get_education = get_sector_by_id(state.clone(), *education_id).await?;
+    if let Some(ref sector_id) = get.sector_id {
+        let get_sector = get_sector_by_id(state.clone(), *sector_id).await?;
 
-        if let Some(education_username) = get_education.username {
-            sector_name = Some(education_username);
+        if let Some(sector_username) = get_sector.username {
+            sector_name = Some(sector_username);
         } else {
-            sector_name = Some(get_education.name);
+            sector_name = Some(get_sector.name);
         }
     }
     let mut sector = TradeModel::format(get);
@@ -137,7 +137,26 @@ pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModel
         .trade
         .get_many(None, Some("School section".to_string()))
         .await?;
-    Ok(get_all.into_iter().map(TradeModel::format).collect())
+    let mut trades: Vec<TradeModelGet> = Vec::new();
+
+    for trade in get_all {
+        let mut sector_name: Option<String> = None;
+        let mut format_trade = TradeModel::format(trade.clone());
+
+        if let Some(ref sector_id) = trade.sector_id {
+            let get_sector = get_sector_by_id(state.clone(), *sector_id).await?;
+
+            if let Some(sector_username) = get_sector.username {
+                sector_name = Some(sector_username);
+            } else {
+                sector_name = Some(get_sector.name);
+            }
+        }
+        format_trade.sector = sector_name;
+        trades.push(format_trade);
+    }
+
+    Ok(trades)
 }
 
 pub async fn update_trade_by_id(
