@@ -5,8 +5,8 @@ use actix_web::{
 
 use crate::{
     controllers::school_controller::sector_controller::{
-        create_sector, delete_sector_by_id, get_all_sector, get_sector_by_id,
-        get_sector_by_username, update_sector_by_id,
+        create_sector, delete_sector_by_id, get_all_sector, get_all_sector_by_education,
+        get_sector_by_id, get_sector_by_username, update_sector_by_id,
     },
     libs::functions::object_id::change_string_into_object_id,
     models::{
@@ -56,6 +56,21 @@ pub async fn get_sector_by_id_handle(state: Data<AppState>, id: Path<String>) ->
     match change_string_into_object_id(id.into_inner()) {
         Err(e) => HttpResponse::BadRequest().json(e),
         Ok(i) => match get_sector_by_id(state.into_inner(), i).await {
+            Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
+                message: e.to_string(),
+            }),
+            Ok(r) => HttpResponse::Ok().json(r),
+        },
+    }
+}
+
+pub async fn get_all_sector_by_education_handle(
+    state: Data<AppState>,
+    education: Path<String>,
+) -> impl Responder {
+    match change_string_into_object_id(education.into_inner()) {
+        Err(e) => HttpResponse::BadRequest().json(e),
+        Ok(i) => match get_all_sector_by_education(state.into_inner(), i).await {
             Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
                 message: e.to_string(),
             }),

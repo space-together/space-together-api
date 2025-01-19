@@ -146,6 +146,32 @@ pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorMod
     Ok(sectors)
 }
 
+pub async fn get_all_sector_by_education(state: Arc<AppState>, id : ObjectId) -> DbClassResult<Vec<SectorModelGet>> {
+    let get = state
+        .db
+        .sector
+        .get_many(Some(GetManyByField{ field: "education_id".to_string() , value : id}), Some("sector".to_string()))
+        .await?;
+
+    let mut sectors: Vec<SectorModelGet> = Vec::new();
+
+    for sector in get {
+        if let Some(ref education_id) = sector.education_id {
+            let get_education = get_education_by_id(state.clone(), *education_id).await?;
+            if let Some(education_username) = get_education.username {
+                let mut fol_sector = SectorModel::format(sector);
+                fol_sector.education = Some(education_username);
+                sectors.push(fol_sector);
+            } else {
+                let mut fol_sector = SectorModel::format(sector);
+                fol_sector.education = Some(get_education.name);
+                sectors.push(fol_sector);
+            }
+        }
+    }
+    Ok(sectors)
+}
+
 pub async fn get_sector_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<SectorModelGet> {
     let get = state
         .db

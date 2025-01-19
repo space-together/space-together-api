@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use crate::{
     handlers::school_handle::sector_handle::{
-        create_sector_handle, delete_sector_by_id_handle, get_all_sector_handle,
-        get_sector_by_id_handle, get_sector_by_username_handle, update_sector_by_id_handle,
+        create_sector_handle, delete_sector_by_id_handle, get_all_sector_by_education_handle,
+        get_all_sector_handle, get_sector_by_id_handle, get_sector_by_username_handle,
+        update_sector_by_id_handle,
     },
     AppState,
 };
@@ -21,6 +22,10 @@ pub fn routers_sector(
             .route(
                 "/username/{username}",
                 get().to(get_sector_by_username_handle),
+            )
+            .route(
+                "/education/{education}",
+                get().to(get_all_sector_by_education_handle),
             )
             .route("/{id}", get().to(get_sector_by_id_handle))
             .route("/{id}", delete().to(delete_sector_by_id_handle))
