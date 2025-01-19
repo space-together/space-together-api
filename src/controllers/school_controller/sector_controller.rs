@@ -216,6 +216,28 @@ pub async fn update_sector_by_id(
             });
         }
     }
+    if let Some(ref education) = sector.education {
+        let id = match ObjectId::from_str(education) {
+            Err(_) => {
+                return Err(DbClassError::OtherError {
+                    err: format!("Invalid education id [{}], please try other id", education),
+                })
+            }
+            Ok(i) => i,
+        };
+
+        let get_education = get_education_by_id(state.clone(), id).await;
+
+        if get_education.is_err() {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Education id is not found [{}], please try other id",
+                    education
+                ),
+            });
+        }
+    }
+    
     let _ = state
         .db
         .sector
