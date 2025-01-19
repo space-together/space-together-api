@@ -72,7 +72,7 @@ pub async fn create_trade(
     let create = state
         .db
         .trade
-        .create(TradeModel::new(trade), Some("School section".to_string()))
+        .create(TradeModel::new(trade), Some("trade".to_string()))
         .await?;
     let get = get_trade_by_id(state, create).await?;
     Ok(get)
@@ -112,7 +112,7 @@ pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResul
     let get = state
         .db
         .trade
-        .get_one_by_id(id, Some("School section".to_string()))
+        .get_one_by_id(id, Some("trade".to_string()))
         .await?;
 
     let mut sector_name: Option<String> = None;
@@ -135,7 +135,7 @@ pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModel
     let get_all = state
         .db
         .trade
-        .get_many(None, Some("School section".to_string()))
+        .get_many(None, Some("trade".to_string()))
         .await?;
     let mut trades: Vec<TradeModelGet> = Vec::new();
 
@@ -167,17 +167,13 @@ pub async fn update_trade_by_id(
     let _ = state
         .db
         .trade
-        .update(
-            id,
-            TradeModel::put(section),
-            Some("School Section".to_string()),
-        )
+        .update(id, TradeModel::put(section), Some("trade".to_string()))
         .await?;
 
     let get = state
         .db
         .trade
-        .get_one_by_id(id, Some("School section".to_string()))
+        .get_one_by_id(id, Some("trade".to_string()))
         .await?;
 
     Ok(TradeModel::format(get))
@@ -187,11 +183,7 @@ pub async fn delete_trade_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<TradeModelGet> {
-    let _ = state
-        .db
-        .trade
-        .delete(id, Some("School Section".to_string()))
-        .await?;
+    let _ = state.db.trade.delete(id, Some("trade".to_string())).await?;
     let get = get_trade_by_id(state, id).await?;
     Ok(get)
 }
