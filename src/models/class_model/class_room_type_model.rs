@@ -6,6 +6,7 @@ pub struct ClassRoomTypeModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: DateTime,
@@ -16,6 +17,7 @@ pub struct ClassRoomTypeModel {
 pub struct ClassRoomTypeModelGet {
     pub id: String,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: String,
@@ -25,46 +27,52 @@ pub struct ClassRoomTypeModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassRoomTypeModelNew {
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassRoomTypeModelPut {
+    pub username: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
 
 impl ClassRoomTypeModel {
-    pub fn new(class_type: ClassRoomTypeModelNew) -> Self {
+    pub fn new(class_room_type: ClassRoomTypeModelNew) -> Self {
         ClassRoomTypeModel {
             id: None,
-            name: class_type.name,
-            description: class_type.description,
-            roles: class_type.roles,
+            name: class_room_type.name,
+            username: class_room_type.username,
+            description: class_room_type.description,
+            roles: class_room_type.roles,
             created_on: DateTime::now(),
             updated_on: None,
         }
     }
 
-    pub fn format(class_type: Self) -> ClassRoomTypeModelGet {
+    pub fn format(class_room_type: Self) -> ClassRoomTypeModelGet {
         ClassRoomTypeModelGet {
-            id: class_type.id.map_or("".to_string(), |id| id.to_string()),
-            name: class_type.name,
-            description: class_type.description,
-            roles: class_type.roles,
-            created_on: class_type
+            id: class_room_type
+                .id
+                .map_or("".to_string(), |id| id.to_string()),
+            name: class_room_type.name,
+            username: class_room_type.username,
+            description: class_room_type.description,
+            roles: class_room_type.roles,
+            created_on: class_room_type
                 .created_on
                 .try_to_rfc3339_string()
                 .unwrap_or("".to_string()),
-            updated_on: Some(class_type.updated_on.map_or("".to_string(), |date| {
+            updated_on: Some(class_room_type.updated_on.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }
     }
 
-    pub fn put(class_type: ClassRoomTypeModelPut) -> Document {
+    pub fn put(class_room_type: ClassRoomTypeModelPut) -> Document {
         let mut doc = Document::new();
         let mut is_update = false;
 
@@ -75,12 +83,13 @@ impl ClassRoomTypeModel {
             }
         };
 
-        insert_if_some("name", class_type.name.map(bson::Bson::String));
+        insert_if_some("name", class_room_type.name.map(bson::Bson::String));
+        insert_if_some("username", class_room_type.username.map(bson::Bson::String));
         insert_if_some(
             "description",
-            class_type.description.map(bson::Bson::String),
+            class_room_type.description.map(bson::Bson::String),
         );
-        if let Some(roles) = class_type.roles {
+        if let Some(roles) = class_room_type.roles {
             let existing_roles = doc.get_array("roles").unwrap_or(&vec![]).clone();
             let mut new_roles = existing_roles
                 .iter()
