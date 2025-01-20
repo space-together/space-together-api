@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -21,6 +21,8 @@ use crate::{
     AppState,
 };
 
+use super::class_room_type_controller::get_class_room_type_by_id;
+
 pub async fn create_class_room(
     state: Arc<AppState>,
     class_room: ClassRoomModelNew,
@@ -41,6 +43,24 @@ pub async fn create_class_room(
                 ),
             });
         }
+    }
+
+    if let Some(ref class_room_id) = class_room.class_room_type {
+        let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
+            err: format!(
+                "Class room type ID is invalid [{}], please try another",
+                class_room_id
+            ),
+        })?;
+
+        get_class_room_type_by_id(state.clone(), id)
+            .await
+            .map_err(|_| DbClassError::OtherError {
+                err: format!(
+                    "Class room type ID not found [{}], please try another",
+                    class_room_id
+                ),
+            })?;
     }
 
     check_sector_trade_exit(
