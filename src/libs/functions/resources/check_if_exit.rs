@@ -22,27 +22,31 @@ pub async fn check_sector_trade_exit(
     exits: CheckSectorTradeExitModel,
 ) -> DbClassResult<()> {
     if let Some(ref sector_id) = exits.sector {
-        let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
-            err: format!("Sector ID is invalid [{}], please try another", sector_id),
-        })?;
-
-        get_sector_by_id(state.clone(), id)
-            .await
-            .map_err(|_| DbClassError::OtherError {
-                err: format!("Sector ID not found [{}], please try another", sector_id),
+        if !sector_id.is_empty() {
+            let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
+                err: format!("Sector ID is invalid [{}], please try another", sector_id),
             })?;
+
+            get_sector_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!("Sector ID not found [{}], please try another", sector_id),
+                })?;
+        }
     }
 
     if let Some(ref trade_id) = exits.trade {
-        let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
-            err: format!("Trade ID is invalid [{}], please try another", trade_id),
-        })?;
-
-        get_trade_by_id(state.clone(), id)
-            .await
-            .map_err(|_| DbClassError::OtherError {
-                err: format!("Trade ID not found [{}], please try another", trade_id),
+        if !trade_id.is_empty() {
+            let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
+                err: format!("Trade ID is invalid [{}], please try another", trade_id),
             })?;
+
+            get_trade_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!("Trade ID not found [{}], please try another", trade_id),
+                })?;
+        }
     }
 
     Ok(())
