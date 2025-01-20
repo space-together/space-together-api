@@ -75,10 +75,11 @@ pub async fn delete_class_room_type_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<ClassRoomTypeModelGet> {
-    let delete = state
+    let get = get_class_room_type_by_id(state.clone(), id).await?;
+    let _ = state
         .db
         .class_room_type
         .delete(id, Some("class_room_type".to_string()))
         .await?;
-    Ok(ClassRoomTypeModel::format(delete))
+    Ok(get)
 }

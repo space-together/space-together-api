@@ -183,7 +183,7 @@ pub async fn delete_trade_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<TradeModelGet> {
+    let get = get_trade_by_id(state.clone(), id).await?;
     let _ = state.db.trade.delete(id, Some("trade".to_string())).await?;
-    let get = get_trade_by_id(state, id).await?;
     Ok(get)
 }

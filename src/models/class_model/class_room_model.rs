@@ -9,7 +9,8 @@ pub struct ClassRoomModel {
     pub id: Option<ObjectId>,
     pub name: String,
     pub username: Option<String>,
-    pub school_section_id: Option<ObjectId>,
+    pub sector_id: Option<ObjectId>,
+    pub trade_id: Option<ObjectId>,
     pub class_room_type_id: Option<ObjectId>,
     pub description: Option<String>,
     pub created_on: DateTime,
@@ -22,8 +23,9 @@ pub struct ClassRoomModelGet {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub school_section_id: Option<String>,
-    pub class_room_type_id: Option<String>,
+    pub sector: Option<String>,
+    pub trade: Option<String>,
+    pub class_room_type: Option<String>,
     pub created_on: String,
     pub updated_on: Option<String>,
 }
@@ -33,8 +35,9 @@ pub struct ClassRoomModelNew {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub school_section_id: Option<String>,
-    pub class_room_type_id: Option<String>,
+    pub sector: Option<String>,
+    pub trade: Option<String>,
+    pub class_room_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -42,8 +45,9 @@ pub struct ClassRoomModelPut {
     pub name: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub school_section_id: Option<String>,
-    pub class_room_type_id: Option<String>,
+    pub sector: Option<String>,
+    pub trade: Option<String>,
+    pub class_room_type: Option<String>,
 }
 
 impl ClassRoomModel {
@@ -52,10 +56,13 @@ impl ClassRoomModel {
             id: None,
             name: class_room.name,
             username: class_room.username,
-            class_room_type_id: class_room.class_room_type_id.map(|id| {
+            class_room_type_id: class_room.class_room_type.map(|id| {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
-            school_section_id: class_room.school_section_id.map(|id| {
+            sector_id: class_room.sector.map(|id| {
+                ObjectId::from_str(&id).expect("can change class room id into object is")
+            }),
+            trade_id: class_room.trade.map(|id| {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
             description: class_room.description,
@@ -67,8 +74,9 @@ impl ClassRoomModel {
     pub fn format(class_room: Self) -> ClassRoomModelGet {
         ClassRoomModelGet {
             id: class_room.id.map_or("".to_string(), |id| id.to_string()),
-            class_room_type_id: class_room.class_room_type_id.map(|id| id.to_string()),
-            school_section_id: class_room.school_section_id.map(|id| id.to_string()),
+            class_room_type: class_room.class_room_type_id.map(|id| id.to_string()),
+            sector: class_room.sector_id.map(|id| id.to_string()),
+            trade: class_room.trade_id.map(|id| id.to_string()),
             name: class_room.name,
             username: class_room.username,
             description: class_room.description,
@@ -101,16 +109,22 @@ impl ClassRoomModel {
         );
 
         insert_if_some(
-            "school_section_id",
+            "sector_id",
             class_room
-                .school_section_id
+                .sector
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+        insert_if_some(
+            "trade_id",
+            class_room
+                .trade
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
 
         insert_if_some(
             "class_room_type_id",
             class_room
-                .class_room_type_id
+                .class_room_type
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
 

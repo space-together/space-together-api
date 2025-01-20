@@ -1,32 +1,40 @@
+use std::sync::Arc;
+
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::IndexOptions,
     IndexModel,
 };
-use serde::{Deserialize, Serialize};
-use std::{str::FromStr, sync::Arc};
 
 use crate::{
     controllers::school_controller::{
         sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
     },
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::{generate_code, generate_username, is_valid_username},
+    libs::functions::{
+        characters_fn::{generate_code, generate_username, is_valid_username},
+        resources::check_if_exit::{check_sector_trade_exit, CheckSectorTradeExitModel},
+    },
     models::class_model::class_model_model::{
         ClassModel, ClassModelGet, ClassModelNew, ClassModelPut,
     },
     AppState,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
-struct CheckOtherExitModel {
-    username: Option<String>,
-    sector: Option<String>,
-    trade: Option<String>,
-}
+pub async fn create_class(
+    state: Arc<AppState>,
+    mut class: ClassModelNew,
+) -> DbClassResult<ClassModelGet> {
+    check_sector_trade_exit(
+        state.clone(),
+        CheckSectorTradeExitModel {
+            sector: class.sector.clone(),
+            trade: class.trade.clone(),
+        },
+    )
+    .await?;
 
-async fn check_other_exit(state: Arc<AppState>, exits: CheckOtherExitModel) -> DbClassResult<()> {
-    if let Some(ref username) = exits.username {
+    if let Some(ref username) = class.username {
         is_valid_username(username).map_err(|err| DbClassError::OtherError {
             err: err.to_string(),
         })?;
@@ -44,37 +52,6 @@ async fn check_other_exit(state: Arc<AppState>, exits: CheckOtherExitModel) -> D
         }
     }
 
-    if let Some(ref sector_id) = exits.sector {
-        let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
-            err: format!("Sector ID is invalid [{}], please try another", sector_id),
-        })?;
-
-        get_sector_by_id(state.clone(), id)
-            .await
-            .map_err(|_| DbClassError::OtherError {
-                err: format!("Sector ID not found [{}], please try another", sector_id),
-            })?;
-    }
-
-    if let Some(ref trade_id) = exits.trade {
-        let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
-            err: format!("Trade ID is invalid [{}], please try another", trade_id),
-        })?;
-
-        get_trade_by_id(state.clone(), id)
-            .await
-            .map_err(|_| DbClassError::OtherError {
-                err: format!("Trade ID not found [{}], please try another", trade_id),
-            })?;
-    }
-
-    Ok(())
-}
-
-pub async fn create_class(
-    state: Arc<AppState>,
-    mut class: ClassModelNew,
-) -> DbClassResult<ClassModelGet> {
     let index = IndexModel::builder()
         .keys(doc! {"username": 1, "code": 1})
         .options(IndexOptions::builder().unique(true).build())
@@ -87,16 +64,6 @@ pub async fn create_class(
         .create_index(index)
         .await
         .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
-
-    check_other_exit(
-        state.clone(),
-        CheckOtherExitModel {
-            username: class.username.clone(),
-            sector: class.sector.clone(),
-            trade: class.trade.clone(),
-        },
-    )
-    .await?;
 
     if class.username.is_none() {
         class.username = Some(generate_username(&class.name));
@@ -172,10 +139,9 @@ pub async fn update_class_by_id(
     id: ObjectId,
     class: ClassModelPut,
 ) -> DbClassResult<ClassModelGet> {
-    check_other_exit(
+    check_sector_trade_exit(
         state.clone(),
-        CheckOtherExitModel {
-            username: class.username.clone(),
+        CheckSectorTradeExitModel {
             sector: class.sector.clone(),
             trade: class.trade.clone(),
         },
