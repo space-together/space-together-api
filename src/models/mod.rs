@@ -3,6 +3,7 @@ pub mod class_model;
 pub mod conversation_model;
 pub mod database_model;
 pub mod education_model;
+pub mod file_model;
 pub mod images_model;
 pub mod jwt_model;
 pub mod other_model;

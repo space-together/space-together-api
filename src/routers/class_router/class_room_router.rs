@@ -20,7 +20,7 @@ pub fn routers_class_room(
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(create_class_room_handle))
             .route("", get().to(get_all_class_room_handle))
-            .route("type/{id}", get().to(get_class_room_by_trade_type))
+            .route("types/{id}", get().to(get_class_room_by_trade_type))
             .route("sector/{id}", get().to(get_class_room_by_sector_handle))
             .route("trade/{id}", get().to(get_class_room_by_trade_handle))
             .route("/{id}", get().to(get_class_room_by_id_handle))

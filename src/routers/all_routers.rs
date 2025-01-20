@@ -90,8 +90,3 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
 async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there! 🌼 this is space-together api version v0.0.1")
 }
-
-// TODO: subject_type : subject/type CRUD
-// TODO: subject : subject CRUD
-// TODO: class_room_type : classes/room/type CRUD
-// TODO: class_room : classes/room CRUD
