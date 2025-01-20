@@ -213,6 +213,31 @@ pub async fn get_all_class_room_by_trade(
     Ok(class_rooms)
 }
 
+pub async fn get_all_class_room_by_sector(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> DbClassResult<Vec<ClassRoomModelGet>> {
+    let get = state
+        .db
+        .class_room
+        .get_many(
+            Some(GetManyByField {
+                field: "sector_id".to_string(),
+                value: id,
+            }),
+            Some("class_room".to_string()),
+        )
+        .await?;
+    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
+
+    for class_room in get {
+        let change = get_other_collection(state.clone(), class_room).await?;
+        class_rooms.push(change);
+    }
+
+    Ok(class_rooms)
+}
+
 pub async fn get_all_class_room_by_type(
     state: Arc<AppState>,
     id: ObjectId,

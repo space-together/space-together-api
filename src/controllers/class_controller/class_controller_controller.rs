@@ -46,7 +46,7 @@ async fn get_other_collection(
         None
     };
 
-    let class_type = if let Some(ref class_type_id) = class.sector_id {
+    let class_type = if let Some(ref class_type_id) = class.class_type_id {
         let document = get_class_type_by_id(state.clone(), *class_type_id).await?;
         document.username.or(Some(document.name))
     } else {

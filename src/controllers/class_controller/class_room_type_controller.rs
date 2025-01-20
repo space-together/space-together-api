@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    options::IndexOptions,
+    IndexModel,
+};
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
@@ -16,6 +20,33 @@ pub async fn create_class_room_type(
     state: Arc<AppState>,
     class_room_type: ClassRoomTypeModelNew,
 ) -> DbClassResult<ClassRoomTypeModelGet> {
+    let index = IndexModel::builder()
+        .keys(doc! {"username": 1,})
+        .options(IndexOptions::builder().unique(true).build())
+        .build();
+
+    state
+        .db
+        .class
+        .collection
+        .create_index(index)
+        .await
+        .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
+
+    if let Some(ref username) = class_room_type.username {
+        if get_class_room_type_by_username(state.clone(), username.clone())
+            .await
+            .is_ok()
+        {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "class room type username name is ready exit [{}] , please try other username",
+                    username
+                ),
+            });
+        }
+    }
+
     let create = state
         .db
         .class_room_type
@@ -52,6 +83,22 @@ pub async fn get_class_room_type_by_id(
         .class_room_type
         .get_one_by_id(id, Some("class_room_type".to_string()))
         .await?;
+    Ok(ClassRoomTypeModel::format(get))
+}
+
+pub async fn get_class_room_type_by_username(
+    state: Arc<AppState>,
+    username: String,
+) -> DbClassResult<ClassRoomTypeModelGet> {
+    let get = state
+        .db
+        .class_room_type
+        .collection
+        .find_one(doc! {"username": &username})
+        .await?
+        .ok_or(DbClassError::OtherError {
+            err: format!("Class not found by username [{}]", &username),
+        })?;
     Ok(ClassRoomTypeModel::format(get))
 }
 
