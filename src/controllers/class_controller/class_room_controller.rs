@@ -179,6 +179,24 @@ pub async fn update_class_room_by_id(
     id: ObjectId,
     class_room: ClassRoomModelPut,
 ) -> DbClassResult<ClassRoomModelGet> {
+    if let Some(ref class_room_id) = class_room.class_room_type {
+        let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
+            err: format!(
+                "Class room type ID is invalid [{}], please try another",
+                class_room_id
+            ),
+        })?;
+
+        get_class_room_type_by_id(state.clone(), id)
+            .await
+            .map_err(|_| DbClassError::OtherError {
+                err: format!(
+                    "Class room type ID not found [{}], please try another",
+                    class_room_id
+                ),
+            })?;
+    }
+
     check_sector_trade_exit(
         state.clone(),
         CheckSectorTradeExitModel {
