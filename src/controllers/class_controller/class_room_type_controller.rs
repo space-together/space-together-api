@@ -4,12 +4,13 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::classes::db_crud::GetManyByField,
     models::class_model::class_room_type_model::{
         ClassRoomTypeModel, ClassRoomTypeModelGet, ClassRoomTypeModelNew, ClassRoomTypeModelPut,
     },
     AppState,
 };
+
+use super::class_room_controller::get_all_class_room_by_type;
 
 pub async fn create_class_room_type(
     state: Arc<AppState>,
@@ -76,18 +77,7 @@ pub async fn delete_class_room_type_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<ClassRoomTypeModelGet> {
-    let get_class_rooms = state
-        .db
-        .class_room
-        .get_many(
-            Some(GetManyByField {
-                field: "class_room_type_id".to_string(),
-                value: id,
-            }),
-            Some("class_room".to_string()),
-        )
-        .await;
-
+    let get_class_rooms = get_all_class_room_by_type(state.clone(), id).await;
     if let Ok(class_rooms) = get_class_rooms {
         if !class_rooms.is_empty() {
             return Err(DbClassError::OtherError { err: "You can not delete class room role because they are other document using it, delete those collection and try again".to_string() });

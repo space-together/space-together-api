@@ -52,11 +52,31 @@ async fn get_other_collection(
 
     Ok(class)
 }
-
 pub async fn create_class_room(
     state: Arc<AppState>,
     mut class_room: ClassRoomModelNew,
 ) -> DbClassResult<ClassRoomModelGet> {
+    // Helper function for repetitive checks and validations
+    async fn validate_option<T, F>(
+        option: &Option<String>,
+        validation_fn: F,
+        err_message: &str,
+    ) -> Result<Option<T>, DbClassError>
+    where
+        F: Fn(&String) -> Result<T, DbClassError>,
+    {
+        if let Some(ref value) = option {
+            validation_fn(value)
+                .map(Some)
+                .map_err(|_| DbClassError::OtherError {
+                    err: err_message.to_string(),
+                })
+        } else {
+            Ok(None)
+        }
+    }
+
+    // Validate username
     if let Some(ref username) = class_room.username {
         is_valid_username(username).map_err(|err| DbClassError::OtherError {
             err: err.to_string(),
@@ -75,6 +95,7 @@ pub async fn create_class_room(
         }
     }
 
+    // Validate class room type
     if let Some(ref class_room_id) = class_room.class_room_type {
         if !class_room_id.is_empty() {
             let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
@@ -97,6 +118,7 @@ pub async fn create_class_room(
         }
     }
 
+    // Validate trade
     if let Some(ref trade_id) = class_room.trade {
         if !trade_id.is_empty() {
             let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
@@ -113,7 +135,12 @@ pub async fn create_class_room(
 
             if let Some(num_class_room) = trade.class_rooms {
                 if get_by_trade.len() >= num_class_room as usize {
-                    return Err(DbClassError::OtherError { err: format!("You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",trade.name , num_class_room) });
+                    return Err(DbClassError::OtherError {
+                        err: format!(
+                            "You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",
+                            trade.name, num_class_room
+                        ),
+                    });
                 }
             }
         } else {
@@ -121,6 +148,7 @@ pub async fn create_class_room(
         }
     }
 
+    // Validate sector
     if let Some(ref sector_id) = class_room.sector {
         if !sector_id.is_empty() {
             let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
@@ -137,6 +165,7 @@ pub async fn create_class_room(
         }
     }
 
+    // Create a unique index for username and code
     let index = IndexModel::builder()
         .keys(doc! {"username": 1, "code": 1})
         .options(IndexOptions::builder().unique(true).build())
@@ -150,6 +179,7 @@ pub async fn create_class_room(
         .await
         .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
 
+    // Create and retrieve the new classroom
     let create = state
         .db
         .class_room
@@ -193,6 +223,32 @@ pub async fn get_all_class_room_by_trade(
             Some("class_room".to_string()),
         )
         .await?;
+    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
+
+    for class_room in get {
+        let change = get_other_collection(state.clone(), class_room).await?;
+        class_rooms.push(change);
+    }
+
+    Ok(class_rooms)
+}
+
+pub async fn get_all_class_room_by_type(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> DbClassResult<Vec<ClassRoomModelGet>> {
+    let get = state
+        .db
+        .class_room
+        .get_many(
+            Some(GetManyByField {
+                field: "class_room_type_id".to_string(),
+                value: id,
+            }),
+            Some("class_room".to_string()),
+        )
+        .await?;
+
     let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
 
     for class_room in get {

@@ -8,12 +8,13 @@ pub struct ClassModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
-    pub username : Option<String>,
+    pub username: Option<String>,
     pub class_teacher_id: Option<ObjectId>,
     pub trade_id: Option<ObjectId>,
     pub sector_id: Option<ObjectId>,
     pub code: Option<String>,
     pub class_type_id: Option<ObjectId>,
+    pub class_room_id: Option<ObjectId>,
     pub is_public: Option<bool>,
     pub image: Option<ObjectId>,
     pub description: Option<String>,
@@ -24,12 +25,13 @@ pub struct ClassModel {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelNew {
     pub name: String,
-     pub username : Option<String>,
-    pub class_teacher_id: Option<String>,
+    pub username: Option<String>,
+    pub class_teacher: Option<String>,
     pub trade: Option<String>,
     pub sector: Option<String>,
     pub code: Option<String>,
-    pub class_type_id: Option<String>,
+    pub class_type: Option<String>,
+    pub class_room: Option<String>,
     pub is_public: Option<bool>,
     pub image: Option<String>,
     pub description: Option<String>,
@@ -39,8 +41,9 @@ pub struct ClassModelNew {
 pub struct ClassModelGet {
     pub id: String,
     pub name: String,
-     pub username : Option<String>,
+    pub username: Option<String>,
     pub class_teacher: Option<String>,
+    pub class_room: Option<String>,
     pub trade: Option<String>,
     pub sector: Option<String>,
     pub code: Option<String>,
@@ -55,12 +58,13 @@ pub struct ClassModelGet {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClassModelPut {
     pub name: Option<String>,
-    pub username : Option<String>,
-    pub class_teacher_id: Option<String>,
+    pub username: Option<String>,
+    pub class_teacher: Option<String>,
     pub trade: Option<String>,
     pub sector: Option<String>,
     pub code: Option<String>,
-    pub class_type_id: Option<String>,
+    pub class_type: Option<String>,
+    pub class_room: Option<String>,
     pub is_public: Option<bool>,
     pub image: Option<String>,
     pub description: Option<String>,
@@ -71,9 +75,12 @@ impl ClassModel {
         ClassModel {
             id: None,
             name: class_model_new.name,
-            username : class_model_new.username,
+            username: class_model_new.username,
             class_teacher_id: class_model_new
-                .class_teacher_id
+                .class_teacher
+                .and_then(|id| ObjectId::from_str(&id).ok()),
+            class_room_id: class_model_new
+                .class_room
                 .and_then(|id| ObjectId::from_str(&id).ok()),
             trade_id: class_model_new
                 .trade
@@ -83,7 +90,7 @@ impl ClassModel {
                 .and_then(|id| ObjectId::from_str(&id).ok()),
             code: class_model_new.code,
             class_type_id: class_model_new
-                .class_type_id
+                .class_type
                 .and_then(|id| ObjectId::from_str(&id).ok()),
             is_public: class_model_new.is_public,
             image: class_model_new
@@ -95,13 +102,14 @@ impl ClassModel {
         }
     }
 
-    pub fn format(class : Self) -> ClassModelGet {
+    pub fn format(class: Self) -> ClassModelGet {
         ClassModelGet {
             id: class.id.map_or("".to_string(), |id| id.to_string()),
             name: class.name.clone(),
             username: class.username.clone(),
             description: class.description.clone(),
             class_teacher: class.class_teacher_id.map(|id| id.to_string()),
+            class_room: class.class_room_id.map(|id| id.to_string()),
             image: class.image.map(|id| id.to_string()),
             trade: class.trade_id.map(|id| id.to_string()),
             sector: class.sector_id.map(|id| id.to_string()),
@@ -134,7 +142,14 @@ impl ClassModel {
         insert_if_some(
             "class_teacher_id",
             class_model_put
-                .class_teacher_id
+                .class_teacher
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
+        insert_if_some(
+            "class_room_id",
+            class_model_put
+                .class_room
                 .and_then(|id| ObjectId::from_str(&id).ok())
                 .map(bson::Bson::ObjectId),
         );
@@ -156,7 +171,7 @@ impl ClassModel {
         insert_if_some(
             "class_type_id",
             class_model_put
-                .class_type_id
+                .class_type
                 .and_then(|id| ObjectId::from_str(&id).ok())
                 .map(bson::Bson::ObjectId),
         );

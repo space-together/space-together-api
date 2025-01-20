@@ -133,10 +133,11 @@ pub async fn delete_class_type_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<ClassTypeModelGet> {
-    let delete = state
+    let get = get_class_type_by_id(state.clone(), id).await?;
+    state
         .db
         .class_type
         .delete(id, Some("class_type".to_string()))
         .await?;
-    Ok(ClassTypeModel::format(delete))
+    Ok(get)
 }
