@@ -176,9 +176,17 @@ pub async fn get_class_room_by_username(
         None
     };
 
+    let class_room_type_name = if let Some(ref class_room_type_id) = get.class_room_type_id {
+        let class_room_type = get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
+        class_room_type.username.or(Some(class_room_type.name))
+    } else {
+        None
+    };
+
     let mut class = ClassRoomModel::format(get);
     class.trade = trade_name;
     class.sector = sector_name;
+    class.class_room_type = class_room_type_name;
     Ok(class)
 }
 
