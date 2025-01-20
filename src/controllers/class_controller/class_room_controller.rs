@@ -11,10 +11,7 @@ use crate::{
         sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
     },
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::{
-        characters_fn::is_valid_username,
-        resources::check_if_exit::{check_sector_trade_exit, CheckSectorTradeExitModel},
-    },
+    libs::functions::characters_fn::is_valid_username,
     models::class_model::class_room_model::{
         ClassRoomModel, ClassRoomModelGet, ClassRoomModelNew, ClassRoomModelPut,
     },
@@ -58,7 +55,7 @@ async fn get_other_collection(
 
 pub async fn create_class_room(
     state: Arc<AppState>,
-    class_room: ClassRoomModelNew,
+    mut class_room: ClassRoomModelNew,
 ) -> DbClassResult<ClassRoomModelGet> {
     if let Some(ref username) = class_room.username {
         is_valid_username(username).map_err(|err| DbClassError::OtherError {
@@ -79,31 +76,57 @@ pub async fn create_class_room(
     }
 
     if let Some(ref class_room_id) = class_room.class_room_type {
-        let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
-            err: format!(
-                "Class room type ID is invalid [{}], please try another",
-                class_room_id
-            ),
-        })?;
-
-        get_class_room_type_by_id(state.clone(), id)
-            .await
-            .map_err(|_| DbClassError::OtherError {
+        if !class_room_id.is_empty() {
+            let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
                 err: format!(
-                    "Class room type ID not found [{}], please try another",
+                    "Class room type ID is invalid [{}], please try another",
                     class_room_id
                 ),
             })?;
+
+            get_class_room_type_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!(
+                        "Class room type ID not found [{}], please try another",
+                        class_room_id
+                    ),
+                })?;
+        } else {
+            class_room.class_room_type = None
+        }
     }
 
-    check_sector_trade_exit(
-        state.clone(),
-        CheckSectorTradeExitModel {
-            sector: class_room.sector.clone(),
-            trade: class_room.trade.clone(),
-        },
-    )
-    .await?;
+    if let Some(ref trade_id) = class_room.trade {
+        if !trade_id.is_empty() {
+            let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
+                err: format!("Trade ID is invalid [{}], please try another", trade_id),
+            })?;
+
+            get_trade_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!("Trade ID not found [{}], please try another", trade_id),
+                })?;
+        } else {
+            class_room.trade = None
+        }
+    }
+
+    if let Some(ref sector_id) = class_room.sector {
+        if !sector_id.is_empty() {
+            let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
+                err: format!("Sector ID is invalid [{}], please try another", sector_id),
+            })?;
+
+            get_sector_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!("Sector ID not found [{}], please try another", sector_id),
+                })?;
+        }
+        class_room.sector = None
+    }
 
     let index = IndexModel::builder()
         .keys(doc! {"username": 1, "code": 1})
@@ -179,34 +202,60 @@ pub async fn get_class_room_by_username(
 pub async fn update_class_room_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-    class_room: ClassRoomModelPut,
+    mut class_room: ClassRoomModelPut,
 ) -> DbClassResult<ClassRoomModelGet> {
     if let Some(ref class_room_id) = class_room.class_room_type {
-        let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
-            err: format!(
-                "Class room type ID is invalid [{}], please try another",
-                class_room_id
-            ),
-        })?;
-
-        get_class_room_type_by_id(state.clone(), id)
-            .await
-            .map_err(|_| DbClassError::OtherError {
+        if !class_room_id.is_empty() {
+            let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
                 err: format!(
-                    "Class room type ID not found [{}], please try another",
+                    "Class room type ID is invalid [{}], please try another",
                     class_room_id
                 ),
             })?;
+
+            get_class_room_type_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!(
+                        "Class room type ID not found [{}], please try another",
+                        class_room_id
+                    ),
+                })?;
+        } else {
+            class_room.class_room_type = None
+        }
     }
 
-    check_sector_trade_exit(
-        state.clone(),
-        CheckSectorTradeExitModel {
-            sector: class_room.sector.clone(),
-            trade: class_room.trade.clone(),
-        },
-    )
-    .await?;
+    if let Some(ref trade_id) = class_room.trade {
+        if !trade_id.is_empty() {
+            let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
+                err: format!("Trade ID is invalid [{}], please try another", trade_id),
+            })?;
+
+            get_trade_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!("Trade ID not found [{}], please try another", trade_id),
+                })?;
+        } else {
+            class_room.trade = None
+        }
+    }
+
+    if let Some(ref sector_id) = class_room.sector {
+        if !sector_id.is_empty() {
+            let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
+                err: format!("Sector ID is invalid [{}], please try another", sector_id),
+            })?;
+
+            get_sector_by_id(state.clone(), id)
+                .await
+                .map_err(|_| DbClassError::OtherError {
+                    err: format!("Sector ID not found [{}], please try another", sector_id),
+                })?;
+        }
+        class_room.sector = None
+    }
 
     let _ = state
         .db
