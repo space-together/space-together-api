@@ -23,6 +23,39 @@ use crate::{
 
 use super::class_room_type_controller::get_class_room_type_by_id;
 
+async fn get_other_collection(
+    state: Arc<AppState>,
+    class_room: ClassRoomModel,
+) -> DbClassResult<ClassRoomModelGet> {
+    let trade_name = if let Some(ref trade_id) = class_room.trade_id {
+        let trade = get_trade_by_id(state.clone(), *trade_id).await?;
+        trade.username.or(Some(trade.name))
+    } else {
+        None
+    };
+
+    let sector_name = if let Some(ref sector_id) = class_room.sector_id {
+        let sector = get_sector_by_id(state.clone(), *sector_id).await?;
+        sector.username.or(Some(sector.name))
+    } else {
+        None
+    };
+
+    let class_room_type_name = if let Some(ref class_room_type_id) = class_room.class_room_type_id {
+        let class_room_type = get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
+        class_room_type.username.or(Some(class_room_type.name))
+    } else {
+        None
+    };
+
+    let mut class = ClassRoomModel::format(class_room);
+    class.trade = trade_name;
+    class.sector = sector_name;
+    class.class_room_type = class_room_type_name;
+
+    Ok(class)
+}
+
 pub async fn create_class_room(
     state: Arc<AppState>,
     class_room: ClassRoomModelNew,
@@ -93,12 +126,8 @@ pub async fn create_class_room(
             Some("class_room".to_string()),
         )
         .await?;
-    let get = state
-        .db
-        .class_room
-        .get_one_by_id(create, Some("class_room".to_string()))
-        .await?;
-    Ok(ClassRoomModel::format(get))
+    let get = get_class_room_by_id(state, create).await?;
+    Ok(get)
 }
 
 pub async fn get_all_class_room(state: Arc<AppState>) -> DbClassResult<Vec<ClassRoomModelGet>> {
@@ -110,38 +139,11 @@ pub async fn get_all_class_room(state: Arc<AppState>) -> DbClassResult<Vec<Class
     let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
 
     for class_room in get {
-        let trade_name = if let Some(ref trade_id) = class_room.trade_id {
-            let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-            trade.username.or(Some(trade.name))
-        } else {
-            None
-        };
-
-        let sector_name = if let Some(ref sector_id) = class_room.sector_id {
-            let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-            sector.username.or(Some(sector.name))
-        } else {
-            None
-        };
-
-        let class_room_type_name =
-            if let Some(ref class_room_type_id) = class_room.class_room_type_id {
-                let class_room_type =
-                    get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
-                class_room_type.username.or(Some(class_room_type.name))
-            } else {
-                None
-            };
-
-        let format_class_room = ClassRoomModel::format(class_room);
-        format_class_room.trade = trade_name;
-        format_class_room.sector = sector_name;
-        format_class_room.class_room_type = class_room_type_name;
-
-        class_rooms.push(format_class_room);
+        let change = get_other_collection(state.clone(), class_room).await?;
+        class_rooms.push(change);
     }
 
-    Ok(format_class_room)
+    Ok(class_rooms)
 }
 
 pub async fn get_class_room_by_id(
@@ -154,32 +156,7 @@ pub async fn get_class_room_by_id(
         .get_one_by_id(id, Some("class_room".to_string()))
         .await?;
 
-    let trade_name = if let Some(ref trade_id) = get.trade_id {
-        let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-        trade.username.or(Some(trade.name))
-    } else {
-        None
-    };
-
-    let sector_name = if let Some(ref sector_id) = get.sector_id {
-        let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-        sector.username.or(Some(sector.name))
-    } else {
-        None
-    };
-
-    let class_room_type_name = if let Some(ref class_room_type_id) = get.class_room_type_id {
-        let class_room_type = get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
-        class_room_type.username.or(Some(class_room_type.name))
-    } else {
-        None
-    };
-
-    let mut class = ClassRoomModel::format(get);
-    class.trade = trade_name;
-    class.sector = sector_name;
-    class.class_room_type = class_room_type_name;
-    Ok(class)
+    get_other_collection(state, get).await
 }
 
 pub async fn get_class_room_by_username(
@@ -196,32 +173,7 @@ pub async fn get_class_room_by_username(
             err: format!("Class not found by username [{}]", &username),
         })?;
 
-    let trade_name = if let Some(ref trade_id) = get.trade_id {
-        let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-        trade.username.or(Some(trade.name))
-    } else {
-        None
-    };
-
-    let sector_name = if let Some(ref sector_id) = get.sector_id {
-        let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-        sector.username.or(Some(sector.name))
-    } else {
-        None
-    };
-
-    let class_room_type_name = if let Some(ref class_room_type_id) = get.class_room_type_id {
-        let class_room_type = get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
-        class_room_type.username.or(Some(class_room_type.name))
-    } else {
-        None
-    };
-
-    let mut class = ClassRoomModel::format(get);
-    class.trade = trade_name;
-    class.sector = sector_name;
-    class.class_room_type = class_room_type_name;
-    Ok(class)
+    get_other_collection(state, get).await
 }
 
 pub async fn update_class_room_by_id(
