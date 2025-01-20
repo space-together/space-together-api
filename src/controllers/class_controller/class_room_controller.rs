@@ -107,7 +107,41 @@ pub async fn get_all_class_room(state: Arc<AppState>) -> DbClassResult<Vec<Class
         .class_room
         .get_many(None, Some("class_room".to_string()))
         .await?;
-    Ok(get.into_iter().map(ClassRoomModel::format).collect())
+    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
+
+    for class_room in get {
+        let trade_name = if let Some(ref trade_id) = class_room.trade_id {
+            let trade = get_trade_by_id(state.clone(), *trade_id).await?;
+            trade.username.or(Some(trade.name))
+        } else {
+            None
+        };
+
+        let sector_name = if let Some(ref sector_id) = class_room.sector_id {
+            let sector = get_sector_by_id(state.clone(), *sector_id).await?;
+            sector.username.or(Some(sector.name))
+        } else {
+            None
+        };
+
+        let class_room_type_name =
+            if let Some(ref class_room_type_id) = class_room.class_room_type_id {
+                let class_room_type =
+                    get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
+                class_room_type.username.or(Some(class_room_type.name))
+            } else {
+                None
+            };
+
+        let format_class_room = ClassRoomModel::format(class_room);
+        format_class_room.trade = trade_name;
+        format_class_room.sector = sector_name;
+        format_class_room.class_room_type = class_room_type_name;
+
+        class_rooms.push(format_class_room);
+    }
+
+    Ok(format_class_room)
 }
 
 pub async fn get_class_room_by_id(
