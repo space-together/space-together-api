@@ -124,8 +124,9 @@ pub async fn create_class_room(
                 .map_err(|_| DbClassError::OtherError {
                     err: format!("Sector ID not found [{}], please try another", sector_id),
                 })?;
+        } else {
+            class_room.sector = None
         }
-        class_room.sector = None
     }
 
     let index = IndexModel::builder()
@@ -253,8 +254,9 @@ pub async fn update_class_room_by_id(
                 .map_err(|_| DbClassError::OtherError {
                     err: format!("Sector ID not found [{}], please try another", sector_id),
                 })?;
+        } else {
+            class_room.sector = None
         }
-        class_room.sector = None
     }
 
     let _ = state
