@@ -56,26 +56,6 @@ pub async fn create_class_room(
     state: Arc<AppState>,
     mut class_room: ClassRoomModelNew,
 ) -> DbClassResult<ClassRoomModelGet> {
-    // Helper function for repetitive checks and validations
-    async fn validate_option<T, F>(
-        option: &Option<String>,
-        validation_fn: F,
-        err_message: &str,
-    ) -> Result<Option<T>, DbClassError>
-    where
-        F: Fn(&String) -> Result<T, DbClassError>,
-    {
-        if let Some(ref value) = option {
-            validation_fn(value)
-                .map(Some)
-                .map_err(|_| DbClassError::OtherError {
-                    err: err_message.to_string(),
-                })
-        } else {
-            Ok(None)
-        }
-    }
-
     // Validate username
     if let Some(ref username) = class_room.username {
         is_valid_username(username).map_err(|err| DbClassError::OtherError {
