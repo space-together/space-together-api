@@ -7,8 +7,11 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::school_controller::{
-        sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
+    controllers::{
+        school_controller::{
+            sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
+        },
+        user_controller::user_controller_controller::controller_get_user_by_id,
     },
     error::db_class_error::{DbClassError, DbClassResult},
     libs::functions::{
@@ -20,6 +23,63 @@ use crate::{
     },
     AppState,
 };
+
+use super::{
+    class_room_controller::get_class_room_by_id, class_type_controller::get_class_type_by_id,
+};
+
+async fn get_other_collection(
+    state: Arc<AppState>,
+    class: ClassModel,
+) -> DbClassResult<ClassModelGet> {
+    let trade_name = if let Some(ref trade_id) = class.trade_id {
+        let trade = get_trade_by_id(state.clone(), *trade_id).await?;
+        trade.username.or(Some(trade.name))
+    } else {
+        None
+    };
+
+    let sector_name = if let Some(ref sector_id) = class.sector_id {
+        let sector = get_sector_by_id(state.clone(), *sector_id).await?;
+        sector.username.or(Some(sector.name))
+    } else {
+        None
+    };
+
+    let class_type = if let Some(ref class_type_id) = class.sector_id {
+        let document = get_class_type_by_id(state.clone(), *class_type_id).await?;
+        document.username.or(Some(document.name))
+    } else {
+        None
+    };
+
+    let class_teacher = if let Some(ref class_teacher_id) = class.class_teacher_id {
+        let document = controller_get_user_by_id(state.clone(), *class_teacher_id)
+            .await
+            .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
+        document.username.or(Some(document.name))
+    } else {
+        None
+    };
+
+    let class_room = if let Some(ref class_room_id) = class.class_teacher_id {
+        let document = get_class_room_by_id(state.clone(), *class_room_id)
+            .await
+            .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
+        document.username.or(Some(document.name))
+    } else {
+        None
+    };
+
+    let mut class = ClassModel::format(class);
+    class.trade = trade_name;
+    class.sector = sector_name;
+    class.class_type = class_type;
+    class.class_teacher = class_teacher;
+    class.class_room = class_room;
+
+    Ok(class)
+}
 
 pub async fn create_class(
     state: Arc<AppState>,
@@ -96,24 +156,7 @@ pub async fn get_class_by_username(
             err: format!("Class not found by username [{}]", &username),
         })?;
 
-    let trade_name = if let Some(ref trade_id) = get.trade_id {
-        let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-        trade.username.or(Some(trade.name))
-    } else {
-        None
-    };
-
-    let sector_name = if let Some(ref sector_id) = get.sector_id {
-        let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-        sector.username.or(Some(sector.name))
-    } else {
-        None
-    };
-
-    let mut class = ClassModel::format(get);
-    class.trade = trade_name;
-    class.sector = sector_name;
-    Ok(class)
+    get_other_collection(state, get).await
 }
 
 pub async fn get_class_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<ClassModelGet> {
@@ -122,7 +165,8 @@ pub async fn get_class_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResul
         .class
         .get_one_by_id(id, Some("class".to_string()))
         .await?;
-    Ok(ClassModel::format(get))
+
+    get_other_collection(state, get).await
 }
 
 pub async fn get_all_class(state: Arc<AppState>) -> DbClassResult<Vec<ClassModelGet>> {
@@ -131,7 +175,15 @@ pub async fn get_all_class(state: Arc<AppState>) -> DbClassResult<Vec<ClassModel
         .class
         .get_many(None, Some("class".to_string()))
         .await?;
-    Ok(get.into_iter().map(ClassModel::format).collect())
+
+    let mut class_gets = Vec::new();
+
+    for class in get {
+        let my_class = get_other_collection(state.clone(), class).await?;
+        class_gets.push(my_class);
+    }
+
+    Ok(class_gets)
 }
 
 pub async fn update_class_by_id(
@@ -159,6 +211,7 @@ pub async fn delete_class_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<ClassModelGet> {
-    let delete = state.db.class.delete(id, Some("class".to_string())).await?;
-    Ok(ClassModel::format(delete))
+    let get = get_class_by_id(state.clone(), id).await?;
+    state.db.class.delete(id, Some("class".to_string())).await?;
+    Ok(get)
 }
