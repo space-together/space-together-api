@@ -11,7 +11,7 @@ use crate::{
         sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
     },
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::is_valid_username,
+    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
     models::class_model::class_room_model::{
         ClassRoomModel, ClassRoomModelGet, ClassRoomModelNew, ClassRoomModelPut,
     },
@@ -103,11 +103,19 @@ pub async fn create_class_room(
                 err: format!("Trade ID is invalid [{}], please try another", trade_id),
             })?;
 
-            get_trade_by_id(state.clone(), id)
-                .await
-                .map_err(|_| DbClassError::OtherError {
-                    err: format!("Trade ID not found [{}], please try another", trade_id),
-                })?;
+            let get_by_trade = get_all_class_room_by_trade(state.clone(), id).await?;
+            let trade =
+                get_trade_by_id(state.clone(), id)
+                    .await
+                    .map_err(|_| DbClassError::OtherError {
+                        err: format!("Trade ID not found [{}], please try another", trade_id),
+                    })?;
+
+            if let Some(num_class_room) = trade.class_rooms {
+                if get_by_trade.len() >= num_class_room as usize {
+                    return Err(DbClassError::OtherError { err: format!("You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",trade.name , num_class_room) });
+                }
+            }
         } else {
             class_room.trade = None
         }
@@ -159,6 +167,31 @@ pub async fn get_all_class_room(state: Arc<AppState>) -> DbClassResult<Vec<Class
         .db
         .class_room
         .get_many(None, Some("class_room".to_string()))
+        .await?;
+    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
+
+    for class_room in get {
+        let change = get_other_collection(state.clone(), class_room).await?;
+        class_rooms.push(change);
+    }
+
+    Ok(class_rooms)
+}
+
+pub async fn get_all_class_room_by_trade(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> DbClassResult<Vec<ClassRoomModelGet>> {
+    let get = state
+        .db
+        .class_room
+        .get_many(
+            Some(GetManyByField {
+                field: "trade_id".to_string(),
+                value: id,
+            }),
+            Some("class_room".to_string()),
+        )
         .await?;
     let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
 
@@ -233,11 +266,19 @@ pub async fn update_class_room_by_id(
                 err: format!("Trade ID is invalid [{}], please try another", trade_id),
             })?;
 
-            get_trade_by_id(state.clone(), id)
-                .await
-                .map_err(|_| DbClassError::OtherError {
-                    err: format!("Trade ID not found [{}], please try another", trade_id),
-                })?;
+            let get_by_trade = get_all_class_room_by_trade(state.clone(), id).await?;
+            let trade =
+                get_trade_by_id(state.clone(), id)
+                    .await
+                    .map_err(|_| DbClassError::OtherError {
+                        err: format!("Trade ID not found [{}], please try another", trade_id),
+                    })?;
+
+            if let Some(num_class_room) = trade.class_rooms {
+                if get_by_trade.len() >= num_class_room as usize {
+                    return Err(DbClassError::OtherError { err: format!("You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",trade.name , num_class_room) });
+                }
+            }
         } else {
             class_room.trade = None
         }

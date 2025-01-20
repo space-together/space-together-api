@@ -11,6 +11,7 @@ pub struct TradeModel {
     pub username: Option<String>,
     pub description: Option<String>,
     pub sector_id: Option<ObjectId>,
+    pub class_rooms: Option<i32>,
     pub create_on: DateTime,
     pub updated_on: Option<DateTime>,
 }
@@ -21,6 +22,7 @@ pub struct TradeModelGet {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
+    pub class_rooms: Option<i32>,
     pub sector: Option<String>,
     pub create_on: String,
     pub updated_on: Option<String>,
@@ -32,6 +34,7 @@ pub struct TradeModelNew {
     pub username: Option<String>,
     pub sector: Option<String>,
     pub description: Option<String>,
+    pub class_rooms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
@@ -40,6 +43,7 @@ pub struct TradeModelPut {
     pub username: Option<String>,
     pub description: Option<String>,
     pub sector: Option<String>,
+    pub class_rooms: Option<i32>,
 }
 
 impl TradeModel {
@@ -48,6 +52,7 @@ impl TradeModel {
             id: None,
             name: trade.name,
             username: trade.username,
+            class_rooms: trade.class_rooms,
             sector_id: trade.sector.map(|id| ObjectId::from_str(&id).unwrap()),
             description: trade.description,
             create_on: DateTime::now(),
@@ -60,6 +65,7 @@ impl TradeModel {
             id: trade.id.map_or("".to_string(), |id| id.to_string()),
             name: trade.name,
             username: trade.username,
+            class_rooms: trade.class_rooms,
             description: trade.description,
             sector: trade.sector_id.map(|id| id.to_string()),
             create_on: trade
@@ -85,6 +91,7 @@ impl TradeModel {
 
         insert_if_some("name", trade.name.map(bson::Bson::String));
         insert_if_some("username", trade.username.map(bson::Bson::String));
+        insert_if_some("class_rooms", trade.class_rooms.map(bson::Bson::Int32));
         insert_if_some(
             "sector_id",
             trade
