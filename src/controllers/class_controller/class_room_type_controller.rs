@@ -3,7 +3,8 @@ use std::sync::Arc;
 use mongodb::bson::oid::ObjectId;
 
 use crate::{
-    error::db_class_error::DbClassResult,
+    error::db_class_error::{DbClassError, DbClassResult},
+    libs::classes::db_crud::GetManyByField,
     models::class_model::class_room_type_model::{
         ClassRoomTypeModel, ClassRoomTypeModelGet, ClassRoomTypeModelNew, ClassRoomTypeModelPut,
     },
@@ -75,6 +76,24 @@ pub async fn delete_class_room_type_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<ClassRoomTypeModelGet> {
+    let get_class_rooms = state
+        .db
+        .class_room
+        .get_many(
+            Some(GetManyByField {
+                field: "class_room_type_id".to_string(),
+                value: id,
+            }),
+            Some("class_room".to_string()),
+        )
+        .await;
+
+    if let Ok(class_rooms) = get_class_rooms {
+        if !class_rooms.is_empty() {
+            return Err(DbClassError::OtherError { err: "You can not delete class room role because they are other document using it, delete those collection and try again".to_string() });
+        }
+    }
+
     let get = get_class_room_type_by_id(state.clone(), id).await?;
     let _ = state
         .db
