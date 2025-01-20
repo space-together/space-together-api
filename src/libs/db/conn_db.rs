@@ -24,6 +24,7 @@ use crate::{
         },
         database_model::collection_model::DatabaseStats,
         education_model::education_model_model::EducationModel,
+        file_model::file_type_model::FileTypeModel,
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
@@ -62,6 +63,8 @@ pub struct ConnDb {
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
     pub school_logo: MongoCrud<SchoolLogoModel>,
+    // files
+    pub file_type: MongoCrud<FileTypeModel>,
     // auth
     pub session: MongoCrud<SessionModel>,
     pub account: MongoCrud<AccountModel>,
@@ -173,6 +176,11 @@ impl ConnDb {
                     collection: st_data.collection("account"),
                 };
 
+                // files
+                let file_type = MongoCrud {
+                    collection: st_data.collection("files.role"),
+                };
+
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
@@ -199,6 +207,8 @@ impl ConnDb {
                     // images
                     avatars,
                     school_logo,
+                    // files
+                    file_type,
                     // auth
                     session,
                     account,
