@@ -17,6 +17,7 @@ use super::{
     },
     database_router::database_status_router::routers_database,
     education_router::education_router_router::routers_education,
+    file_router::file_type_route::routers_file_type,
     request_router::{
         request_router_router::routers_request, request_type_router::routers_request_type,
     },
@@ -83,6 +84,9 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_trade(user_cfg, state.clone());
                 routers_school_auth(user_cfg, state.clone());
                 routers_school(user_cfg, state.clone());
+            }))
+            .service(web::scope("/file").configure(|user_cfg| {
+                routers_file_type(user_cfg, state.clone());
             })),
     );
 }

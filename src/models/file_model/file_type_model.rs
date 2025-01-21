@@ -6,6 +6,7 @@ pub struct FileTypeModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: DateTime,
@@ -16,6 +17,7 @@ pub struct FileTypeModel {
 pub struct FileTypeModelGet {
     pub id: String,
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: String,
@@ -25,6 +27,7 @@ pub struct FileTypeModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FileTypeModelNew {
     pub name: String,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
@@ -32,39 +35,42 @@ pub struct FileTypeModelNew {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FileTypeModelPut {
     pub name: Option<String>,
+    pub username: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
 }
 
 impl FileTypeModel {
-    pub fn new(class_type: FileTypeModelNew) -> Self {
+    pub fn new(fille_type: FileTypeModelNew) -> Self {
         FileTypeModel {
             id: None,
-            name: class_type.name,
-            description: class_type.description,
-            roles: class_type.roles,
+            name: fille_type.name,
+            username: fille_type.username,
+            description: fille_type.description,
+            roles: fille_type.roles,
             created_on: DateTime::now(),
             updated_on: None,
         }
     }
 
-    pub fn format(class_type: Self) -> FileTypeModelGet {
+    pub fn format(fille_type: Self) -> FileTypeModelGet {
         FileTypeModelGet {
-            id: class_type.id.map_or("".to_string(), |id| id.to_string()),
-            name: class_type.name,
-            description: class_type.description,
-            roles: class_type.roles,
-            created_on: class_type
+            id: fille_type.id.map_or("".to_string(), |id| id.to_string()),
+            name: fille_type.name,
+            username: fille_type.username,
+            description: fille_type.description,
+            roles: fille_type.roles,
+            created_on: fille_type
                 .created_on
                 .try_to_rfc3339_string()
                 .unwrap_or("".to_string()),
-            updated_on: Some(class_type.updated_on.map_or("".to_string(), |date| {
+            updated_on: Some(fille_type.updated_on.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }
     }
 
-    pub fn put(class_type: FileTypeModelPut) -> Document {
+    pub fn put(fille_type: FileTypeModelPut) -> Document {
         let mut doc = Document::new();
         let mut is_update = false;
 
@@ -75,12 +81,13 @@ impl FileTypeModel {
             }
         };
 
-        insert_if_some("name", class_type.name.map(bson::Bson::String));
+        insert_if_some("name", fille_type.name.map(bson::Bson::String));
+        insert_if_some("username", fille_type.username.map(bson::Bson::String));
         insert_if_some(
             "description",
-            class_type.description.map(bson::Bson::String),
+            fille_type.description.map(bson::Bson::String),
         );
-        if let Some(roles) = class_type.roles {
+        if let Some(roles) = fille_type.roles {
             let existing_roles = doc.get_array("roles").unwrap_or(&vec![]).clone();
             let mut new_roles = existing_roles
                 .iter()
