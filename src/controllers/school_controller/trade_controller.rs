@@ -8,12 +8,32 @@ use mongodb::{
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::functions::characters_fn::is_valid_username,
+    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
     models::school_model::trade_model::{TradeModel, TradeModelGet, TradeModelNew, TradeModelPut},
     AppState,
 };
 
 use super::sector_controller::get_sector_by_id;
+
+async fn get_other_collection(
+    state: Arc<AppState>,
+    trade: TradeModel,
+) -> DbClassResult<TradeModelGet> {
+    let mut sector_name: Option<String> = None;
+
+    if let Some(ref sector_id) = trade.sector_id {
+        let get_sector = get_sector_by_id(state.clone(), *sector_id).await?;
+
+        if let Some(sector_username) = get_sector.username {
+            sector_name = Some(sector_username);
+        } else {
+            sector_name = Some(get_sector.name);
+        }
+    }
+    let mut sector = TradeModel::format(trade);
+    sector.sector = sector_name;
+    Ok(sector)
+}
 
 pub async fn create_trade(
     state: Arc<AppState>,
@@ -89,23 +109,10 @@ pub async fn get_trade_by_username(
         .find_one(doc! {"username" : &username})
         .await?
         .ok_or(DbClassError::OtherError {
-            err: format!("Sector not found by username [{}]", &username),
+            err: format!("Trade not found by username [{}]", &username),
         })?;
 
-    let mut sector_name: Option<String> = None;
-
-    if let Some(ref education_id) = get.sector_id {
-        let get_education = get_sector_by_id(state.clone(), *education_id).await?;
-
-        if let Some(education_username) = get_education.username {
-            sector_name = Some(education_username);
-        } else {
-            sector_name = Some(get_education.name);
-        }
-    }
-    let mut sector = TradeModel::format(get);
-    sector.sector = sector_name;
-    Ok(sector)
+    get_other_collection(state, get).await
 }
 
 pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<TradeModelGet> {
@@ -115,20 +122,30 @@ pub async fn get_trade_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResul
         .get_one_by_id(id, Some("trade".to_string()))
         .await?;
 
-    let mut sector_name: Option<String> = None;
+    get_other_collection(state, get).await
+}
 
-    if let Some(ref sector_id) = get.sector_id {
-        let get_sector = get_sector_by_id(state.clone(), *sector_id).await?;
-
-        if let Some(sector_username) = get_sector.username {
-            sector_name = Some(sector_username);
-        } else {
-            sector_name = Some(get_sector.name);
-        }
+pub async fn get_trade_by_sector(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> DbClassResult<Vec<TradeModelGet>> {
+    let get = state
+        .db
+        .trade
+        .get_many(
+            Some(GetManyByField {
+                field: "sector_id".to_string(),
+                value: id,
+            }),
+            Some("Trades".to_string()),
+        )
+        .await?;
+    let mut trades = Vec::new();
+    for trade in get {
+        trades.push(get_other_collection(state.clone(), trade).await?);
     }
-    let mut sector = TradeModel::format(get);
-    sector.sector = sector_name;
-    Ok(sector)
+
+    Ok(trades)
 }
 
 pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModelGet>> {

@@ -16,6 +16,8 @@ use crate::{
     AppState,
 };
 
+use super::trade_controller::get_trade_by_sector;
+
 pub async fn create_sector(
     state: Arc<AppState>,
     sector: SectorModelNew,
@@ -251,17 +253,7 @@ pub async fn delete_sector_by_id(
     state: Arc<AppState>,
     id: ObjectId,
 ) -> DbClassResult<SectorModelGet> {
-    let get_trade = state
-    .db
-    .sector
-    .get_many(
-        Some(GetManyByField {
-            field: "trade_id".to_string(),
-            value: id,
-        }),
-        Some("trade".to_string()),
-    )
-    .await;
+    let get_trade = get_trade_by_sector(state.clone(),id).await;
 
 if let Ok(sectors) = get_trade {
     if !sectors.is_empty() {
