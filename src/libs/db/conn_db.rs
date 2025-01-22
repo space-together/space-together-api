@@ -24,7 +24,7 @@ use crate::{
         },
         database_model::collection_model::DatabaseStats,
         education_model::education_model_model::EducationModel,
-        file_model::file_type_model::FileTypeModel,
+        file_model::{file_model_model::FileModel, file_type_model::FileTypeModel},
         images_model::{
             profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
         },
@@ -65,6 +65,7 @@ pub struct ConnDb {
     pub school_logo: MongoCrud<SchoolLogoModel>,
     // files
     pub file_type: MongoCrud<FileTypeModel>,
+    pub file: MongoCrud<FileModel>,
     // auth
     pub session: MongoCrud<SessionModel>,
     pub account: MongoCrud<AccountModel>,
@@ -91,127 +92,88 @@ impl ConnDb {
                     Err(_) => None,
                 };
 
-                // Initialize collections
-                let user_role = UserRoleDb {
-                    role: st_data.collection("users.role"),
-                };
-                let user = UserDb {
-                    user: st_data.collection("users"),
-                };
-                let class = MongoCrud {
-                    collection: st_data.collection("classes"),
-                };
-                let class_group = ClassGroupDb {
-                    class_group: st_data.collection("--classes_groups"), // private
-                };
-
-                let class_type = MongoCrud {
-                    collection: st_data.collection("classes.role"),
-                };
-
-                let class_room_type = MongoCrud {
-                    collection: st_data.collection("class_room.role"),
-                };
-
-                let class_room = MongoCrud {
-                    collection: st_data.collection("class_room"),
-                };
-
-                let conversation = ConversationDb {
-                    conversation: st_data.collection("--conversations"), // private
-                };
-                let message = MessageDb {
-                    message: st_data.collection("--messages"), // private collection
-                };
-                let activities_type = ActivitiesTypeDb {
-                    activities_type: st_data.collection("classes_activities.role"), // role
-                };
-                let activity = ActivityDb {
-                    activity: st_data.collection("--classes_activities"), //
-                };
-                let request_type = RequestTypeDb {
-                    request: st_data.collection("requests.role"), // role for request
-                };
-                let request = RequestDb {
-                    request: st_data.collection("requests"),
-                };
-
-                // schools
-                let school = MongoCrud {
-                    collection: st_data.collection("schools"),
-                };
-                let education = MongoCrud {
-                    collection: st_data.collection("educations"),
-                };
-
-                // image collections
-                let avatars = MongoCrud {
-                    collection: st_image.collection("avatars"),
-                };
-
-                let school_logo = MongoCrud {
-                    collection: st_image.collection("school_logo"),
-                };
-                let trade = MongoCrud {
-                    collection: st_data.collection("trades"),
-                };
-
-                let subject_type = MongoCrud {
-                    collection: st_data.collection("subjects.role"),
-                };
-
-                let subject = MongoCrud {
-                    collection: st_data.collection("subjects"),
-                };
-
-                let sector = MongoCrud {
-                    collection: st_data.collection("sector"),
-                };
-
-                // auth model
-                let session = MongoCrud {
-                    collection: st_data.collection("--session"),
-                };
-                let account = MongoCrud {
-                    collection: st_data.collection("account"),
-                };
-
-                // files
-                let file_type = MongoCrud {
-                    collection: st_data.collection("files.role"),
-                };
-
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
-                    user_role,
-                    user,
-                    class,
-                    class_group,
-                    conversation,
-                    message,
-                    activities_type,
-                    activity,
+                    user_role: UserRoleDb {
+                        role: st_data.collection("users.role"),
+                    },
+                    user: UserDb {
+                        user: st_data.collection("users"),
+                    },
+                    class: MongoCrud {
+                        collection: st_data.collection("classes"),
+                    },
+                    class_group: ClassGroupDb {
+                        class_group: st_data.collection("--classes_groups"), // private
+                    },
+                    conversation: ConversationDb {
+                        conversation: st_data.collection("--conversations"), // private
+                    },
+                    message: MessageDb {
+                        message: st_data.collection("--messages"), // private collection
+                    },
+                    activities_type: ActivitiesTypeDb {
+                        activities_type: st_data.collection("classes_activities.role"), // role
+                    },
+                    activity: ActivityDb {
+                        activity: st_data.collection("--classes_activities"), //
+                    },
                     stats,
-                    request_type,
-                    request,
-                    education,
-                    school,
-                    sector,
-                    trade,
-                    subject_type,
-                    subject,
-                    class_type,
-                    class_room,
-                    class_room_type,
+                    request_type: RequestTypeDb {
+                        request: st_data.collection("requests.role"), // role for request
+                    },
+                    request: RequestDb {
+                        request: st_data.collection("requests"),
+                    },
+                    education: MongoCrud {
+                        collection: st_data.collection("educations"),
+                    },
+                    school: MongoCrud {
+                        collection: st_data.collection("schools"),
+                    },
+                    sector: MongoCrud {
+                        collection: st_data.collection("sector"),
+                    },
+                    trade: MongoCrud {
+                        collection: st_data.collection("trades"),
+                    },
+                    subject_type: MongoCrud {
+                        collection: st_data.collection("subjects.role"),
+                    },
+                    subject: MongoCrud {
+                        collection: st_data.collection("subjects"),
+                    },
+                    class_type: MongoCrud {
+                        collection: st_data.collection("classes.role"),
+                    },
+                    class_room: MongoCrud {
+                        collection: st_data.collection("class_room"),
+                    },
+                    class_room_type: MongoCrud {
+                        collection: st_data.collection("class_room.role"),
+                    },
                     // images
-                    avatars,
-                    school_logo,
+                    avatars: MongoCrud {
+                        collection: st_image.collection("avatars"),
+                    },
+                    school_logo: MongoCrud {
+                        collection: st_image.collection("school_logo"),
+                    },
                     // files
-                    file_type,
+                    file_type: MongoCrud {
+                        collection: st_data.collection("files.role"),
+                    },
+                    file: MongoCrud {
+                        collection: st_data.collection("files"),
+                    },
                     // auth
-                    session,
-                    account,
+                    session: MongoCrud {
+                        collection: st_data.collection("--session"),
+                    },
+                    account: MongoCrud {
+                        collection: st_data.collection("account"),
+                    },
                 })
             }
             Err(err) => Err(DbError::CanNotConnectToDatabase {
