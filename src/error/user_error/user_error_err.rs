@@ -46,7 +46,7 @@ impl std::fmt::Display for UserError {
             UserError::UserNotFound { field, value } => {
                 write!(
                     f,
-                    "{} not found by [{}], please try other {}",
+                    "{} not found [{}], please try other {}",
                     field, value, field
                 )
             }
