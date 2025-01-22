@@ -11,11 +11,13 @@ use crate::{
         school_controller::{
             sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
         },
-        user_controller::user_controller_controller::controller_get_user_by_id,
+        user_controller::user_controller_controller::{
+            controller_get_user_by_id, controller_user_get_user_by_email,
+        },
     },
     error::db_class_error::{DbClassError, DbClassResult},
     libs::functions::{
-        characters_fn::{generate_code, generate_username, is_valid_username},
+        characters_fn::{generate_code, generate_username, is_valid_email, is_valid_username},
         resources::check_if_exit::{check_sector_trade_exit, CheckSectorTradeExitModel},
     },
     models::class_model::class_model_model::{
@@ -62,8 +64,8 @@ async fn get_other_collection(
         None
     };
 
-    let class_room = if let Some(ref class_room_id) = class.class_teacher_id {
-        let document = get_class_room_by_id(state.clone(), *class_room_id)
+    let class_room = if let Some(class_room_id) = class.class_room_id {
+        let document = get_class_room_by_id(state.clone(), class_room_id)
             .await
             .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
         document.username.or(Some(document.name))
@@ -94,15 +96,38 @@ pub async fn create_class(
     )
     .await?;
 
-    if let Some(ref username) = class.username {
-        is_valid_username(username).map_err(|err| DbClassError::OtherError {
-            err: err.to_string(),
-        })?;
+    if let Some(ref user_email) = class.class_teacher {
+        is_valid_email(user_email).map_err(|e| DbClassError::OtherError { err: e })?;
 
-        if get_class_by_username(state.clone(), username.clone())
+        let teacher = controller_user_get_user_by_email(state.clone(), user_email.clone())
             .await
-            .is_ok()
-        {
+            .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
+
+        if let Some(teacher_role) = teacher.role {
+            if teacher_role != "Student" {
+                class.class_teacher = Some(teacher.id);
+            } else {
+                return Err(DbClassError::OtherError {
+                    err: format!(
+                        "This user is not allowed [{}] to create class, because his/her role is student [{}]",
+                        teacher.name, teacher_role
+                    ),
+                });
+            }
+        } else {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "This user is not allowed [{}] to create class, because his/he don't have role",
+                    teacher.name,
+                ),
+            });
+        }
+    }
+
+    if let Some(ref username) = class.username {
+        is_valid_username(username).map_err(|err| DbClassError::OtherError { err })?;
+        let get_username = get_class_by_username(state.clone(), username).await;
+        if get_username.is_ok() {
             return Err(DbClassError::OtherError {
                 err: format!(
                     "Username sector already exists [{}], please try another",
@@ -144,7 +169,7 @@ pub async fn create_class(
 
 pub async fn get_class_by_username(
     state: Arc<AppState>,
-    username: String,
+    username: &String,
 ) -> DbClassResult<ClassModelGet> {
     let get = state
         .db
@@ -189,7 +214,7 @@ pub async fn get_all_class(state: Arc<AppState>) -> DbClassResult<Vec<ClassModel
 pub async fn update_class_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-    class: ClassModelPut,
+    mut class: ClassModelPut,
 ) -> DbClassResult<ClassModelGet> {
     check_sector_trade_exit(
         state.clone(),
@@ -199,6 +224,50 @@ pub async fn update_class_by_id(
         },
     )
     .await?;
+
+    if let Some(ref user_email) = class.class_teacher {
+        is_valid_email(user_email).map_err(|e| DbClassError::OtherError { err: e })?;
+
+        let teacher = controller_user_get_user_by_email(state.clone(), user_email.clone())
+            .await
+            .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
+
+        if let Some(teacher_role) = teacher.role {
+            if teacher_role != "Student" {
+                class.class_teacher = Some(teacher.id);
+            } else {
+                return Err(DbClassError::OtherError {
+                    err: format!(
+                        "This user is not allowed [{}] to create class, because his/her role is student [{}]",
+                        teacher.name, teacher_role
+                    ),
+                });
+            }
+        } else {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "This user is not allowed [{}] to create class, because his/he don't have role",
+                    teacher.name,
+                ),
+            });
+        }
+    }
+
+    if let Some(ref username) = class.username {
+        is_valid_username(username).map_err(|err| DbClassError::OtherError {
+            err: err.to_string(),
+        })?;
+
+        if get_class_by_username(state.clone(), username).await.is_ok() {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Username sector already exists [{}], please try another",
+                    username
+                ),
+            });
+        }
+    }
+
     state
         .db
         .class
