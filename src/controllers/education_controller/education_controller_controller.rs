@@ -7,17 +7,23 @@ use mongodb::{
 };
 
 use crate::{
-    error::db_class_error::{DbClassError, DbClassResult},
-    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
-    models::education_model::education_model_model::{
+    controllers::file_controller::file_controller_controller::{create_file_image, get_file_by_id}, error::db_class_error::{DbClassError, DbClassResult}, libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username}, models::education_model::education_model_model::{
         EducationModel, EducationModelGet, EducationModelNew, EducationModelPut,
-    },
-    AppState,
+    }, AppState
 };
+
+async fn get_other_collection (state: Arc<AppState> , education: EducationModel) -> DbClassResult<EducationModelGet> {
+    let mut format_education = EducationModel::format(education.clone());
+    if let Some(symbol_id) = education.symbol_id {
+        let image = get_file_by_id(state, symbol_id).await?;
+        format_education.symbol = Some(image.src)
+    }
+    Ok(format_education)
+}
 
 pub async fn create_education(
     state: Arc<AppState>,
-    education: EducationModelNew,
+  mut   education: EducationModelNew,
 ) -> DbClassResult<EducationModelGet> {
     let index = IndexModel::builder()
         .keys(doc! {
@@ -57,6 +63,11 @@ pub async fn create_education(
         });
     }
 
+    if let Some(file) = education.symbol {
+      let symbol =   create_file_image(state.clone(), file, "Education symbol".to_string()).await?;
+      education.symbol = Some(symbol);
+    }
+
     let create = state
         .db
         .education
@@ -76,7 +87,11 @@ pub async fn get_all_education(state: Arc<AppState>) -> DbClassResult<Vec<Educat
         .education
         .get_many(None, Some("education".to_string()))
         .await?;
-    Ok(get.into_iter().map(EducationModel::format).collect())
+    let mut educations = Vec::new();
+    for education in get {
+        educations.push(get_other_collection(state.clone(), education).await?);
+    }
+    Ok(educations)
 }
 
 pub async fn get_education_by_id(
@@ -88,7 +103,7 @@ pub async fn get_education_by_id(
         .education
         .get_one_by_id(id, Some("education".to_string()))
         .await?;
-    Ok(EducationModel::format(get))
+    get_other_collection(state, get).await
 }
 
 pub async fn get_education_by_username(
@@ -105,7 +120,7 @@ pub async fn get_education_by_username(
             err: format!("Education not found by username [{}]", &username),
         })?;
 
-    Ok(EducationModel::format(get))
+        get_other_collection(state, get).await
 }
 
 pub async fn update_education_by_id(

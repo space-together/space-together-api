@@ -3,13 +3,15 @@ use mongodb::{
     options::IndexOptions,
     IndexModel,
 };
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
     models::file_model::file_model_model::{FileModel, FileModelGet, FileModelNew, FileModelPut},
     AppState,
 };
+
+use super::file_type_controller::get_file_type_by_username;
 
 pub async fn create_file(state: Arc<AppState>, file: FileModelNew) -> DbClassResult<FileModelGet> {
     let index = IndexModel::builder()
@@ -68,4 +70,29 @@ pub async fn update_file_by_id(
 pub async fn delete_file_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResult<FileModelGet> {
     let delete = state.db.file.delete(id, Some("file".to_string())).await?;
     Ok(FileModel::format(delete))
+}
+
+pub async fn create_file_image(
+    state: Arc<AppState>,
+    file: String,
+    description: String,
+) -> DbClassResult<String> {
+    let get_file_type = get_file_type_by_username(state.clone(), "image".to_string()).await?;
+    let new_file = FileModelNew {
+        src: file,
+        description: Some(description),
+        file_type: get_file_type.id,
+    };
+
+    let create_file = create_file(state.clone(), new_file).await?;
+
+    Ok(create_file.id)
+}
+
+pub async fn get_file_image(state: Arc<AppState>, id: &String) -> DbClassResult<String> {
+    let image_id = ObjectId::from_str(id).map_err(|_| DbClassError::OtherError {
+        err: format!("Invalid Image id [{}]", id),
+    })?;
+    let get = get_file_by_id(state, image_id).await?;
+    Ok(get.src)
 }
