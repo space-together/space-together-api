@@ -254,11 +254,9 @@ pub async fn update_class_by_id(
     }
 
     if let Some(ref username) = class.username {
-        is_valid_username(username).map_err(|err| DbClassError::OtherError {
-            err: err.to_string(),
-        })?;
-
-        if get_class_by_username(state.clone(), username).await.is_ok() {
+        is_valid_username(username).map_err(|err| DbClassError::OtherError { err })?;
+        let get_username = get_class_by_username(state.clone(), username).await;
+        if get_username.is_ok() {
             return Err(DbClassError::OtherError {
                 err: format!(
                     "Username sector already exists [{}], please try another",
