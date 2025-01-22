@@ -17,7 +17,7 @@ use super::{
     },
     database_router::database_status_router::routers_database,
     education_router::education_router_router::routers_education,
-    file_router::file_type_route::routers_file_type,
+    file_router::{file_router_router::routers_file, file_type_route::routers_file_type},
     request_router::{
         request_router_router::routers_request, request_type_router::routers_request_type,
     },
@@ -87,6 +87,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             }))
             .service(web::scope("/file").configure(|user_cfg| {
                 routers_file_type(user_cfg, state.clone());
+                routers_file(user_cfg, state.clone());
             })),
     );
 }
@@ -94,3 +95,5 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
 async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there! 🌼 this is space-together api version v0.0.1")
 }
+
+// TODO : to check CRUD for file
