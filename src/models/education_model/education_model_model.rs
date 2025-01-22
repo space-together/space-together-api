@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +10,7 @@ pub struct EducationModel {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
+    pub symbol_id: Option<ObjectId>,
     pub roles: Option<Vec<String>>,
     pub created_on: DateTime,
     pub updated_on: Option<DateTime>,
@@ -18,6 +21,7 @@ pub struct EducationModelGet {
     pub id: String,
     pub name: String,
     pub username: Option<String>,
+    pub symbol: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
     pub created_on: String,
@@ -29,6 +33,7 @@ pub struct EducationModelNew {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
+    pub symbol: Option<String>,
     pub roles: Option<Vec<String>>,
 }
 
@@ -37,6 +42,7 @@ pub struct EducationModelPut {
     pub name: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
+    pub symbol: Option<String>,
     pub roles: Option<Vec<String>>,
 }
 
@@ -46,6 +52,7 @@ impl EducationModel {
             id: None,
             name: education.name,
             username: education.username,
+            symbol_id: education.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
             description: education.description,
             roles: education.roles,
             created_on: DateTime::now(),
@@ -59,6 +66,7 @@ impl EducationModel {
             name: education.name,
             username: education.username,
             description: education.description,
+            symbol: education.symbol_id.map(|id| id.to_string()),
             roles: education.roles,
             created_on: education
                 .created_on
@@ -84,6 +92,13 @@ impl EducationModel {
         insert_if_some("name", education.name.map(bson::Bson::String));
         insert_if_some("username", education.username.map(bson::Bson::String));
         insert_if_some("description", education.description.map(bson::Bson::String));
+        insert_if_some(
+            "symbol_id",
+            education
+                .symbol
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
 
         if is_update {
             doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
