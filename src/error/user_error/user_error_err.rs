@@ -4,7 +4,7 @@ pub type UserResult<T> = core::result::Result<T, UserError>;
 pub enum UserError {
     CanNotCreateUser { err: String },
     UserIsReadyExit { field: String, value: String },
-    UserNotFound { field: String },
+    UserNotFound { field: String, value: String },
     CanNotFindUser { err: String },
     InvalidId,
     InvalidUserRoleId,
@@ -43,8 +43,12 @@ impl std::fmt::Display for UserError {
                 "{} is ready to exit [{}], try other {}",
                 field, value, field
             ),
-            UserError::UserNotFound { field } => {
-                write!(f, "User not found by {}, please try other {}", field, field)
+            UserError::UserNotFound { field, value } => {
+                write!(
+                    f,
+                    "{} not found by [{}], please try other {}",
+                    field, value, field
+                )
             }
             UserError::CanNotFindUser { err } => {
                 write!(f, "Can't find user bcs : 😡 {} 😡, try again later", err)

@@ -28,7 +28,11 @@ enum UpdateDeleteValueType {
 }
 
 impl UserDb {
-    async fn find_one_by_field(&self, field: &str, value: String) -> UserResult<Option<UserModel>> {
+    async fn find_one_by_field(
+        &self,
+        field: &str,
+        value: &String,
+    ) -> UserResult<Option<UserModel>> {
         self.user
             .find_one(doc! { field: value})
             .await
@@ -38,20 +42,22 @@ impl UserDb {
     }
 
     pub async fn get_user_by_email(&self, email: String) -> UserResult<UserModel> {
-        match self.find_one_by_field("email", email).await {
+        match self.find_one_by_field("email", &email).await {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound {
                 field: "email".to_string(),
+                value: email,
             }),
             Err(err) => Err(err),
         }
     }
 
     pub async fn get_user_by_username(&self, username: String) -> UserResult<UserModel> {
-        match self.find_one_by_field("username", username).await {
+        match self.find_one_by_field("username", &username).await {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound {
                 field: "username".to_string(),
+                value: username,
             }),
             Err(err) => Err(err),
         }
@@ -98,6 +104,7 @@ impl UserDb {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound {
                 field: "_id".to_string(),
+                value: id.to_string(),
             }),
             Err(err) => Err(UserError::CanNotFindUser {
                 err: err.to_string(),
@@ -222,6 +229,7 @@ impl UserDb {
             Ok(Some(res)) => Ok(res),
             Ok(None) => Err(UserError::UserNotFound {
                 field: field.to_string(),
+                value,
             }),
             Err(err) => Err(UserError::CanNotDoActionUser {
                 action: "update".to_string(),
@@ -273,6 +281,7 @@ impl UserDb {
             Ok(Some(doc)) => Ok(doc),
             Ok(None) => Err(UserError::UserNotFound {
                 field: field.to_string(),
+                value,
             }),
             Err(err) => Err(UserError::CanNotDoActionUser {
                 action: "delete".to_string(),
