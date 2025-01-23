@@ -165,7 +165,7 @@ impl ConnDb {
                         collection: st_data.collection("files.role"),
                     },
                     file: MongoCrud {
-                        collection: st_data.collection("files"),
+                        collection: st_image.collection("files"),
                     },
                     // auth
                     session: MongoCrud {

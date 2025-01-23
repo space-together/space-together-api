@@ -3,7 +3,7 @@ use mongodb::{
     options::IndexOptions,
     IndexModel,
 };
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
@@ -87,12 +87,4 @@ pub async fn create_file_image(
     let create_file = create_file(state.clone(), new_file).await?;
 
     Ok(create_file.id)
-}
-
-pub async fn get_file_image(state: Arc<AppState>, id: &String) -> DbClassResult<String> {
-    let image_id = ObjectId::from_str(id).map_err(|_| DbClassError::OtherError {
-        err: format!("Invalid Image id [{}]", id),
-    })?;
-    let get = get_file_by_id(state, image_id).await?;
-    Ok(get.src)
 }
