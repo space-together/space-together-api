@@ -130,13 +130,16 @@ pub async fn update_education_by_id(
 ) -> DbClassResult<EducationModelGet> {
     if let Some(username) = &education.username {
         let get_username = get_education_by_username(state.clone(), username.clone()).await;
-        if get_username.is_ok() {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username education is ready exit [{}], please try other",
-                    &username
-                ),
-            });
+        
+        if let Ok(education_username) = get_username {
+            if education_username.id != id.to_string() {
+                return Err(DbClassError::OtherError {
+                    err: format!(
+                        "Username education is ready exit [{}], please try other",
+                        &username
+                    ),
+                });
+            }
         }
     };
 
