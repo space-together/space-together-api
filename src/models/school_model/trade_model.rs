@@ -12,6 +12,7 @@ pub struct TradeModel {
     pub description: Option<String>,
     pub sector_id: Option<ObjectId>,
     pub class_rooms: Option<i32>,
+    pub symbol_id: Option<ObjectId>,
     pub create_on: DateTime,
     pub updated_on: Option<DateTime>,
 }
@@ -24,6 +25,7 @@ pub struct TradeModelGet {
     pub description: Option<String>,
     pub class_rooms: Option<i32>,
     pub sector: Option<String>,
+    pub symbol: Option<String>,
     pub create_on: String,
     pub updated_on: Option<String>,
 }
@@ -35,6 +37,7 @@ pub struct TradeModelNew {
     pub sector: Option<String>,
     pub description: Option<String>,
     pub class_rooms: Option<i32>,
+    pub symbol: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
@@ -44,6 +47,7 @@ pub struct TradeModelPut {
     pub description: Option<String>,
     pub sector: Option<String>,
     pub class_rooms: Option<i32>,
+    pub symbol: Option<String>,
 }
 
 impl TradeModel {
@@ -54,6 +58,7 @@ impl TradeModel {
             username: trade.username,
             class_rooms: trade.class_rooms,
             sector_id: trade.sector.map(|id| ObjectId::from_str(&id).unwrap()),
+            symbol_id: trade.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
             description: trade.description,
             create_on: DateTime::now(),
             updated_on: None,
@@ -68,6 +73,7 @@ impl TradeModel {
             class_rooms: trade.class_rooms,
             description: trade.description,
             sector: trade.sector_id.map(|id| id.to_string()),
+            symbol: trade.symbol_id.map(|id| id.to_string()),
             create_on: trade
                 .create_on
                 .try_to_rfc3339_string()
@@ -96,6 +102,13 @@ impl TradeModel {
             "sector_id",
             trade
                 .sector
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+        insert_if_some("description", trade.description.map(bson::Bson::String));
+        insert_if_some(
+            "symbol_id",
+            trade
+                .symbol
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
         insert_if_some("description", trade.description.map(bson::Bson::String));
