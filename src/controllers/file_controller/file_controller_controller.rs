@@ -1,5 +1,5 @@
 use mongodb::bson::oid::ObjectId;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     error::db_class_error::DbClassResult,
@@ -74,22 +74,21 @@ pub async fn create_file_image(
 pub async fn update_file_image(
     state: Arc<AppState>,
     file: String,
-    id: &str,
+    id: &ObjectId,
 ) -> DbClassResult<String> {
-    let change_file_id = ObjectId::from_str(id).unwrap();
     let update_file_model = FileModelPut {
         src: Some(file),
         file_type: None,
         description: None,
     };
-    let update_file = update_file_by_id(state.clone(), change_file_id, update_file_model).await?;
+    let update_file = update_file_by_id(state.clone(), *id, update_file_model).await?;
     Ok(update_file.id)
 }
 
 pub async fn handle_symbol_update(
     state: Arc<AppState>,
     file: String,
-    existing_symbol_id: Option<String>,
+    existing_symbol_id: Option<ObjectId>,
 ) -> DbClassResult<String> {
     if let Some(file_id) = existing_symbol_id {
         update_file_image(state.clone(), file, &file_id).await

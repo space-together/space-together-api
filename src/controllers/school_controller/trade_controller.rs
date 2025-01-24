@@ -201,9 +201,13 @@ pub async fn update_trade_by_id(
     id: ObjectId,
     mut trade: TradeModelPut,
 ) -> DbClassResult<TradeModelGet> {
-    let exit_trade = get_trade_by_id(state.clone(), id).await?;
+    let exit_trade = state
+        .db
+        .trade
+        .get_one_by_id(id, Some("trade".to_string()))
+        .await?;
     if let Some(file) = trade.symbol {
-        trade.symbol = Some(handle_symbol_update(state.clone(), file, exit_trade.symbol).await?);
+        trade.symbol = Some(handle_symbol_update(state.clone(), file, exit_trade.symbol_id).await?);
     }
 
     let _ = state

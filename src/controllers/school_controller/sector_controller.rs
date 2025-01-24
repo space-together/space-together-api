@@ -201,7 +201,7 @@ pub async fn update_sector_by_id(
             }
             Ok(i) => i,
         };
-
+        
         let get_education = get_education_by_id(state.clone(), id).await;
 
         if get_education.is_err() {
@@ -214,10 +214,14 @@ pub async fn update_sector_by_id(
         }
     }
 
-    let exit_sector = get_sector_by_id(state.clone(), id).await?;
+    let exit_sector =state
+    .db
+    .sector
+    .get_one_by_id(id, Some("sector".to_string()))
+    .await?;
 
     if let Some(file) = sector.symbol {
-        sector.symbol = Some(handle_symbol_update(state.clone(), file, exit_sector.symbol).await?);
+        sector.symbol = Some(handle_symbol_update(state.clone(), file, exit_sector.symbol_id).await?);
     }
     
     state

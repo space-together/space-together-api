@@ -156,11 +156,16 @@ pub async fn update_education_by_id(
     if let Some(username) = &education.username {
         validate_username(state.clone(), username, Some(id)).await?;
     }
-    let existing_education = get_education_by_id(state.clone(), id).await?;
+    let existing_education = state
+    .db
+    .education
+    .get_one_by_id(id, Some("education".to_string()))
+    .await?;
+
 
     // Handle symbol file update or creation
     if let Some(file) = education.symbol {
-        education.symbol = Some(handle_symbol_update(state.clone(), file, existing_education.symbol).await?);
+        education.symbol = Some(handle_symbol_update(state.clone(), file, existing_education.symbol_id).await?);
     }
 
     // Update the education record in the database
