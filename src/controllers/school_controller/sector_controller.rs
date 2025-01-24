@@ -9,7 +9,7 @@ use mongodb::{
 use crate::{
     controllers::education_controller::education_controller_controller::get_education_by_id,
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
+    libs::{classes::db_crud::GetManyByField, functions::{characters_fn::is_valid_username, resources::check_if_exit::UsernameValidator}},
     models::school_model::sector_model::{
         SectorModel, SectorModelGet, SectorModelNew, SectorModelPut,
     },
@@ -17,6 +17,44 @@ use crate::{
 };
 
 use super::trade_controller::get_trade_by_sector;
+
+pub async fn validate_sector_username(
+    state: Arc<AppState>,
+    username: &str,
+    id_to_exclude: Option<ObjectId>,
+) -> DbClassResult<()> {
+    let validator = UsernameValidator::new(state.clone());
+
+    validator
+        .validate(username, id_to_exclude, move |state, username| {
+            let username = username.to_string();
+            Box::pin(async move {
+                let sector = get_sector_by_username(state, username.clone()).await;
+                sector.map(|sector| Some(sector.id)).or_else(|err| {
+                    if matches!(err, DbClassError::OtherError { .. }) {
+                        Ok(None) 
+                    } else {
+                        Err(err)
+                    }
+                })
+            })
+        })
+        .await
+}
+
+async fn get_other_collection (state: Arc<AppState> , sector: SectorModel) -> DbClassResult<SectorModelGet> {
+    let mut format_sector = SectorModel::format(sector.clone());
+    if let Some(ref education_id) = sector.education_id {
+        let get_education = get_education_by_id(state.clone(), *education_id).await?;
+
+        if let Some(education_username) = get_education.username {
+            format_sector.education = Some(education_username);
+        } else {
+            format_sector.education = Some(get_education.name);
+        }
+    }
+    Ok(format_sector)
+}
 
 pub async fn create_sector(
     state: Arc<AppState>,
@@ -38,27 +76,9 @@ pub async fn create_sector(
         });
     }
 
-    if let Some(ref username) = sector.username {
-        if let Err(err) = is_valid_username(username) {
-            return Err(DbClassError::OtherError {
-                err: err.to_string(),
-            });
-        }
-
-        let get_username = get_sector_by_username(state.clone(), username.clone()).await;
-        if get_username.is_ok() {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username education is ready exit [{}], please try other",
-                    &username
-                ),
-            });
-        }
-    } else {
-        return Err(DbClassError::OtherError {
-            err: "Username is missing".to_string(),
-        });
-    }
+   if let Some(ref username) = sector.username {
+   let _ = validate_sector_username(state.clone(), username, None).await;
+   }
 
     if let Some(ref education) = sector.education {
         let id = match ObjectId::from_str(education) {
@@ -106,20 +126,7 @@ pub async fn get_sector_by_username(
             err: format!("Sector not found by username [{}]", &username),
         })?;
 
-        let mut education_name: Option<String> = None;
-
-        if let Some(ref education_id) = get.education_id {
-            let get_education = get_education_by_id(state.clone(), *education_id).await?;
-    
-            if let Some(education_username) = get_education.username {
-                education_name = Some(education_username);
-            } else {
-                education_name = Some(get_education.name);
-            }
-        }
-        let mut sector = SectorModel::format(get);
-        sector.education = education_name;
-        Ok(sector)
+        get_other_collection(state, get).await
 }
 
 pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorModelGet>> {
@@ -133,16 +140,7 @@ pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorMod
 
     for sector in get {
         if let Some(ref education_id) = sector.education_id {
-            let get_education = get_education_by_id(state.clone(), *education_id).await?;
-            if let Some(education_username) = get_education.username {
-                let mut fol_sector = SectorModel::format(sector);
-                fol_sector.education = Some(education_username);
-                sectors.push(fol_sector);
-            } else {
-                let mut fol_sector = SectorModel::format(sector);
-                fol_sector.education = Some(get_education.name);
-                sectors.push(fol_sector);
-            }
+         sectors.push( get_other_collection(state, get).await?);
         }
     }
     Ok(sectors)
@@ -180,20 +178,7 @@ pub async fn get_sector_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResu
         .sector
         .get_one_by_id(id, Some("sector".to_string()))
         .await?;
-    let mut education_name: Option<String> = None;
-
-    if let Some(ref education_id) = get.education_id {
-        let get_education = get_education_by_id(state.clone(), *education_id).await?;
-
-        if let Some(education_username) = get_education.username {
-            education_name = Some(education_username);
-        } else {
-            education_name = Some(get_education.name);
-        }
-    }
-    let mut sector = SectorModel::format(get);
-    sector.education = education_name;
-    Ok(sector)
+    get_other_collection(state, get).await
 }
 
 pub async fn update_sector_by_id(
@@ -202,22 +187,9 @@ pub async fn update_sector_by_id(
     sector: SectorModelPut,
 ) -> DbClassResult<SectorModelGet> {
     if let Some(ref username) = sector.username {
-        if let Err(err) = is_valid_username(username) {
-            return Err(DbClassError::OtherError {
-                err: err.to_string(),
-            });
+        let _ = validate_sector_username(state.clone(), username, Some(id)).await;
         }
 
-        let get_username = get_sector_by_username(state.clone(), username.clone()).await;
-        if get_username.is_ok() {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username education is ready exit [{}], please try other",
-                    &username
-                ),
-            });
-        }
-    }
     if let Some(ref education) = sector.education {
         let id = match ObjectId::from_str(education) {
             Err(_) => {

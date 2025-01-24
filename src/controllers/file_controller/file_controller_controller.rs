@@ -1,12 +1,8 @@
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    options::IndexOptions,
-    IndexModel,
-};
-use std::sync::Arc;
+use mongodb::bson::oid::ObjectId;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
-    error::db_class_error::{DbClassError, DbClassResult},
+    error::db_class_error::DbClassResult,
     models::file_model::file_model_model::{FileModel, FileModelGet, FileModelNew, FileModelPut},
     AppState,
 };
@@ -14,19 +10,6 @@ use crate::{
 use super::file_type_controller::get_file_type_by_username;
 
 pub async fn create_file(state: Arc<AppState>, file: FileModelNew) -> DbClassResult<FileModelGet> {
-    let index = IndexModel::builder()
-        .keys(doc! {"username": 1,})
-        .options(IndexOptions::builder().unique(true).build())
-        .build();
-
-    state
-        .db
-        .file
-        .collection
-        .create_index(index)
-        .await
-        .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
-
     let create = state
         .db
         .file
@@ -85,6 +68,32 @@ pub async fn create_file_image(
     };
 
     let create_file = create_file(state.clone(), new_file).await?;
-
     Ok(create_file.id)
+}
+
+pub async fn update_file_image(
+    state: Arc<AppState>,
+    file: String,
+    id: &str,
+) -> DbClassResult<String> {
+    let change_file_id = ObjectId::from_str(id).unwrap();
+    let update_file_model = FileModelPut {
+        src: Some(file),
+        file_type: None,
+        description: None,
+    };
+    let update_file = update_file_by_id(state.clone(), change_file_id, update_file_model).await?;
+    Ok(update_file.id)
+}
+
+pub async fn handle_symbol_update(
+    state: Arc<AppState>,
+    file: String,
+    existing_symbol_id: Option<String>,
+) -> DbClassResult<String> {
+    if let Some(file_id) = existing_symbol_id {
+        update_file_image(state.clone(), file, &file_id).await
+    } else {
+        create_file_image(state.clone(), file, "Education symbol".to_string()).await
+    }
 }

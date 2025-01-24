@@ -94,13 +94,13 @@ impl EducationModel {
         insert_if_some("username", education.username.map(bson::Bson::String));
         insert_if_some("description", education.description.map(bson::Bson::String));
 
-        // Always insert the `symbol_id`, with a default or actual value
-        let symbol_id = education
-            .symbol
-            .and_then(|id| ObjectId::from_str(&id).ok())
-            .map(bson::Bson::ObjectId)
-            .unwrap_or_else(|| bson::Bson::String("default_symbol_id".to_string())); // Default value
-        doc.insert("symbol_id", symbol_id);
+        insert_if_some(
+            "symbol_id",
+            education
+                .symbol
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
+        );
 
         // Add the `updated_on` field if any fields were updated
         if is_update {
