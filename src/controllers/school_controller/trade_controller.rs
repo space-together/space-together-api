@@ -8,7 +8,9 @@ use mongodb::{
 
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
+    libs::{
+        classes::db_crud::GetManyByField, functions::resources::check_if_exit::UsernameValidator,
+    },
     models::school_model::trade_model::{TradeModel, TradeModelGet, TradeModelNew, TradeModelPut},
     AppState,
 };
@@ -35,35 +37,36 @@ async fn get_other_collection(
     Ok(sector)
 }
 
+pub async fn validate_trade_username(
+    state: Arc<AppState>,
+    username: &str,
+    id_to_exclude: Option<ObjectId>,
+) -> DbClassResult<()> {
+    let validator = UsernameValidator::new(state.clone());
+
+    validator
+        .validate(username, id_to_exclude, move |state, username| {
+            let username = username.to_string();
+            Box::pin(async move {
+                let trade = get_trade_by_username(state, username.clone()).await;
+                trade.map(|trade| Some(trade.id)).or_else(|err| {
+                    if matches!(err, DbClassError::OtherError { .. }) {
+                        Ok(None)
+                    } else {
+                        Err(err)
+                    }
+                })
+            })
+        })
+        .await
+}
+
 pub async fn create_trade(
     state: Arc<AppState>,
     trade: TradeModelNew,
 ) -> DbClassResult<TradeModelGet> {
-    let index = IndexModel::builder()
-        .keys(doc! {"username" : 1})
-        .options(IndexOptions::builder().unique(true).build())
-        .build();
-
-    if let Err(e) = state.db.trade.collection.create_index(index).await {
-        return Err(DbClassError::OtherError { err: e.to_string() });
-    }
-
     if let Some(ref username) = trade.username {
-        if let Err(err) = is_valid_username(username) {
-            return Err(DbClassError::OtherError {
-                err: err.to_string(),
-            });
-        }
-
-        let get_username = get_trade_by_username(state.clone(), username.clone()).await;
-        if get_username.is_ok() {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username trade is ready exit [{}], please try other",
-                    &username
-                ),
-            });
-        }
+        let _ = validate_trade_username(state.clone(), username, None).await;
     } else {
         return Err(DbClassError::OtherError {
             err: "Username is missing".to_string(),
@@ -87,6 +90,15 @@ pub async fn create_trade(
                 err: format!("Sector id is not found [{}], please try other id", sector),
             });
         }
+    }
+
+    let index = IndexModel::builder()
+        .keys(doc! {"username" : 1})
+        .options(IndexOptions::builder().unique(true).build())
+        .build();
+
+    if let Err(e) = state.db.trade.collection.create_index(index).await {
+        return Err(DbClassError::OtherError { err: e.to_string() });
     }
 
     let create = state

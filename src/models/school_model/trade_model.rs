@@ -111,7 +111,6 @@ impl TradeModel {
                 .symbol
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
-        insert_if_some("description", trade.description.map(bson::Bson::String));
 
         if is_updated {
             set_doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
