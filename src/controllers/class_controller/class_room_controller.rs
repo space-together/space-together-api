@@ -8,7 +8,7 @@ use mongodb::{
 
 use crate::{
     controllers::{
-        file_controller::file_controller_controller::handle_symbol_update,
+        file_controller::file_controller_controller::{create_file_image, handle_symbol_update},
         school_controller::{
             sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
         },
@@ -178,6 +178,11 @@ pub async fn create_class_room(
         .await
         .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
 
+    if let Some(file) = class_room.symbol {
+        let symbol =
+            create_file_image(state.clone(), file, "class room symbol".to_string()).await?;
+        class_room.symbol = Some(symbol);
+    }
     // Create and retrieve the new classroom
     let create = state
         .db
