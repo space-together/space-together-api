@@ -140,7 +140,7 @@ pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorMod
 
     for sector in get {
         if let Some(ref education_id) = sector.education_id {
-         sectors.push( get_other_collection(state, sector).await?);
+         sectors.push( get_other_collection(state.clone(), sector).await?);
         }
     }
     Ok(sectors)
