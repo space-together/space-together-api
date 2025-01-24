@@ -7,9 +7,9 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::education_controller::education_controller_controller::get_education_by_id,
+    controllers::{education_controller::education_controller_controller::get_education_by_id, file_controller::file_controller_controller::{create_file_image, get_file_by_id, handle_symbol_update}},
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::{classes::db_crud::GetManyByField, functions::{characters_fn::is_valid_username, resources::check_if_exit::UsernameValidator}},
+    libs::{classes::db_crud::GetManyByField, functions::resources::check_if_exit::UsernameValidator},
     models::school_model::sector_model::{
         SectorModel, SectorModelGet, SectorModelNew, SectorModelPut,
     },
@@ -53,12 +53,17 @@ async fn get_other_collection (state: Arc<AppState> , sector: SectorModel) -> Db
             format_sector.education = Some(get_education.name);
         }
     }
+
+    if let Some(symbol_id) = sector.symbol_id {
+        let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
+        format_sector.symbol = Some(get_symbol.src);
+    }
     Ok(format_sector)
 }
 
 pub async fn create_sector(
     state: Arc<AppState>,
-    sector: SectorModelNew,
+   mut sector: SectorModelNew,
 ) -> DbClassResult<SectorModelGet> {
     let index = IndexModel::builder()
         .keys(doc! {
@@ -79,6 +84,12 @@ pub async fn create_sector(
    if let Some(ref username) = sector.username {
    let _ = validate_sector_username(state.clone(), username, None).await;
    }
+
+   if let Some(file) = sector.symbol {
+    let symbol =   create_file_image(state.clone(), file, "Education symbol".to_string()).await?;
+    sector.symbol = Some(symbol);
+  }
+
 
     if let Some(ref education) = sector.education {
         let id = match ObjectId::from_str(education) {
@@ -171,7 +182,7 @@ pub async fn get_sector_by_id(state: Arc<AppState>, id: ObjectId) -> DbClassResu
 pub async fn update_sector_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-    sector: SectorModelPut,
+   mut sector: SectorModelPut,
 ) -> DbClassResult<SectorModelGet> {
     if let Some(ref username) = sector.username {
         let _ = validate_sector_username(state.clone(), username, Some(id)).await;
@@ -198,12 +209,19 @@ pub async fn update_sector_by_id(
             });
         }
     }
+
+    let exit_sector = get_sector_by_id(state.clone(), id).await?;
+
+    if let Some(file) = sector.symbol {
+        sector.symbol = Some(handle_symbol_update(state.clone(), file, exit_sector.symbol).await?);
+    }
     
-    let _ = state
+    state
         .db
         .sector
         .update(id, SectorModel::put(sector), Some("sector".to_string()))
-        .await;
+        .await?;
+
     let get = get_sector_by_id(state, id).await?;
     Ok(get)
 }

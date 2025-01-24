@@ -7,9 +7,9 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::file_controller::file_controller_controller::{create_file_image, get_file_by_id, handle_symbol_update}, error::db_class_error::{DbClassError, DbClassResult}, libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username}, models::{education_model::education_model_model::{
+    controllers::file_controller::file_controller_controller::{create_file_image, get_file_by_id, handle_symbol_update}, error::db_class_error::{DbClassError, DbClassResult}, libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username}, models::education_model::education_model_model::{
         EducationModel, EducationModelGet, EducationModelNew, EducationModelPut,
-    }}, AppState
+    }, AppState
 };
 
 async fn get_other_collection (state: Arc<AppState> , education: EducationModel) -> DbClassResult<EducationModelGet> {
