@@ -201,6 +201,10 @@ pub async fn update_trade_by_id(
     id: ObjectId,
     mut trade: TradeModelPut,
 ) -> DbClassResult<TradeModelGet> {
+    if let Some(username) = &trade.username {
+        validate_trade_username(state.clone(), username, Some(id)).await?;
+    }
+
     let exit_trade = state
         .db
         .trade

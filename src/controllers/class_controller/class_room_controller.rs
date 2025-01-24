@@ -7,11 +7,16 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::school_controller::{
-        sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
+    controllers::{
+        file_controller::file_controller_controller::handle_symbol_update,
+        school_controller::{
+            sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
+        },
     },
     error::db_class_error::{DbClassError, DbClassResult},
-    libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username},
+    libs::{
+        classes::db_crud::GetManyByField, functions::resources::check_if_exit::UsernameValidator,
+    },
     models::class_model::class_room_model::{
         ClassRoomModel, ClassRoomModelGet, ClassRoomModelNew, ClassRoomModelPut,
     },
@@ -52,27 +57,41 @@ async fn get_other_collection(
 
     Ok(class)
 }
+
+pub async fn validate_class_room_username(
+    state: Arc<AppState>,
+    username: &str,
+    id_to_exclude: Option<ObjectId>,
+) -> DbClassResult<()> {
+    let validator = UsernameValidator::new(state.clone());
+
+    validator
+        .validate(username, id_to_exclude, move |state, username| {
+            let username = username.to_string();
+            Box::pin(async move {
+                let class_room = get_class_room_by_username(state, username.clone()).await;
+                class_room.map(|trade| Some(trade.id)).or_else(|err| {
+                    if matches!(err, DbClassError::OtherError { .. }) {
+                        Ok(None)
+                    } else {
+                        Err(err)
+                    }
+                })
+            })
+        })
+        .await
+}
+
 pub async fn create_class_room(
     state: Arc<AppState>,
     mut class_room: ClassRoomModelNew,
 ) -> DbClassResult<ClassRoomModelGet> {
-    // Validate username
     if let Some(ref username) = class_room.username {
-        is_valid_username(username).map_err(|err| DbClassError::OtherError {
-            err: err.to_string(),
-        })?;
-
-        if get_class_room_by_username(state.clone(), username.clone())
-            .await
-            .is_ok()
-        {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username sector already exists [{}], please try another",
-                    username
-                ),
-            });
-        }
+        let _ = validate_class_room_username(state.clone(), username, None).await;
+    } else {
+        return Err(DbClassError::OtherError {
+            err: "Username is missing".to_string(),
+        });
     }
 
     // Validate class room type
@@ -299,21 +318,35 @@ pub async fn update_class_room_by_id(
     id: ObjectId,
     mut class_room: ClassRoomModelPut,
 ) -> DbClassResult<ClassRoomModelGet> {
-    if let Some(ref class_room_id) = class_room.class_room_type {
-        if !class_room_id.is_empty() {
-            let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
-                err: format!(
-                    "Class room type ID is invalid [{}], please try another",
-                    class_room_id
-                ),
-            })?;
+    if let Some(username) = &class_room.username {
+        validate_class_room_username(state.clone(), username, Some(id)).await?;
+    }
+    let existing_class_room = state
+        .db
+        .class_room
+        .get_one_by_id(id, Some("class_room".to_string()))
+        .await?;
+    if let Some(file) = class_room.symbol {
+        class_room.symbol =
+            Some(handle_symbol_update(state.clone(), file, existing_class_room.symbol_id).await?);
+    }
+
+    if let Some(ref class_room_type_id) = class_room.class_room_type {
+        if !class_room_type_id.is_empty() {
+            let id =
+                ObjectId::from_str(class_room_type_id).map_err(|_| DbClassError::OtherError {
+                    err: format!(
+                        "Class room type ID is invalid [{}], please try another",
+                        class_room_type_id
+                    ),
+                })?;
 
             get_class_room_type_by_id(state.clone(), id)
                 .await
                 .map_err(|_| DbClassError::OtherError {
                     err: format!(
                         "Class room type ID not found [{}], please try another",
-                        class_room_id
+                        class_room_type_id
                     ),
                 })?;
         } else {
