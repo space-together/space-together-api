@@ -73,11 +73,6 @@ pub async fn create_sector(
        });
      }
 
-     if let Some(file) = sector.symbol {
-        let symbol =   create_file_image(state.clone(), file, "Education symbol".to_string()).await?;
-        sector.symbol = Some(symbol);
-      }
-
     let index = IndexModel::builder()
         .keys(doc! {
         "username" : 1,
@@ -93,6 +88,11 @@ pub async fn create_sector(
             ),
         });
     }
+    
+    if let Some(file) = sector.symbol {
+        let symbol =   create_file_image(state.clone(), file, "Sector symbol".to_string()).await?;
+        sector.symbol = Some(symbol);
+      }
 
 
     if let Some(ref education) = sector.education {

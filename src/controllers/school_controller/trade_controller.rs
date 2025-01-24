@@ -87,9 +87,7 @@ pub async fn create_trade(
             }
             Ok(i) => i,
         };
-
         let get_sector = get_sector_by_id(state.clone(), id).await;
-
         if get_sector.is_err() {
             return Err(DbClassError::OtherError {
                 err: format!("Sector id is not found [{}], please try other id", sector),
@@ -98,7 +96,7 @@ pub async fn create_trade(
     }
 
     if let Some(file) = trade.symbol {
-        let symbol = create_file_image(state.clone(), file, "Education symbol".to_string()).await?;
+        let symbol = create_file_image(state.clone(), file, "Trade symbol".to_string()).await?;
         trade.symbol = Some(symbol);
     }
 
