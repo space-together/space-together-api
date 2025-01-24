@@ -95,7 +95,6 @@ pub async fn create_sector(
     }
 
 
-
     if let Some(ref education) = sector.education {
         let id = match ObjectId::from_str(education) {
             Err(_) => {

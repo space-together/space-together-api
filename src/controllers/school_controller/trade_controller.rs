@@ -7,6 +7,9 @@ use mongodb::{
 };
 
 use crate::{
+    controllers::file_controller::file_controller_controller::{
+        create_file_image, get_file_by_id, handle_symbol_update,
+    },
     error::db_class_error::{DbClassError, DbClassResult},
     libs::{
         classes::db_crud::GetManyByField, functions::resources::check_if_exit::UsernameValidator,
@@ -21,20 +24,22 @@ async fn get_other_collection(
     state: Arc<AppState>,
     trade: TradeModel,
 ) -> DbClassResult<TradeModelGet> {
-    let mut sector_name: Option<String> = None;
-
+    let mut format_trade = TradeModel::format(trade.clone());
     if let Some(ref sector_id) = trade.sector_id {
         let get_sector = get_sector_by_id(state.clone(), *sector_id).await?;
 
         if let Some(sector_username) = get_sector.username {
-            sector_name = Some(sector_username);
+            format_trade.sector = Some(sector_username);
         } else {
-            sector_name = Some(get_sector.name);
+            format_trade.sector = Some(get_sector.name);
         }
     }
-    let mut sector = TradeModel::format(trade);
-    sector.sector = sector_name;
-    Ok(sector)
+
+    if let Some(symbol_id) = trade.symbol_id {
+        let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
+        format_trade.symbol = Some(get_symbol.src);
+    }
+    Ok(format_trade)
 }
 
 pub async fn validate_trade_username(
@@ -63,7 +68,7 @@ pub async fn validate_trade_username(
 
 pub async fn create_trade(
     state: Arc<AppState>,
-    trade: TradeModelNew,
+    mut trade: TradeModelNew,
 ) -> DbClassResult<TradeModelGet> {
     if let Some(ref username) = trade.username {
         let _ = validate_trade_username(state.clone(), username, None).await;
@@ -90,6 +95,11 @@ pub async fn create_trade(
                 err: format!("Sector id is not found [{}], please try other id", sector),
             });
         }
+    }
+
+    if let Some(file) = trade.symbol {
+        let symbol = create_file_image(state.clone(), file, "Education symbol".to_string()).await?;
+        trade.symbol = Some(symbol);
     }
 
     let index = IndexModel::builder()
@@ -191,12 +201,17 @@ pub async fn get_all_trade(state: Arc<AppState>) -> DbClassResult<Vec<TradeModel
 pub async fn update_trade_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-    section: TradeModelPut,
+    mut trade: TradeModelPut,
 ) -> DbClassResult<TradeModelGet> {
+    let exit_trade = get_trade_by_id(state.clone(), id).await?;
+    if let Some(file) = trade.symbol {
+        trade.symbol = Some(handle_symbol_update(state.clone(), file, exit_trade.symbol).await?);
+    }
+
     let _ = state
         .db
         .trade
-        .update(id, TradeModel::put(section), Some("trade".to_string()))
+        .update(id, TradeModel::put(trade), Some("trade".to_string()))
         .await?;
 
     let get = state
