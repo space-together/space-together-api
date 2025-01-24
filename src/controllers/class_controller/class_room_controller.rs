@@ -8,7 +8,9 @@ use mongodb::{
 
 use crate::{
     controllers::{
-        file_controller::file_controller_controller::{create_file_image, handle_symbol_update},
+        file_controller::file_controller_controller::{
+            create_file_image, get_file_by_id, handle_symbol_update,
+        },
         school_controller::{
             sector_controller::get_sector_by_id, trade_controller::get_trade_by_id,
         },
@@ -29,33 +31,29 @@ async fn get_other_collection(
     state: Arc<AppState>,
     class_room: ClassRoomModel,
 ) -> DbClassResult<ClassRoomModelGet> {
-    let trade_name = if let Some(ref trade_id) = class_room.trade_id {
+    let mut format_class_room = ClassRoomModel::format(class_room.clone());
+
+    if let Some(ref trade_id) = class_room.trade_id {
         let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-        trade.username.or(Some(trade.name))
-    } else {
-        None
-    };
+        format_class_room.trade = trade.username.or(Some(trade.name))
+    }
 
-    let sector_name = if let Some(ref sector_id) = class_room.sector_id {
+    if let Some(ref sector_id) = class_room.sector_id {
         let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-        sector.username.or(Some(sector.name))
-    } else {
-        None
-    };
+        format_class_room.sector = sector.username.or(Some(sector.name))
+    }
 
-    let class_room_type_name = if let Some(ref class_room_type_id) = class_room.class_room_type_id {
+    if let Some(ref class_room_type_id) = class_room.class_room_type_id {
         let class_room_type = get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
-        class_room_type.username.or(Some(class_room_type.name))
-    } else {
-        None
+        format_class_room.class_room_type = class_room_type.username.or(Some(class_room_type.name));
     };
 
-    let mut class = ClassRoomModel::format(class_room);
-    class.trade = trade_name;
-    class.sector = sector_name;
-    class.class_room_type = class_room_type_name;
+    if let Some(symbol_id) = class_room.symbol_id {
+        let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
+        format_class_room.sector = Some(get_symbol.src);
+    };
 
-    Ok(class)
+    Ok(format_class_room)
 }
 
 pub async fn validate_class_room_username(
