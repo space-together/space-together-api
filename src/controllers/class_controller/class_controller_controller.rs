@@ -18,7 +18,9 @@ use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
     libs::functions::{
         characters_fn::{generate_code, generate_username, is_valid_email, is_valid_username},
-        resources::check_if_exit::{check_sector_trade_exit, CheckSectorTradeExitModel},
+        resources::check_if_exit::{
+            check_sector_trade_exit, CheckSectorTradeExitModel, UsernameValidator,
+        },
     },
     models::class_model::class_model_model::{
         ClassModel, ClassModelGet, ClassModelNew, ClassModelPut,
@@ -83,10 +85,41 @@ async fn get_other_collection(
     Ok(class)
 }
 
+async fn validate_class_username(
+    state: Arc<AppState>,
+    username: &str,
+    id_to_exclude: Option<ObjectId>,
+) -> DbClassResult<()> {
+    let validator = UsernameValidator::new(state.clone());
+
+    validator
+        .validate(username, id_to_exclude, move |state, username| {
+            let username = username.to_string();
+            Box::pin(async move {
+                let class = get_class_by_username(state, &username.to_string()).await;
+                class.map(|class| Some(class.id)).or_else(|err| {
+                    if matches!(err, DbClassError::OtherError { .. }) {
+                        Ok(None)
+                    } else {
+                        Err(err)
+                    }
+                })
+            })
+        })
+        .await
+}
+
 pub async fn create_class(
     state: Arc<AppState>,
     mut class: ClassModelNew,
 ) -> DbClassResult<ClassModelGet> {
+    if let Some(ref username) = class.username {
+        let _ = validate_class_username(state.clone(), username, None).await;
+    } else {
+        return Err(DbClassError::OtherError {
+            err: "Username is missing".to_string(),
+        });
+    }
     check_sector_trade_exit(
         state.clone(),
         CheckSectorTradeExitModel {
@@ -119,19 +152,6 @@ pub async fn create_class(
                 err: format!(
                     "This user is not allowed [{}] to create class, because his/he don't have role",
                     teacher.name,
-                ),
-            });
-        }
-    }
-
-    if let Some(ref username) = class.username {
-        is_valid_username(username).map_err(|err| DbClassError::OtherError { err })?;
-        let get_username = get_class_by_username(state.clone(), username).await;
-        if get_username.is_ok() {
-            return Err(DbClassError::OtherError {
-                err: format!(
-                    "Username sector already exists [{}], please try another",
-                    username
                 ),
             });
         }
