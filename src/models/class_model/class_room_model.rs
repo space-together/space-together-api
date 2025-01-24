@@ -11,6 +11,7 @@ pub struct ClassRoomModel {
     pub username: Option<String>,
     pub sector_id: Option<ObjectId>,
     pub trade_id: Option<ObjectId>,
+    pub symbol_id: Option<ObjectId>,
     pub class_room_type_id: Option<ObjectId>,
     pub description: Option<String>,
     pub created_on: DateTime,
@@ -28,6 +29,7 @@ pub struct ClassRoomModelGet {
     pub class_room_type: Option<String>,
     pub created_on: String,
     pub updated_on: Option<String>,
+    pub symbol: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -38,6 +40,7 @@ pub struct ClassRoomModelNew {
     pub sector: Option<String>,
     pub trade: Option<String>,
     pub class_room_type: Option<String>,
+    pub symbol: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -48,6 +51,7 @@ pub struct ClassRoomModelPut {
     pub sector: Option<String>,
     pub trade: Option<String>,
     pub class_room_type: Option<String>,
+    pub symbol: Option<String>,
 }
 
 impl ClassRoomModel {
@@ -66,6 +70,7 @@ impl ClassRoomModel {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
             description: class_room.description,
+            symbol_id: class_room.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
             created_on: DateTime::now(),
             updated_on: None,
         }
@@ -80,6 +85,7 @@ impl ClassRoomModel {
             name: class_room.name,
             username: class_room.username,
             description: class_room.description,
+            symbol: class_room.symbol_id.map(|id| id.to_string()),
             created_on: class_room
                 .created_on
                 .try_to_rfc3339_string()
@@ -106,6 +112,13 @@ impl ClassRoomModel {
         insert_if_some(
             "description",
             class_room.description.map(bson::Bson::String),
+        );
+        insert_if_some(
+            "symbol_id",
+            class_room
+                .symbol
+                .and_then(|id| ObjectId::from_str(&id).ok())
+                .map(bson::Bson::ObjectId),
         );
 
         insert_if_some(
