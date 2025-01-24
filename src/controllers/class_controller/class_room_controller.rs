@@ -50,7 +50,7 @@ async fn get_other_collection(
 
     if let Some(symbol_id) = class_room.symbol_id {
         let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
-        format_class_room.sector = Some(get_symbol.src);
+        format_class_room.symbol = Some(get_symbol.src);
     };
 
     Ok(format_class_room)
