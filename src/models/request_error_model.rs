@@ -5,6 +5,12 @@ pub struct ReqErrModel {
     pub message: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct RequestErrorModel {
+    pub error: String,
+    pub message: Option<String>,
+}
+
 impl ReqErrModel {
     pub fn id(id: String) -> ReqErrModel {
         ReqErrModel {

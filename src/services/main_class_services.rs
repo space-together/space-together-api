@@ -1,24 +1,24 @@
-use crate::{
-    libs::{
-        functions::{crud_fn::to_document, data_type_fn::convert_fields_to_string},
-        schemas::subject_schema::SubjectSchema,
-    },
-    models::request_error_model::RequestErrorModel,
-    AppState,
-};
 use actix_web::{
     web::{Data, Json},
     HttpResponse, Responder,
 };
 use mongodb::{bson::doc, options::IndexOptions, IndexModel};
 
-pub async fn create_subject_servicer(
+use crate::{
+    libs::{
+        functions::{crud_fn::to_document, data_type_fn::convert_fields_to_string},
+        schemas::main_class_schema::ClassRoomSchema,
+    },
+    models::request_error_model::RequestErrorModel,
+    AppState,
+};
+pub async fn create_main_class(
     state: Data<AppState>,
-    item: Json<SubjectSchema>,
+    item: Json<ClassRoomSchema>,
 ) -> impl Responder {
     let index = IndexModel::builder()
         .keys(doc! {
-        "code" : 1,
+        "username" : 1,
         })
         .options(IndexOptions::builder().unique(true).build())
         .build();
@@ -26,19 +26,21 @@ pub async fn create_subject_servicer(
     if let Err(e) = state.db.subject.collection.create_index(index).await {
         return HttpResponse::BadRequest().json(RequestErrorModel {
             error: e.to_string(),
-            message: Some("Subject Code is ready exit, try other code".to_string()),
+            message: Some(
+                "main class room is ready exit, try other username for main class".to_string(),
+            ),
         });
     }
 
     match state
         .db
-        .subjects
-        .create_new(item.into_inner(), &"subject".to_string())
+        .main_class
+        .create_new(item.into_inner(), "class_room")
         .await
     {
         Err(e) => HttpResponse::BadRequest().json(RequestErrorModel {
             error: e.to_string(),
-            message: Some("Something went wrong to create subject , try again late".to_string()),
+            message: Some("Can't create subject, try again later".to_string()),
         }),
         Ok(doc) => HttpResponse::Created().json(convert_fields_to_string(to_document(&doc))),
     }

@@ -8,6 +8,7 @@ use crate::{
         get_class_room_by_trade_handle, get_class_room_by_trade_type,
         update_class_room_by_id_handle,
     },
+    services::main_class_services::create_main_class,
     AppState,
 };
 
@@ -26,5 +27,16 @@ pub fn routers_class_room(
             .route("/{id}", get().to(get_class_room_by_id_handle))
             .route("/{id}", delete().to(delete_class_room_by_id_handle))
             .route("{id}", put().to(update_class_room_by_id_handle)),
+    )
+}
+
+pub fn main_class_router(
+    cfg: &mut web::ServiceConfig,
+    state: Arc<AppState>,
+) -> &mut actix_web::web::ServiceConfig {
+    cfg.service(
+        web::scope("main")
+            .app_data(web::Data::new(state.clone()))
+            .route("", post().to(create_main_class)),
     )
 }

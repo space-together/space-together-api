@@ -116,12 +116,12 @@ where
         }
     }
 
-    pub async fn create_new(&self, document: T, collection: Option<String>) -> DbClassResult<T> {
+    pub async fn create_new(&self, document: T, collection: &str) -> DbClassResult<T> {
         let created_at = DateTime::now();
         let mut doc_bson =
             bson::to_document(&document).map_err(|e| DbClassError::CanNotDoAction {
                 error: e.to_string(),
-                collection: collection.clone().unwrap_or_else(|| "unknown".to_string()),
+                collection: collection.to_string(),
                 action: "serialize document".to_string(),
                 how_fix_it: "Ensure document is serializable".to_string(),
             })?;
@@ -132,7 +132,7 @@ where
         let new_document: T =
             bson::from_document(doc_bson).map_err(|e| DbClassError::CanNotDoAction {
                 error: e.to_string(),
-                collection: collection.clone().unwrap_or_else(|| "unknown".to_string()),
+                collection: collection.to_string(),
                 action: "deserialize document".to_string(),
                 how_fix_it: "Ensure document structure matches T".to_string(),
             })?;
@@ -141,7 +141,7 @@ where
         match insert_result {
             Err(e) => Err(DbClassError::CanNotDoAction {
                 error: e.to_string(),
-                collection: collection.unwrap_or_else(|| "unknown".to_string()),
+                collection: collection.to_string(),
                 action: "create".to_string(),
                 how_fix_it: "try again later".to_string(),
             }),
@@ -149,7 +149,7 @@ where
                 let inserted_doc = self
                     .get_one_by_id(
                         change_insertoneresult_into_object_id(inserted_id),
-                        collection.clone(),
+                        Some(collection.to_string()),
                     )
                     .await?;
                 Ok(inserted_doc)
