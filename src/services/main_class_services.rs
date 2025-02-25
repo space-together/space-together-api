@@ -45,3 +45,18 @@ pub async fn create_main_class(
         Ok(doc) => HttpResponse::Created().json(convert_fields_to_string(to_document(&doc))),
     }
 }
+
+pub async fn get_all_main_class_room(state: Data<AppState>) -> impl Responder {
+    match state
+        .db
+        .main_class
+        .get_many(None, Some("main_class".to_string()))
+        .await
+    {
+        Ok(doc) => HttpResponse::Created().json(convert_fields_to_string(to_document(&doc))),
+        Err(e) => HttpResponse::BadRequest().json(RequestErrorModel {
+            error: e.to_string(),
+            message: Some("Some thing went worn to get all main classes".to_string()),
+        }),
+    }
+}

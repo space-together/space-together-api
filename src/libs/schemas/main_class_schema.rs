@@ -13,6 +13,6 @@ pub struct ClassRoomSchema {
     pub symbol_id: Option<IdType>,
     pub class_room_type_id: Option<IdType>,
     pub description: Option<String>,
-    pub created_on: Option<DateType>,
-    pub updated_on: Option<DateType>,
+    pub created_at: Option<DateType>,
+    pub updated_at: Option<DateType>,
 }

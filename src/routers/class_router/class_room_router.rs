@@ -8,7 +8,7 @@ use crate::{
         get_class_room_by_trade_handle, get_class_room_by_trade_type,
         update_class_room_by_id_handle,
     },
-    services::main_class_services::create_main_class,
+    services::main_class_services::{create_main_class, get_all_main_class_room},
     AppState,
 };
 
@@ -37,6 +37,7 @@ pub fn main_class_router(
     cfg.service(
         web::scope("main")
             .app_data(web::Data::new(state.clone()))
-            .route("", post().to(create_main_class)),
+            .route("", post().to(create_main_class))
+            .route("", get().to(get_all_main_class_room)),
     )
 }
