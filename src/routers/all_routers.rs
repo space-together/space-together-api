@@ -98,6 +98,17 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
     cfg.service(
         scope("/api/v0.0.2")
             .route("/", web::get().to(manual_hello_v2))
+            .service(web::scope("/education").configure(|user_cfg| {
+                routers_education(user_cfg, state.clone());
+            }))
+            // trade
+            .service(web::scope("").configure(|user_cfg| {
+                routers_trade(user_cfg, state.clone());
+            }))
+            // sector
+            .service(web::scope("").configure(|user_cfg| {
+                routers_sector(user_cfg, state.clone());
+            }))
             .service(web::scope("/subject").configure(|user_cfg| {
                 subject_routers(user_cfg, state.clone());
             }))
