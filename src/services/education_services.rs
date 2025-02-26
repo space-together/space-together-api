@@ -63,7 +63,7 @@ pub async fn create_education_service(
                     error: "Can't create new education because username is ready exit".to_string(),
                     message: Some(format!(
                         "education username is ready exit [{}], try other username for main class",
-                        education.name
+                        education.username
                     )),
                 });
             }
