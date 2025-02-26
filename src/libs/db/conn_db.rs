@@ -15,7 +15,10 @@ use crate::{
             conversation_db::conversation_db_db::ConversationDb,
             db_status::db_status_db::get_database_stats,
         },
-        schemas::{main_class_schema::ClassRoomSchema, subject_schema::SubjectSchema},
+        schemas::{
+            education_schema::EducationSchema, main_class_schema::ClassRoomSchema,
+            subject_schema::SubjectSchema,
+        },
     },
     models::{
         auth::adapter_model::{AccountModel, SessionModel},
@@ -56,6 +59,7 @@ pub struct ConnDb {
     pub request_type: RequestTypeDb,
     pub request: RequestDb,
     pub education: MongoCrud<EducationModel>,
+    pub educations: MongoCrud<EducationSchema>,
     pub school: MongoCrud<SchoolModel>,
     pub trade: MongoCrud<TradeModel>,
     pub sector: MongoCrud<SectorModel>,
@@ -130,6 +134,9 @@ impl ConnDb {
                         request: st_data.collection("requests"),
                     },
                     education: MongoCrud {
+                        collection: st_data.collection("educations_"), // not used
+                    },
+                    educations: MongoCrud {
                         collection: st_data.collection("educations"),
                     },
                     school: MongoCrud {

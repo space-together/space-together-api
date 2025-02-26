@@ -1,7 +1,6 @@
 use crate::{
     libs::{
-        functions::{crud_fn::to_document, data_type_fn::convert_fields_to_string},
-        schemas::subject_schema::SubjectSchema,
+        functions::data_type_fn::convert_fields_to_string, schemas::subject_schema::SubjectSchema,
     },
     models::request_error_model::RequestErrorModel,
     AppState,
@@ -10,7 +9,11 @@ use actix_web::{
     web::{Data, Json},
     HttpResponse, Responder,
 };
-use mongodb::{bson::doc, options::IndexOptions, IndexModel};
+use mongodb::{
+    bson::{doc, to_document},
+    options::IndexOptions,
+    IndexModel,
+};
 
 pub async fn create_subject_servicer(
     state: Data<AppState>,
@@ -33,13 +36,15 @@ pub async fn create_subject_servicer(
     match state
         .db
         .subjects
-        .create_new(item.into_inner(), &"subject".to_string())
+        .create_new(item.into_inner(), "subject")
         .await
     {
         Err(e) => HttpResponse::BadRequest().json(RequestErrorModel {
             error: e.to_string(),
             message: Some("Something went wrong to create subject , try again late".to_string()),
         }),
-        Ok(doc) => HttpResponse::Created().json(convert_fields_to_string(to_document(&doc))),
+        Ok(doc) => {
+            HttpResponse::Created().json(convert_fields_to_string(to_document(&doc).unwrap()))
+        }
     }
 }

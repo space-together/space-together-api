@@ -7,6 +7,10 @@ use crate::{
         get_education_by_id_handle, get_education_by_username_handle,
         update_education_by_id_handle,
     },
+    services::education_services::{
+        create_education_service, get_all_education_service, get_education_by_id_service,
+        get_education_by_username_service,
+    },
     AppState,
 };
 
@@ -26,5 +30,22 @@ pub fn routers_education(
             .route("/{id}", get().to(get_education_by_id_handle))
             .route("/{id}", delete().to(delete_education_by_id_handle))
             .route("{id}", put().to(update_education_by_id_handle)),
+    )
+}
+// version 2
+pub fn education_routers(
+    cfg: &mut web::ServiceConfig,
+    state: Arc<AppState>,
+) -> &mut actix_web::web::ServiceConfig {
+    cfg.service(
+        web::scope("")
+            .app_data(web::Data::new(state.clone()))
+            .route("", post().to(create_education_service))
+            .route("", get().to(get_all_education_service))
+            .route(
+                "/username/{username}",
+                get().to(get_education_by_username_service),
+            )
+            .route("/id/{id}", get().to(get_education_by_id_service)),
     )
 }

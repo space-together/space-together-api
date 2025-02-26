@@ -19,7 +19,7 @@ use super::{
         conversation_router_router::routers_conversation, message_router::routers_message,
     },
     database_router::database_status_router::routers_database,
-    education_router::education_router_router::routers_education,
+    education_router::education_router_router::{education_routers, routers_education},
     file_router::{file_router_router::routers_file, file_type_route::routers_file_type},
     request_router::{
         request_router_router::routers_request, request_type_router::routers_request_type,
@@ -99,7 +99,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
         scope("/api/v0.0.2")
             .route("/", web::get().to(manual_hello_v2))
             .service(web::scope("/education").configure(|user_cfg| {
-                routers_education(user_cfg, state.clone());
+                education_routers(user_cfg, state.clone());
             }))
             .service(web::scope("/subject").configure(|user_cfg| {
                 subject_routers(user_cfg, state.clone());

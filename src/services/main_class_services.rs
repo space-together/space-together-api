@@ -2,11 +2,16 @@ use actix_web::{
     web::{Data, Json},
     HttpResponse, Responder,
 };
-use mongodb::{bson::doc, options::IndexOptions, IndexModel};
+use mongodb::{
+    bson::{doc, to_document},
+    options::IndexOptions,
+    IndexModel,
+};
 
 use crate::{
     libs::{
-        functions::{crud_fn::to_document, data_type_fn::convert_fields_to_string},
+        data::class_data::get_main_class_by_username,
+        functions::data_type_fn::convert_fields_to_string,
         schemas::main_class_schema::ClassRoomSchema,
     },
     models::request_error_model::RequestErrorModel,
@@ -16,6 +21,21 @@ pub async fn create_main_class(
     state: Data<AppState>,
     item: Json<ClassRoomSchema>,
 ) -> impl Responder {
+    if let Some(username) = &item.username.clone() {
+        if get_main_class_by_username(state.clone().into_inner(), username)
+            .await
+            .is_ok()
+        {
+            return HttpResponse::BadRequest().json(RequestErrorModel {
+                error: "Can't create new class room because username is ready exit".to_string(),
+                message: Some(
+                    "main class room username is ready exit, try other username for main class"
+                        .to_string(),
+                ),
+            });
+        }
+    }
+
     let index = IndexModel::builder()
         .keys(doc! {
         "username" : 1,
@@ -27,7 +47,8 @@ pub async fn create_main_class(
         return HttpResponse::BadRequest().json(RequestErrorModel {
             error: e.to_string(),
             message: Some(
-                "main class room is ready exit, try other username for main class".to_string(),
+                "main class room username is ready exit, try other username for main class"
+                    .to_string(),
             ),
         });
     }
@@ -42,7 +63,9 @@ pub async fn create_main_class(
             error: e.to_string(),
             message: Some("Can't create subject, try again later".to_string()),
         }),
-        Ok(doc) => HttpResponse::Created().json(convert_fields_to_string(to_document(&doc))),
+        Ok(doc) => {
+            HttpResponse::Created().json(convert_fields_to_string(to_document(&doc).unwrap()))
+        }
     }
 }
 
@@ -56,7 +79,7 @@ pub async fn get_all_main_class_room(state: Data<AppState>) -> impl Responder {
         Ok(docs) => {
             let mut all_main_class = Vec::new();
             for main_class in docs {
-                all_main_class.push(convert_fields_to_string(to_document(&main_class)));
+                all_main_class.push(convert_fields_to_string(to_document(&main_class).unwrap()));
             }
             HttpResponse::Ok().json(all_main_class)
         }
