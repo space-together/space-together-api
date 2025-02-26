@@ -35,7 +35,7 @@ pub fn main_class_router(
     state: Arc<AppState>,
 ) -> &mut actix_web::web::ServiceConfig {
     cfg.service(
-        web::scope("main")
+        web::scope("/main")
             .app_data(web::Data::new(state.clone()))
             .route("", post().to(create_main_class))
             .route("", get().to(get_all_main_class_room)),

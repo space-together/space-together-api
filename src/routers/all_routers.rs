@@ -101,6 +101,12 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/education").configure(|user_cfg| {
                 routers_education(user_cfg, state.clone());
             }))
+            .service(web::scope("/subject").configure(|user_cfg| {
+                subject_routers(user_cfg, state.clone());
+            }))
+            .service(web::scope("/class").configure(|user_cfg| {
+                main_class_router(user_cfg, state.clone());
+            }))
             // trade
             .service(web::scope("").configure(|user_cfg| {
                 routers_trade(user_cfg, state.clone());
@@ -108,12 +114,6 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             // sector
             .service(web::scope("").configure(|user_cfg| {
                 routers_sector(user_cfg, state.clone());
-            }))
-            .service(web::scope("/subject").configure(|user_cfg| {
-                subject_routers(user_cfg, state.clone());
-            }))
-            .service(web::scope("/class").configure(|user_cfg| {
-                main_class_router(user_cfg, state.clone());
             })),
     );
 }
