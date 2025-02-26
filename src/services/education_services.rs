@@ -48,26 +48,24 @@ pub async fn create_education_service(
     state: Data<AppState>,
     item: Json<EducationSchema>,
 ) -> impl Responder {
-    if let Some(username) = &item.username.clone() {
-        match is_valid_username(username).map_err(|err| DbClassError::OtherError {
-            err: err.to_string(),
-        }) {
-            Err(e) => {
+    match is_valid_username(&item.username.clone()).map_err(|err| DbClassError::OtherError {
+        err: err.to_string(),
+    }) {
+        Err(e) => {
+            return HttpResponse::BadRequest().json(RequestErrorModel {
+                error: "Can't create new education because username is ready exit".to_string(),
+                message: Some(e.to_string()),
+            })
+        }
+        Ok(u) => {
+            if let Ok(education) = get_educ_by_username(state.clone().into_inner(), &u).await {
                 return HttpResponse::BadRequest().json(RequestErrorModel {
                     error: "Can't create new education because username is ready exit".to_string(),
-                    message: Some(e.to_string()),
-                })
-            }
-            Ok(u) => {
-                if let Ok(education) = get_educ_by_username(state.clone().into_inner(), &u).await {
-                    return HttpResponse::BadRequest().json(RequestErrorModel {
-                        error: "Can't create new education because username is ready exit"
-                            .to_string(),
-                        message: Some(
-                            format!("education username is ready exit [{}], try other username for main class", education.name)
-                        ),
-                    });
-                }
+                    message: Some(format!(
+                        "education username is ready exit [{}], try other username for main class",
+                        education.name
+                    )),
+                });
             }
         }
     }
