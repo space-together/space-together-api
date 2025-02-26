@@ -11,7 +11,6 @@ pub struct ClassRoomSchema {
     pub sector_id: Option<IdType>,
     pub trade_id: Option<IdType>,
     pub symbol_id: Option<IdType>,
-    pub class_room_type_id: Option<IdType>,
     pub description: Option<String>,
     pub created_at: Option<DateType>,
     pub updated_at: Option<DateType>,

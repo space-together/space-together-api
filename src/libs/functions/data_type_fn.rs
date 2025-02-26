@@ -17,13 +17,6 @@ pub fn convert_id_fields(mut doc: Document) -> Document {
 
 pub fn convert_fields_to_string(mut doc: Document) -> Document {
     for (key, value) in doc.clone().into_iter() {
-        if key.ends_with("_id") {
-            let new_value = match value {
-                Bson::ObjectId(object_id) => Bson::String(object_id.to_hex().to_string()),
-                _ => value.clone(),
-            };
-            doc.insert(&key, new_value);
-        }
         if let Bson::ObjectId(object_id) = value {
             doc.insert(key, Bson::String(object_id.to_hex().to_string()));
         } else if let Bson::DateTime(datetime) = value {

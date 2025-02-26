@@ -53,7 +53,13 @@ pub async fn get_all_main_class_room(state: Data<AppState>) -> impl Responder {
         .get_many(None, Some("main_class".to_string()))
         .await
     {
-        Ok(doc) => HttpResponse::Created().json(convert_fields_to_string(to_document(&doc))),
+        Ok(docs) => {
+            let mut all_main_class = Vec::new();
+            for main_class in docs {
+                all_main_class.push(convert_fields_to_string(to_document(&main_class)));
+            }
+            HttpResponse::Ok().json(all_main_class)
+        }
         Err(e) => HttpResponse::BadRequest().json(RequestErrorModel {
             error: e.to_string(),
             message: Some("Some thing went worn to get all main classes".to_string()),
