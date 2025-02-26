@@ -106,7 +106,7 @@ pub async fn create_education_service(
 pub async fn get_all_education_service(state: Data<AppState>) -> impl Responder {
     match state
         .db
-        .education
+        .educations
         .get_many(None, Some("education".to_string()))
         .await
     {
