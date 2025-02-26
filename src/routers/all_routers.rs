@@ -1,7 +1,8 @@
 use actix_web::{
     web::{self, scope, ServiceConfig},
-    HttpResponse, Responder,
+    HttpRequest, HttpResponse, Responder,
 };
+use actix_web_actors::ws;
 use std::sync::Arc;
 
 use super::{
@@ -34,7 +35,10 @@ use super::{
     },
     user_router::{user_role_router::routers_user_role, user_router_router::routers_user},
 };
-use crate::{handlers::database_handle::all_end_point_handle::list_all_endpoints, AppState};
+use crate::{
+    handlers::database_handle::all_end_point_handle::list_all_endpoints, AppState,
+    WebSocketConnection,
+};
 
 pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
     cfg.service(
@@ -116,6 +120,18 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_sector(user_cfg, state.clone());
             })),
     );
+
+    cfg.service(
+        web::resource("/ws") // WebSocket endpoint
+            .route(web::get().to(websocket_handler)),
+    );
+}
+
+pub async fn websocket_handler(
+    req: HttpRequest,
+    stream: web::Payload,
+) -> Result<HttpResponse, actix_web::Error> {
+    ws::start(WebSocketConnection {}, &req, stream)
 }
 
 async fn manual_hello() -> impl Responder {
