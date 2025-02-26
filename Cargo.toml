@@ -8,28 +8,32 @@ authors = ["Rwanda Bruno Happyheart <brunorwanda4@gmail.com>"]
 
 [dependencies]
 actix-web = "4.9.0"
+actix-web-actors = "4.2.0"  # WebSockets support
+actix = "0.13.3"            # Actix actor system (for WebSockets)
 config = "0.10.1"
 dotenv = "0.15.0"
 serde = { version = "1.0.214", features = ["derive"] }
 serde_json = "1.0.132"
 serde_with = "3.11.0"
-tokio = "1.41.1"
+tokio = { version = "1.41.1", features = ["full"] }
 slog = "2.5.2"
 slog-term = "2.5.0"
 slog-async = "2.4.0"
 slog-envlogger = "2.2.0"
 futures = "0.3.31"
+futures-util = "0.3.31"
 regex = "1.11.1"
 rand = "0.8.5"
 itertools = "0.13.0"
-actix-ws = "0.3.0"
-futures-util = "0.3.31"
 actix-cors = "0.7.0"
 jsonwebtoken = "9.3.0"
 lazy_static = "1.4.0"
 chrono = "0.4.39"
 actix-web-lab = "0.20.0"
 bcrypt = "0.16.0"
+
+# WebSocket support
+actix-ws = "0.3.0"   # Already included, but actix-web-actors is needed for full WebSocket support
 
 [dependencies.mongodb]
 version = "3.1.0"
