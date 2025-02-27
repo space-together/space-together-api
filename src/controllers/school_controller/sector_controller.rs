@@ -7,7 +7,7 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::{education_controller::education_controller_controller::get_education_by_id, file_controller::file_controller_controller::{create_file_image, get_file_by_id, handle_symbol_update}},
+    controllers::{education_controller::education_controller_controller::get_education_by_id, file_controller::file_controller_controller::{create_file_image, handle_symbol_update}},
     error::db_class_error::{DbClassError, DbClassResult},
     libs::{classes::db_crud::GetManyByField, functions::resources::check_if_exit::UsernameValidator},
     models::school_model::sector_model::{
@@ -52,11 +52,6 @@ async fn get_other_collection (state: Arc<AppState> , sector: SectorModel) -> Db
         } else {
             format_sector.education = Some(get_education.name);
         }
-    }
-
-    if let Some(symbol_id) = sector.symbol_id {
-        let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
-        format_sector.symbol = Some(get_symbol.src);
     }
     Ok(format_sector)
 }
@@ -151,12 +146,13 @@ pub async fn get_all_sector(state: Arc<AppState>) -> DbClassResult<Vec<SectorMod
         .get_many(None, Some("sector".to_string()))
         .await?;
 
-    let mut sectors: Vec<SectorModelGet> = Vec::new();
+   
+        let mut sectors: Vec<SectorModelGet> = Vec::new();
 
-    for sector in get {
-        sectors.push( get_other_collection(state.clone(), sector).await?);
-    }
-    Ok(sectors)
+        for sector in get {
+            sectors.push( get_other_collection(state.clone(), sector).await?);
+        }
+        Ok(sectors)
 }
 
 pub async fn get_all_sector_by_education(state: Arc<AppState>, id : ObjectId) -> DbClassResult<Vec<SectorModelGet>> {
