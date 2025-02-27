@@ -42,7 +42,7 @@ use crate::{
 
 pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
     cfg.service(
-        scope("/api/v0.0.1")
+        scope("/api/v0.0.2")
             .route("/", web::get().to(manual_hello))
             .route("/endpoints", web::get().to(list_all_endpoints)) // Debug route
             .app_data(web::Data::new(state.clone()))
@@ -100,7 +100,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
     );
 
     cfg.service(
-        scope("/api/v0.0.2")
+        scope("/api/v0.0.2.5")
             .route("/", web::get().to(manual_hello_v2))
             .service(web::scope("/education").configure(|user_cfg| {
                 education_routers(user_cfg, state.clone());
