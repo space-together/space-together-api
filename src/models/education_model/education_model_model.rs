@@ -11,9 +11,10 @@ pub struct EducationModel {
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol_id: Option<ObjectId>,
+    pub disabled: Option<bool>,
     pub roles: Option<Vec<String>>,
-    pub created_on: DateTime,
-    pub updated_on: Option<DateTime>,
+    pub created_at: DateTime,
+    pub updated_at: Option<DateTime>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -24,8 +25,9 @@ pub struct EducationModelGet {
     pub symbol: Option<String>,
     pub description: Option<String>,
     pub roles: Option<Vec<String>>,
-    pub created_on: String,
-    pub updated_on: Option<String>,
+    pub disabled: Option<bool>,
+    pub created_at: String,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -33,6 +35,7 @@ pub struct EducationModelNew {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
+    pub disabled: Option<bool>,
     pub symbol: Option<String>,
     pub roles: Option<Vec<String>>,
 }
@@ -43,6 +46,7 @@ pub struct EducationModelPut {
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol: Option<String>,
+    pub disabled: Option<bool>,
     pub roles: Option<Vec<String>>,
 }
 
@@ -55,8 +59,9 @@ impl EducationModel {
             symbol_id: education.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
             description: education.description,
             roles: education.roles,
-            created_on: DateTime::now(),
-            updated_on: None,
+            disabled: education.disabled,
+            created_at: DateTime::now(),
+            updated_at: None,
         }
     }
 
@@ -68,11 +73,12 @@ impl EducationModel {
             description: education.description,
             symbol: education.symbol_id.map(|id| id.to_string()),
             roles: education.roles,
-            created_on: education
-                .created_on
+            disabled: education.disabled,
+            created_at: education
+                .created_at
                 .try_to_rfc3339_string()
                 .unwrap_or("".to_string()),
-            updated_on: Some(education.updated_on.map_or("".to_string(), |date| {
+            updated_at: Some(education.updated_at.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }
@@ -91,6 +97,13 @@ impl EducationModel {
 
         // Insert optional fields
         insert_if_some("name", education.name.map(bson::Bson::String));
+        insert_if_some("disabled", education.disabled.map(bson::Bson::Boolean));
+        insert_if_some(
+            "roles",
+            education.roles.map(|roles| {
+                bson::Bson::Array(roles.into_iter().map(bson::Bson::String).collect())
+            }),
+        );
         insert_if_some("username", education.username.map(bson::Bson::String));
         insert_if_some("description", education.description.map(bson::Bson::String));
 
@@ -102,9 +115,9 @@ impl EducationModel {
                 .map(bson::Bson::ObjectId),
         );
 
-        // Add the `updated_on` field if any fields were updated
+        // Add the `updated_at` field if any fields were updated
         if is_update {
-            doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
+            doc.insert("updated_at", bson::Bson::DateTime(DateTime::now()));
         }
 
         doc
