@@ -13,6 +13,9 @@ use mongodb::{
 use crate::{
     error::db_class_error::{DbClassError, DbClassResult},
     libs::{
+        data::get_collections_data::{
+            service_get_education_by_id, service_get_education_by_username,
+        },
         functions::{
             characters_fn::is_valid_username, data_type_fn::convert_fields_to_string,
             object_id::change_string_into_object_id,
@@ -130,12 +133,7 @@ pub async fn get_education_by_id_service(
 ) -> impl Responder {
     match change_string_into_object_id(id.into_inner()) {
         Err(e) => HttpResponse::BadRequest().json(e),
-        Ok(i) => match state
-            .db
-            .education
-            .get_one_by_id(i, Some("education".to_string()))
-            .await
-        {
+        Ok(i) => match service_get_education_by_id(state.into_inner(), &i).await {
             Ok(doc) => {
                 HttpResponse::Ok().json(convert_fields_to_string(to_document(&doc).unwrap()))
             }
@@ -151,13 +149,7 @@ pub async fn get_education_by_username_service(
     state: Data<AppState>,
     username: Path<String>,
 ) -> impl Responder {
-    match state
-        .db
-        .education
-        .collection
-        .find_one(doc! {"username" : &username.into_inner()})
-        .await
-    {
+    match service_get_education_by_username(state.into_inner(), &username.into_inner()).await {
         Ok(doc) => HttpResponse::Ok().json(convert_fields_to_string(to_document(&doc).unwrap())),
         Err(e) => HttpResponse::BadRequest().json(RequestErrorModel {
             error: e.to_string(),
