@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::models::user_model::user_model_model::UserRole;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserLoginModule {
     pub email: String,
@@ -10,6 +12,6 @@ pub struct UserLoginModule {
 pub struct UserLoginClaimsModel {
     pub email: String,
     pub name: String,
-    pub role: Option<String>,
+    pub role: Option<UserRole>,
     pub id: String,
 }

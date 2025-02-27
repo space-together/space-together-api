@@ -23,8 +23,9 @@ use crate::{
             check_sector_trade_exit, CheckSectorTradeExitModel, UsernameValidator,
         },
     },
-    models::class_model::class_model_model::{
-        ClassModel, ClassModelGet, ClassModelNew, ClassModelPut,
+    models::{
+        class_model::class_model_model::{ClassModel, ClassModelGet, ClassModelNew, ClassModelPut},
+        user_model::user_model_model::UserRole,
     },
     AppState,
 };
@@ -127,12 +128,12 @@ pub async fn create_class(
             .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
 
         if let Some(teacher_role) = teacher.role {
-            if teacher_role != "Student" {
+            if teacher_role != UserRole::STUDENT {
                 class.class_teacher = Some(teacher.id);
             } else {
                 return Err(DbClassError::OtherError {
                     err: format!(
-                        "This user is not allowed [{}] to create class, because his/her role is student [{}]",
+                        "This user is not allowed [{}] to create class, because his/her role is student [{:#?}]",
                         teacher.name, teacher_role
                     ),
                 });
@@ -249,12 +250,12 @@ pub async fn update_class_by_id(
             .map_err(|e| DbClassError::OtherError { err: e.to_string() })?;
 
         if let Some(teacher_role) = teacher.role {
-            if teacher_role != "Student" {
+            if teacher_role != UserRole::STUDENT {
                 class.class_teacher = Some(teacher.id);
             } else {
                 return Err(DbClassError::OtherError {
                     err: format!(
-                        "This user is not allowed [{}] to create class, because his/her role is student [{}]",
+                        "This user is not allowed [{}] to create class, because his/her role is student [{:#?}]",
                         teacher.name, teacher_role
                     ),
                 });

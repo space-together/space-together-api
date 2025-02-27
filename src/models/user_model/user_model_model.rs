@@ -1,27 +1,31 @@
-use std::str::FromStr;
-
 use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    libs::functions::characters_fn::{generate_username, hash_password},
-    models::images_model::profile_images_model::ProfileImageModelGet,
-};
+use crate::libs::functions::characters_fn::{generate_username, hash_password};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum Gender {
-    M,
-    F,
-    O,
+    MALE,
+    FEMALE,
+    OTHER,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub enum UserRole {
+    STUDENT,
+    TEACHER,
+    SCHOOLSTAFF,
+    ADMIN,
+    PARENT,
 }
 
 #[allow(clippy::inherent_to_string)]
 impl Gender {
     pub(crate) fn to_string(&self) -> String {
         match self {
-            Gender::F => "F".to_string(),
-            Gender::M => "M".to_string(),
-            Gender::O => "O".to_string(),
+            Gender::FEMALE => "FEMALE".to_string(),
+            Gender::MALE => "MALE".to_string(),
+            Gender::OTHER => "OTHER".to_string(),
         }
     }
 }
@@ -30,41 +34,41 @@ impl Gender {
 pub struct UserModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub role: Option<ObjectId>,      // role
-    pub name: String,                // name
-    pub username: Option<String>,    // username
-    pub email: String,               // email
+    pub name: String,             // name
+    pub email: String,            // email
+    pub password: Option<String>, // password
+    pub role: Option<UserRole>,   // role
+    pub username: Option<String>, // username
+    pub image: Option<String>,
+    pub bio: Option<String>,
     pub phone: Option<String>,       //phone number
     pub gender: Option<Gender>,      // gender
     pub age: Option<DateTime>,       // age
     pub disable: Option<bool>,       // disable
-    pub password: Option<String>,    // password
-    pub create_on: DateTime,         // created on
-    pub update_on: Option<DateTime>, // updated on
+    pub create_at: Option<DateTime>, // created on
+    pub update_at: Option<DateTime>, // updated on
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelNew {
     pub name: String,
-    pub username: Option<String>,
-    pub role: Option<String>,
     pub email: String,
-    pub phone: Option<String>,
+    pub username: Option<String>,
     pub password: Option<String>,
-    pub gender: Option<Gender>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelPut {
+    pub password: Option<String>,
+    pub email: Option<String>,
+    pub name: Option<String>,
     pub role: Option<String>,
     pub username: Option<String>,
-    pub name: Option<String>,
-    pub email: Option<String>,
     pub phone: Option<String>,
-    pub password: Option<String>,
     pub image: Option<String>,
     pub gender: Option<Gender>,
     pub age: Option<String>,
+    pub bio: Option<String>,
     pub disable: Option<bool>,
 }
 
@@ -88,23 +92,22 @@ impl UserModel {
     pub fn new(user: UserModelNew) -> Self {
         UserModel {
             id: None,
-            role: user
-                .role
-                .as_ref()
-                .map(|role| ObjectId::from_str(role).unwrap()),
+            role: Some(UserRole::STUDENT),
             name: user.name.clone(),
             email: user.email,
-            gender: user.gender,
+            gender: None,
             age: None,
-            phone: user.phone,
+            image: None,
+            phone: None,
+            bio: None,
             disable: Some(false),
             username: Some(
                 user.username
                     .unwrap_or_else(|| generate_username(&user.name)),
             ),
             password: user.password.as_deref().map(hash_password),
-            create_on: DateTime::now(),
-            update_on: None,
+            create_at: Some(DateTime::now()),
+            update_at: None,
         }
     }
 
@@ -119,11 +122,9 @@ impl UserModel {
             }
         };
 
-        insert_if_some(
-            "role",
-            user.role
-                .map(|role| bson::Bson::ObjectId(ObjectId::from_str(&role).unwrap())),
-        );
+        insert_if_some("role", user.role.map(bson::Bson::String));
+        insert_if_some("bio", user.bio.map(bson::Bson::String));
+
         insert_if_some("image", user.image.map(bson::Bson::String));
         insert_if_some(
             "age",
@@ -143,7 +144,7 @@ impl UserModel {
         );
 
         if is_updated {
-            set_doc.insert("update_on", bson::Bson::DateTime(DateTime::now()));
+            set_doc.insert("update_at", bson::Bson::DateTime(DateTime::now()));
         }
 
         set_doc
@@ -153,43 +154,46 @@ impl UserModel {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModelGet {
     pub id: String,
-    pub role: Option<String>,
+    pub role: Option<UserRole>,
     pub name: String,
-    pub image: Option<Vec<ProfileImageModelGet>>,
+    pub image: Option<String>,
     pub username: Option<String>,
     pub email: String,
     pub disable: Option<bool>,
     pub phone: Option<String>,
     pub password: Option<String>,
     pub gender: Option<Gender>,
+    pub bio: Option<String>,
     pub age: Option<String>,
-    pub create_on: String,
-    pub update_on: Option<String>,
+    pub create_at: Option<String>,
+    pub update_at: Option<String>,
 }
 
 impl UserModelGet {
     pub fn format(user: UserModel) -> Self {
         UserModelGet {
             id: user.id.map_or("".to_string(), |id| id.to_string()),
-            role: Some(user.role.map_or("".to_string(), |role| role.to_string())),
+            role: user.role,
             name: user.name,
             username: user.username,
             email: user.email,
-            image: None,
+            image: user.image,
             gender: user.gender,
             age: user.age.map(|age| {
                 age.try_to_rfc3339_string()
                     .unwrap_or_else(|_| "".to_string())
             }),
+            bio: user.bio,
             phone: user.phone,
             disable: user.disable,
             password: user.password,
-            create_on: user
-                .create_on
-                .try_to_rfc3339_string()
-                .unwrap_or_else(|_| "".to_string()),
-            update_on: user.update_on.map(|up| {
+            update_at: user.update_at.map(|up| {
                 up.try_to_rfc3339_string()
+                    .unwrap_or_else(|_| "".to_string())
+            }),
+            create_at: user.create_at.map(|create| {
+                create
+                    .try_to_rfc3339_string()
                     .unwrap_or_else(|_| "".to_string())
             }),
         }
