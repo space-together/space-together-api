@@ -7,19 +7,11 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::file_controller::file_controller_controller::{create_file_image, get_file_by_id, handle_symbol_update}, error::db_class_error::{DbClassError, DbClassResult}, libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username}, models::education_model::education_model_model::{
+    controllers::file_controller::file_controller_controller::create_file_image, error::db_class_error::{DbClassError, DbClassResult}, libs::{classes::db_crud::GetManyByField, functions::characters_fn::is_valid_username}, models::education_model::education_model_model::{
         EducationModel, EducationModelGet, EducationModelNew, EducationModelPut,
     }, AppState
 };
 
-async fn get_other_collection (state: Arc<AppState> , education: EducationModel) -> DbClassResult<EducationModelGet> {
-    let mut format_education = EducationModel::format(education.clone());
-    if let Some(symbol_id) = education.symbol_id {
-        let image = get_file_by_id(state, symbol_id).await?;
-        format_education.symbol = Some(image.src)
-    }
-    Ok(format_education)
-}
 
 async fn validate_username(
     state: Arc<AppState>,
@@ -111,7 +103,7 @@ pub async fn get_all_education(state: Arc<AppState>) -> DbClassResult<Vec<Educat
         .await?;
     let mut educations = Vec::new();
     for education in get {
-        educations.push(get_other_collection(state.clone(), education).await?);
+        educations.push(EducationModel::format(education));
     }
     Ok(educations)
 }
@@ -125,7 +117,8 @@ pub async fn get_education_by_id(
         .education
         .get_one_by_id(id, Some("education".to_string()))
         .await?;
-    get_other_collection(state, get).await
+
+        Ok(EducationModel::format(get))
 }
 
 pub async fn get_education_by_username(
@@ -141,33 +134,20 @@ pub async fn get_education_by_username(
         .ok_or(DbClassError::OtherError {
             err: format!("Education not found by username [{}]", &username),
         })?;
-
-        get_other_collection(state, get).await
+Ok(EducationModel::format(get))
 }
 
 
 pub async fn update_education_by_id(
     state: Arc<AppState>,
     id: ObjectId,
-    mut education: EducationModelPut,
+    education: EducationModelPut,
 ) -> DbClassResult<EducationModelGet> {
     // Validate username if provided
     
     if let Some(username) = &education.username {
         validate_username(state.clone(), username, Some(id)).await?;
     }
-    let existing_education = state
-    .db
-    .education
-    .get_one_by_id(id, Some("education".to_string()))
-    .await?;
-
-
-    // Handle symbol file update or creation
-    if let Some(file) = education.symbol {
-        education.symbol = Some(handle_symbol_update(state.clone(), file, existing_education.symbol_id).await?);
-    }
-
     // Update the education record in the database
     state
         .db

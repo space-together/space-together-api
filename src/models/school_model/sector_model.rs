@@ -12,8 +12,8 @@ pub struct SectorModel {
     pub name: String,
     pub description: Option<String>,
     pub symbol_id: Option<ObjectId>,
-    pub create_on: DateTime,
-    pub updated_on: Option<DateTime>,
+    pub create_at: DateTime,
+    pub updated_at: Option<DateTime>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -24,8 +24,8 @@ pub struct SectorModelGet {
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol: Option<String>,
-    pub create_on: String,
-    pub updated_on: Option<String>,
+    pub create_at: String,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -55,8 +55,8 @@ impl SectorModel {
             name: sector.name,
             description: sector.description,
             symbol_id: sector.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
-            create_on: DateTime::now(),
-            updated_on: None,
+            create_at: DateTime::now(),
+            updated_at: None,
         }
     }
 
@@ -68,12 +68,12 @@ impl SectorModel {
             username: sector.username,
             description: sector.description,
             symbol: sector.symbol_id.map(|id| id.to_string()),
-            create_on: sector
-                .create_on
+            create_at: sector
+                .create_at
                 .try_to_rfc3339_string()
                 .unwrap_or("".to_string()),
-            updated_on: sector
-                .updated_on
+            updated_at: sector
+                .updated_at
                 .map(|dt| dt.try_to_rfc3339_string().unwrap_or("".to_string())),
         }
     }
@@ -106,7 +106,7 @@ impl SectorModel {
                 .map(bson::Bson::ObjectId),
         );
         if is_updated {
-            set_doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
+            set_doc.insert("updated_at", bson::Bson::DateTime(DateTime::now()));
         }
 
         set_doc

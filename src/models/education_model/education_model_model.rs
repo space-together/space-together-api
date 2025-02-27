@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +8,7 @@ pub struct EducationModel {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub symbol_id: Option<ObjectId>,
+    pub symbol: Option<String>,
     pub disabled: Option<bool>,
     pub roles: Option<Vec<String>>,
     pub created_at: DateTime,
@@ -56,7 +54,7 @@ impl EducationModel {
             id: None,
             name: education.name,
             username: education.username,
-            symbol_id: education.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
+            symbol: education.symbol,
             description: education.description,
             roles: education.roles,
             disabled: education.disabled,
@@ -71,7 +69,7 @@ impl EducationModel {
             name: education.name,
             username: education.username,
             description: education.description,
-            symbol: education.symbol_id.map(|id| id.to_string()),
+            symbol: education.symbol,
             roles: education.roles,
             disabled: education.disabled,
             created_at: education
@@ -107,13 +105,7 @@ impl EducationModel {
         insert_if_some("username", education.username.map(bson::Bson::String));
         insert_if_some("description", education.description.map(bson::Bson::String));
 
-        insert_if_some(
-            "symbol_id",
-            education
-                .symbol
-                .and_then(|id| ObjectId::from_str(&id).ok())
-                .map(bson::Bson::ObjectId),
-        );
+        insert_if_some("symbol", education.symbol.map(bson::Bson::String));
 
         // Add the `updated_at` field if any fields were updated
         if is_update {
