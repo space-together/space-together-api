@@ -1,17 +1,25 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  space-together-api:
-  container_name: space-together-api
-  image : bruno_rwanda/space-together-api:0.0.2
-  build:
-    context: .
-    dockerfile: dockerfile
-    args:
-     DATABASE_URL: mongodb://localhost:27017
-  ports: 
-    - '20044:20044'
-  depends_on:
-    - db
-  
-      
+  api:
+    build: .
+    ports:
+      - "20045:20045"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:6.0
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

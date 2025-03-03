@@ -1,6 +1,6 @@
 [package]
 name = "space-together-api"
-version = "0.1.0"
+version = "0.0.2"
 edition = "2021"
 repository = "https://github.com/space-together/space-together-api"
 description = "space-together-api which implements all request from space-together applications."

@@ -1,18 +1,30 @@
-# Build stage
-FROM rust:1.84-buster as builder
-WORKDIR /app
+# Stage 1: Build the Rust application
+FROM rust:1.84 as builder
 
-# accept the build argument
-ARG DATABASE_URL
+# Set working directory inside the container
+WORKDIR /usr/src/app
 
-ENV DATABASE_URL=$DATABASE_URL
+# Copy Cargo files separately to leverage Docker cache
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
 
-COPY . .
-
+# Install dependencies and build the application in release mode
 RUN cargo build --release
 
-WORKDIR /usr/local/bin
+# Stage 2: Create a lightweight image to run the application
+FROM debian:bookworm-slim
 
-COPY --from=builder /app/target/release/space-together-api .
+# Install only necessary dependencies
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
-CMD [ "./space-together-api" ]
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /usr/src/app/target/release/space-together-api .
+
+# Expose the application's port (adjust as needed)
+EXPOSE 20045
+
+# Set the default command to run the application
+CMD ["./space-together-api"]
