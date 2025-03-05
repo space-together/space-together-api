@@ -148,7 +148,6 @@ pub async fn update_education_by_id(
     if let Some(username) = &education.username {
         validate_username(state.clone(), username, Some(id)).await?;
     }
-    // Update the education record in the database
     state
         .db
         .education
