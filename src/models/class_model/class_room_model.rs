@@ -12,10 +12,9 @@ pub struct ClassRoomModel {
     pub sector_id: Option<ObjectId>,
     pub trade_id: Option<ObjectId>,
     pub symbol_id: Option<ObjectId>,
-    pub class_room_type_id: Option<ObjectId>,
     pub description: Option<String>,
-    pub created_on: DateTime,
-    pub updated_on: Option<DateTime>,
+    pub created_at: DateTime,
+    pub updated_at: Option<DateTime>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -24,11 +23,10 @@ pub struct ClassRoomModelGet {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub sector: Option<String>,
-    pub trade: Option<String>,
-    pub class_room_type: Option<String>,
-    pub created_on: String,
-    pub updated_on: Option<String>,
+    pub sector_id: Option<String>,
+    pub trade_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: Option<String>,
     pub symbol: Option<String>,
 }
 
@@ -37,9 +35,8 @@ pub struct ClassRoomModelNew {
     pub name: String,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub sector: Option<String>,
-    pub trade: Option<String>,
-    pub class_room_type: Option<String>,
+    pub sector_id: Option<String>,
+    pub trade_id: Option<String>,
     pub symbol: Option<String>,
 }
 
@@ -48,9 +45,8 @@ pub struct ClassRoomModelPut {
     pub name: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
-    pub sector: Option<String>,
-    pub trade: Option<String>,
-    pub class_room_type: Option<String>,
+    pub sector_id: Option<String>,
+    pub trade_id: Option<String>,
     pub symbol: Option<String>,
 }
 
@@ -60,37 +56,33 @@ impl ClassRoomModel {
             id: None,
             name: class_room.name,
             username: class_room.username,
-            class_room_type_id: class_room.class_room_type.map(|id| {
+            sector_id: class_room.sector_id.map(|id| {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
-            sector_id: class_room.sector.map(|id| {
-                ObjectId::from_str(&id).expect("can change class room id into object is")
-            }),
-            trade_id: class_room.trade.map(|id| {
+            trade_id: class_room.trade_id.map(|id| {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
             description: class_room.description,
             symbol_id: class_room.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
-            created_on: DateTime::now(),
-            updated_on: None,
+            created_at: DateTime::now(),
+            updated_at: None,
         }
     }
 
     pub fn format(class_room: Self) -> ClassRoomModelGet {
         ClassRoomModelGet {
             id: class_room.id.map_or("".to_string(), |id| id.to_string()),
-            class_room_type: class_room.class_room_type_id.map(|id| id.to_string()),
-            sector: class_room.sector_id.map(|id| id.to_string()),
-            trade: class_room.trade_id.map(|id| id.to_string()),
+            sector_id: class_room.sector_id.map(|id| id.to_string()),
+            trade_id: class_room.trade_id.map(|id| id.to_string()),
             name: class_room.name,
             username: class_room.username,
             description: class_room.description,
             symbol: class_room.symbol_id.map(|id| id.to_string()),
-            created_on: class_room
-                .created_on
+            created_at: class_room
+                .created_at
                 .try_to_rfc3339_string()
                 .unwrap_or("".to_string()),
-            updated_on: Some(class_room.updated_on.map_or("".to_string(), |date| {
+            updated_at: Some(class_room.updated_at.map_or("".to_string(), |date| {
                 date.try_to_rfc3339_string().unwrap_or("".to_string())
             })),
         }
@@ -124,25 +116,17 @@ impl ClassRoomModel {
         insert_if_some(
             "sector_id",
             class_room
-                .sector
+                .sector_id
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
         insert_if_some(
             "trade_id",
             class_room
-                .trade
+                .trade_id
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
-
-        insert_if_some(
-            "class_room_type_id",
-            class_room
-                .class_room_type
-                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
-        );
-
         if is_update {
-            doc.insert("updated_on", bson::Bson::DateTime(DateTime::now()));
+            doc.insert("updated_at", bson::Bson::DateTime(DateTime::now()));
         }
 
         doc

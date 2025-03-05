@@ -25,8 +25,6 @@ use crate::{
     AppState,
 };
 
-use super::class_room_type_controller::get_class_room_type_by_id;
-
 async fn get_other_collection(
     state: Arc<AppState>,
     class_room: ClassRoomModel,
@@ -35,18 +33,13 @@ async fn get_other_collection(
 
     if let Some(ref trade_id) = class_room.trade_id {
         let trade = get_trade_by_id(state.clone(), *trade_id).await?;
-        format_class_room.trade = trade.username.or(Some(trade.name))
+        format_class_room.trade_id = trade.username.or(Some(trade.name))
     }
 
     if let Some(ref sector_id) = class_room.sector_id {
         let sector = get_sector_by_id(state.clone(), *sector_id).await?;
-        format_class_room.sector = sector.username.or(Some(sector.name))
+        format_class_room.sector_id = sector.username.or(Some(sector.name))
     }
-
-    if let Some(ref class_room_type_id) = class_room.class_room_type_id {
-        let class_room_type = get_class_room_type_by_id(state.clone(), *class_room_type_id).await?;
-        format_class_room.class_room_type = class_room_type.username.or(Some(class_room_type.name));
-    };
 
     if let Some(symbol_id) = class_room.symbol_id {
         let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
@@ -92,31 +85,8 @@ pub async fn create_class_room(
         });
     }
 
-    // Validate class room type
-    if let Some(ref class_room_id) = class_room.class_room_type {
-        if !class_room_id.is_empty() {
-            let id = ObjectId::from_str(class_room_id).map_err(|_| DbClassError::OtherError {
-                err: format!(
-                    "Class room type ID is invalid [{}], please try another",
-                    class_room_id
-                ),
-            })?;
-
-            get_class_room_type_by_id(state.clone(), id)
-                .await
-                .map_err(|_| DbClassError::OtherError {
-                    err: format!(
-                        "Class room type ID not found [{}], please try another",
-                        class_room_id
-                    ),
-                })?;
-        } else {
-            class_room.class_room_type = None
-        }
-    }
-
     // Validate trade
-    if let Some(ref trade_id) = class_room.trade {
+    if let Some(ref trade_id) = class_room.trade_id {
         if !trade_id.is_empty() {
             let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
                 err: format!("Trade ID is invalid [{}], please try another", trade_id),
@@ -141,12 +111,12 @@ pub async fn create_class_room(
                 }
             }
         } else {
-            class_room.trade = None
+            class_room.trade_id = None
         }
     }
 
     // Validate sector
-    if let Some(ref sector_id) = class_room.sector {
+    if let Some(ref sector_id) = class_room.sector_id {
         if !sector_id.is_empty() {
             let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
                 err: format!("Sector ID is invalid [{}], please try another", sector_id),
@@ -158,7 +128,7 @@ pub async fn create_class_room(
                     err: format!("Sector ID not found [{}], please try another", sector_id),
                 })?;
         } else {
-            class_room.sector = None
+            class_room.sector_id = None
         }
     }
 
@@ -334,30 +304,7 @@ pub async fn update_class_room_by_id(
             Some(handle_symbol_update(state.clone(), file, existing_class_room.symbol_id).await?);
     }
 
-    if let Some(ref class_room_type_id) = class_room.class_room_type {
-        if !class_room_type_id.is_empty() {
-            let id =
-                ObjectId::from_str(class_room_type_id).map_err(|_| DbClassError::OtherError {
-                    err: format!(
-                        "Class room type ID is invalid [{}], please try another",
-                        class_room_type_id
-                    ),
-                })?;
-
-            get_class_room_type_by_id(state.clone(), id)
-                .await
-                .map_err(|_| DbClassError::OtherError {
-                    err: format!(
-                        "Class room type ID not found [{}], please try another",
-                        class_room_type_id
-                    ),
-                })?;
-        } else {
-            class_room.class_room_type = None
-        }
-    }
-
-    if let Some(ref trade_id) = class_room.trade {
+    if let Some(ref trade_id) = class_room.trade_id {
         if !trade_id.is_empty() {
             let id = ObjectId::from_str(trade_id).map_err(|_| DbClassError::OtherError {
                 err: format!("Trade ID is invalid [{}], please try another", trade_id),
@@ -377,11 +324,11 @@ pub async fn update_class_room_by_id(
                 }
             }
         } else {
-            class_room.trade = None
+            class_room.trade_id = None
         }
     }
 
-    if let Some(ref sector_id) = class_room.sector {
+    if let Some(ref sector_id) = class_room.sector_id {
         if !sector_id.is_empty() {
             let id = ObjectId::from_str(sector_id).map_err(|_| DbClassError::OtherError {
                 err: format!("Sector ID is invalid [{}], please try another", sector_id),
@@ -393,7 +340,7 @@ pub async fn update_class_room_by_id(
                     err: format!("Sector ID not found [{}], please try another", sector_id),
                 })?;
         } else {
-            class_room.sector = None
+            class_room.sector_id = None
         }
     }
 
