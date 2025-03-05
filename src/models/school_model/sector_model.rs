@@ -20,7 +20,7 @@ pub struct SectorModel {
 pub struct SectorModelGet {
     pub id: String,
     pub name: String,
-    pub education: Option<String>,
+    pub education_id: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol: Option<String>,
@@ -31,7 +31,7 @@ pub struct SectorModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SectorModelNew {
     pub name: String,
-    pub education: Option<String>,
+    pub education_id: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol: Option<String>,
@@ -40,7 +40,7 @@ pub struct SectorModelNew {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SectorModelPut {
     pub name: Option<String>,
-    pub education: Option<String>,
+    pub education_id: Option<String>,
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol: Option<String>,
@@ -50,7 +50,9 @@ impl SectorModel {
     pub fn new(sector: SectorModelNew) -> Self {
         SectorModel {
             id: None,
-            education_id: sector.education.map(|id| ObjectId::from_str(&id).unwrap()),
+            education_id: sector
+                .education_id
+                .map(|id| ObjectId::from_str(&id).unwrap()),
             username: sector.username,
             name: sector.name,
             description: sector.description,
@@ -64,7 +66,7 @@ impl SectorModel {
         SectorModelGet {
             id: sector.id.map_or("".to_string(), |id| id.to_string()),
             name: sector.name,
-            education: sector.education_id.map(|id| id.to_string()),
+            education_id: sector.education_id.map(|id| id.to_string()),
             username: sector.username,
             description: sector.description,
             symbol: sector.symbol_id.map(|id| id.to_string()),
@@ -93,7 +95,7 @@ impl SectorModel {
         insert_if_some(
             "education_id",
             sector
-                .education
+                .education_id
                 .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
         );
         insert_if_some("description", sector.description.map(bson::Bson::String));

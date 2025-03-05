@@ -48,9 +48,9 @@ async fn get_other_collection (state: Arc<AppState> , sector: SectorModel) -> Db
         let get_education = get_education_by_id(state.clone(), *education_id).await?;
 
         if let Some(education_username) = get_education.username {
-            format_sector.education = Some(education_username);
+            format_sector.education_id = Some(education_username);
         } else {
-            format_sector.education = Some(get_education.name);
+            format_sector.education_id = Some(get_education.name);
         }
     }
     Ok(format_sector)
@@ -94,7 +94,7 @@ pub async fn create_sector(
       }
 
 
-    if let Some(ref education) = sector.education {
+    if let Some(ref education) = sector.education_id {
         let id = match ObjectId::from_str(education) {
             Err(_) => {
                 return Err(DbClassError::OtherError {
@@ -192,7 +192,7 @@ pub async fn update_sector_by_id(
         let _ = validate_sector_username(state.clone(), username, Some(id)).await;
         }
 
-    if let Some(ref education) = sector.education {
+    if let Some(ref education) = sector.education_id {
         let id = match ObjectId::from_str(education) {
             Err(_) => {
                 return Err(DbClassError::OtherError {
