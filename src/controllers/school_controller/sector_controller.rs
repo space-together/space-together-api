@@ -62,6 +62,10 @@ pub async fn create_sector(
 ) -> DbClassResult<SectorModelGet> {
     if let Some(ref username) = sector.username {
         let _ = validate_sector_username(state.clone(), username, None).await;
+        if  get_sector_by_username(state.clone(), username.to_string()).await.is_ok() {
+            return Err(DbClassError::OtherError { err: format!("Sector username is ready exit [{}], please try other", username) });
+        }
+
         } else {
          return Err(DbClassError::OtherError {
            err: "Username is missing".to_string(),

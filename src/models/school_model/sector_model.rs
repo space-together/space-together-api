@@ -12,7 +12,7 @@ pub struct SectorModel {
     pub name: String,
     pub description: Option<String>,
     pub symbol_id: Option<ObjectId>,
-    pub create_at: DateTime,
+    pub create_at: Option<DateTime>,
     pub updated_at: Option<DateTime>,
 }
 
@@ -24,7 +24,7 @@ pub struct SectorModelGet {
     pub username: Option<String>,
     pub description: Option<String>,
     pub symbol: Option<String>,
-    pub create_at: String,
+    pub create_at: Option<String>,
     pub updated_at: Option<String>,
 }
 
@@ -55,7 +55,7 @@ impl SectorModel {
             name: sector.name,
             description: sector.description,
             symbol_id: sector.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
-            create_at: DateTime::now(),
+            create_at: Some(DateTime::now()),
             updated_at: None,
         }
     }
@@ -70,8 +70,7 @@ impl SectorModel {
             symbol: sector.symbol_id.map(|id| id.to_string()),
             create_at: sector
                 .create_at
-                .try_to_rfc3339_string()
-                .unwrap_or("".to_string()),
+                .map(|dt| dt.try_to_rfc3339_string().unwrap_or("".to_string())),
             updated_at: sector
                 .updated_at
                 .map(|dt| dt.try_to_rfc3339_string().unwrap_or("".to_string())),
