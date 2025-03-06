@@ -79,6 +79,17 @@ pub async fn create_class_room(
 ) -> DbClassResult<ClassRoomModelGet> {
     if let Some(ref username) = class_room.username {
         let _ = validate_class_room_username(state.clone(), username, None).await;
+        if get_class_room_by_username(state.clone(), username.to_string())
+            .await
+            .is_ok()
+        {
+            return Err(DbClassError::OtherError {
+                err: format!(
+                    "Main Class username name is ready exit [{}], please try other username",
+                    username
+                ),
+            });
+        }
     } else {
         return Err(DbClassError::OtherError {
             err: "Username is missing".to_string(),
