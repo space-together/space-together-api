@@ -4,6 +4,22 @@ use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum ClassRoomType {
+    Default,
+    Other,
+}
+
+#[allow(clippy::inherent_to_string)]
+impl ClassRoomType {
+    pub(crate) fn to_string(&self) -> String {
+        match self {
+            ClassRoomType::Default => "Default".to_string(),
+            ClassRoomType::Other => "Other".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClassRoomModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
@@ -13,6 +29,7 @@ pub struct ClassRoomModel {
     pub trade_id: Option<ObjectId>,
     pub symbol_id: Option<ObjectId>,
     pub description: Option<String>,
+    pub class_room_type: Option<ClassRoomType>,
     pub created_at: DateTime,
     pub updated_at: Option<DateTime>,
 }
@@ -28,6 +45,7 @@ pub struct ClassRoomModelGet {
     pub created_at: String,
     pub updated_at: Option<String>,
     pub symbol: Option<String>,
+    pub class_room_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -38,6 +56,7 @@ pub struct ClassRoomModelNew {
     pub sector_id: Option<String>,
     pub trade_id: Option<String>,
     pub symbol: Option<String>,
+    pub class_room_type: Option<ClassRoomType>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -48,6 +67,7 @@ pub struct ClassRoomModelPut {
     pub sector_id: Option<String>,
     pub trade_id: Option<String>,
     pub symbol: Option<String>,
+    pub class_room_type: Option<String>,
 }
 
 impl ClassRoomModel {
@@ -62,6 +82,11 @@ impl ClassRoomModel {
             trade_id: class_room.trade_id.map(|id| {
                 ObjectId::from_str(&id).expect("can change class room id into object is")
             }),
+            class_room_type: Some(
+                class_room
+                    .class_room_type
+                    .map_or(ClassRoomType::Other, |role| role),
+            ),
             description: class_room.description,
             symbol_id: class_room.symbol.map(|id| ObjectId::from_str(&id).unwrap()),
             created_at: DateTime::now(),
@@ -75,6 +100,7 @@ impl ClassRoomModel {
             sector_id: class_room.sector_id.map(|id| id.to_string()),
             trade_id: class_room.trade_id.map(|id| id.to_string()),
             name: class_room.name,
+            class_room_type: class_room.class_room_type.map(|role| role.to_string()),
             username: class_room.username,
             description: class_room.description,
             symbol: class_room.symbol_id.map(|id| id.to_string()),
@@ -112,7 +138,10 @@ impl ClassRoomModel {
                 .and_then(|id| ObjectId::from_str(&id).ok())
                 .map(bson::Bson::ObjectId),
         );
-
+        insert_if_some(
+            "class_room_type",
+            class_room.class_room_type.map(bson::Bson::String),
+        );
         insert_if_some(
             "sector_id",
             class_room

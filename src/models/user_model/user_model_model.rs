@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::libs::functions::characters_fn::{generate_username, hash_password};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum Gender {
     MALE,
     FEMALE,
