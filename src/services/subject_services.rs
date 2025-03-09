@@ -1,6 +1,8 @@
 use crate::{
+    controllers::class_controller::class_room_controller::get_class_room_by_id,
     libs::{
         functions::data_type_fn::convert_fields_to_string, schemas::subject_schema::SubjectSchema,
+        types::fields_types::IdType,
     },
     models::request_error_model::RequestErrorModel,
     AppState,
@@ -31,6 +33,24 @@ pub async fn create_subject_servicer(
             error: e.to_string(),
             message: Some("Subject Code is ready exit, try other code".to_string()),
         });
+    }
+
+    if let Some(main_class) = item.class_room_id.clone() {
+        if get_class_room_by_id(
+            state.clone().into_inner(),
+            IdType::to_object(&main_class).unwrap(),
+        )
+        .await
+        .is_err()
+        {
+            return HttpResponse::BadRequest().json(RequestErrorModel {
+                message: Some(format!(
+                    "Main class id is not exit [{}], try other main class id",
+                    IdType::to_string(&main_class)
+                )),
+                error: "Main class Id is not allow".to_string(),
+            });
+        }
     }
 
     match state
