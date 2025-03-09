@@ -3,6 +3,8 @@ use std::str::FromStr;
 use mongodb::bson::{self, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
+use crate::libs::functions::characters_fn::generate_code;
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum SubjectType {
     General,
@@ -60,7 +62,7 @@ pub struct SubjectModelGet {
     pub name: String,
     pub class_room_id: Option<String>,
     pub class_id: Option<String>,
-    pub code: String,
+    pub code: Option<String>,
     pub sector_id: Option<String>,
     pub trade_id: Option<String>,
     pub subject_type: Option<SubjectType>,
@@ -84,7 +86,7 @@ pub struct SubjectModelNew {
     pub name: String,
     pub class_room_id: Option<String>,
     pub class_id: Option<String>,
-    pub code: String,
+    pub code: Option<String>,
     pub sector_id: Option<String>,
     pub trade_id: Option<String>,
     pub subject_type: Option<SubjectType>,
@@ -132,7 +134,7 @@ impl SubjectModel {
                 .class_room_id
                 .map(|id| ObjectId::from_str(&id).unwrap()),
             class_id: subject.class_id.map(|id| ObjectId::from_str(&id).unwrap()),
-            code: subject.code,
+            code: subject.code.map_or(generate_code(), |f| f),
             sector_id: subject.sector_id.map(|id| ObjectId::from_str(&id).unwrap()),
             trade_id: subject.trade_id.map(|id| ObjectId::from_str(&id).unwrap()),
             subject_type: subject.subject_type,
@@ -160,7 +162,7 @@ impl SubjectModel {
             name: subject.name,
             class_room_id: subject.class_room_id.map(|id| id.to_string()),
             class_id: subject.class_id.map(|id| id.to_string()),
-            code: subject.code,
+            code: Some(subject.code),
             sector_id: subject.sector_id.map(|id| id.to_string()),
             trade_id: subject.trade_id.map(|id| id.to_string()),
             subject_type: subject.subject_type,
