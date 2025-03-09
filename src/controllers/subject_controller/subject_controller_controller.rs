@@ -12,6 +12,7 @@ use crate::{
         class_room_type_controller::get_class_room_type_by_id,
     },
     error::db_class_error::{DbClassError, DbClassResult},
+    libs::classes::db_crud::GetManyByField,
     models::subject_model::subject_model_model::{
         SubjectModel, SubjectModelGet, SubjectModelNew, SubjectModelPut,
     },
@@ -99,7 +100,13 @@ pub async fn get_all_subject(state: Arc<AppState>) -> DbClassResult<Vec<SubjectM
         .subject
         .get_many(None, Some("subject".to_string()))
         .await?;
-    Ok(get.into_iter().map(SubjectModel::format).collect())
+    let mut subjects = Vec::new();
+    for subject in get {
+        let format = get_other_collection(state.clone(), subject).await?;
+        subjects.push(format);
+    }
+
+    Ok(subjects)
 }
 
 pub async fn get_subject_by_id(
@@ -139,6 +146,30 @@ pub async fn get_subject_by_code(
     }
 }
 
+pub async fn get_subjects_by_class_room(
+    state: Arc<AppState>,
+    id: ObjectId,
+) -> DbClassResult<Vec<SubjectModelGet>> {
+    let get = state
+        .db
+        .subject
+        .get_many(
+            Some(GetManyByField {
+                field: "class_room_id".to_string(),
+                value: id,
+            }),
+            Some("Subjects".to_string()),
+        )
+        .await?;
+    let mut subjects = Vec::new();
+    for subject in get {
+        let format = get_other_collection(state.clone(), subject).await?;
+        subjects.push(format);
+    }
+
+    Ok(subjects)
+}
+
 pub async fn update_subject_by_id(
     state: Arc<AppState>,
     id: ObjectId,
@@ -164,26 +195,6 @@ pub async fn update_subject_by_id(
             }
         }
     }
-
-    // if let Some(subject_type) = subject.subject_type_id.clone() {
-    //     let id = ObjectId::from_str(&subject_type);
-    //     if id.is_err() {
-    //         return Err(DbClassError::OtherError {
-    //             err: format!(
-    //                 "Your subject type id is invalid [{}], try other",
-    //                 subject_type
-    //             ),
-    //         });
-    //     };
-
-    //     if let Ok(i) = id {
-    //         let get = get_class_room_by_id(state.clone(), i).await;
-    //         if let Err(e) = get {
-    //             return Err(DbClassError::OtherError { err: e.to_string() });
-    //         }
-    //     }
-    // }
-
     let _ = state
         .db
         .subject
