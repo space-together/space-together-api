@@ -31,15 +31,29 @@ async fn get_other_collection(
     Ok(subject)
 }
 
+async fn get_many_other_collection(
+    state: Arc<AppState>,
+    items: Vec<SubjectModel>,
+) -> DbClassResult<Vec<SubjectModelGet>> {
+    let mut subjects: Vec<SubjectModelGet> = Vec::new();
+    for item in items {
+        let mut subject = SubjectModel::format(item.clone());
+        if let Some(id) = item.class_room_id {
+            if let Ok(class_room) = get_class_room_by_id(state.clone(), id).await {
+                subject.class_room_id = class_room.username.or(Some(class_room.name))
+            }
+        }
+        subjects.push(subject);
+    }
+    Ok(subjects)
+}
+
 pub async fn create_subject(
     state: Arc<AppState>,
     subject: SubjectModelNew,
 ) -> DbClassResult<SubjectModelGet> {
     if let Some(exit_code) = subject.code.clone() {
-        if get_subject_by_code(state.clone(), &exit_code)
-            .await
-            .is_err()
-        {
+        if let Ok(_subject) = get_subject_by_code(state.clone(), &exit_code).await {
             return Err(DbClassError::OtherError {
                 err: format!(
                     "Subject code is ready exit [{}], please try other",
@@ -69,20 +83,11 @@ pub async fn create_subject(
     }
 
     if let Some(class_room) = subject.class_room_id.clone() {
-        if let Ok(id) = ObjectId::from_str(&class_room) {
-            if get_class_room_by_id(state.clone(), id).await.is_ok() {
-                return Err(DbClassError::OtherError {
-                    err: format!(
-                        "your class room id is not found  [{}], please use other class room id",
-                        class_room
-                    ),
-                });
-            }
-        } else {
-            return Err(DbClassError::OtherError {
+        let class_room_id =
+            ObjectId::from_str(&class_room).map_err(|_| DbClassError::OtherError {
                 err: format!("Your class room id is invalid [{}], try other", class_room),
-            });
-        }
+            })?;
+        get_class_room_by_id(state.clone(), class_room_id).await?;
     }
 
     let create = state
@@ -100,13 +105,7 @@ pub async fn get_all_subject(state: Arc<AppState>) -> DbClassResult<Vec<SubjectM
         .subject
         .get_many(None, Some("subject".to_string()))
         .await?;
-    let mut subjects = Vec::new();
-    for subject in get {
-        let format = get_other_collection(state.clone(), subject).await?;
-        subjects.push(format);
-    }
-
-    Ok(subjects)
+    get_many_other_collection(state.clone(), get).await
 }
 
 pub async fn get_subject_by_id(
@@ -161,13 +160,8 @@ pub async fn get_subjects_by_class_room(
             Some("Subjects".to_string()),
         )
         .await?;
-    let mut subjects = Vec::new();
-    for subject in get {
-        let format = get_other_collection(state.clone(), subject).await?;
-        subjects.push(format);
-    }
-
-    Ok(subjects)
+    let format = get_many_other_collection(state.clone(), get).await?;
+    Ok(format)
 }
 
 pub async fn update_subject_by_id(
