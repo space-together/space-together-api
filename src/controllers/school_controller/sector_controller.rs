@@ -7,7 +7,7 @@ use mongodb::{
 };
 
 use crate::{
-    controllers::{education_controller::education_controller_controller::get_education_by_id, file_controller::file_controller_controller::{create_file_image, handle_symbol_update}},
+    controllers::{education_controller::education_controller_controller::get_education_by_id, file_controller::file_controller_controller::{create_file_image, get_file_by_id, handle_symbol_update}},
     error::db_class_error::{DbClassError, DbClassResult},
     libs::{classes::db_crud::GetManyByField, functions::resources::check_if_exit::UsernameValidator},
     models::school_model::sector_model::{
@@ -51,6 +51,11 @@ async fn get_other_collection (state: Arc<AppState> , sector: SectorModel) -> Db
             format_sector.education_id = Some(education_username);
         } else {
             format_sector.education_id = Some(get_education.name);
+        }
+    }
+    if let Some(symbol_id) = sector.symbol_id {
+        if let Ok(image) = get_file_by_id(state.clone(), symbol_id).await {
+            format_sector.symbol = Some(image.src);
         }
     }
     Ok(format_sector)
