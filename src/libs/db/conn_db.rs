@@ -24,7 +24,7 @@ use crate::{
         auth::adapter_model::{AccountModel, SessionModel},
         class_model::{
             class_model_model::ClassModel, class_room_model::ClassRoomModel,
-            class_room_type_model::ClassRoomTypeModel, class_type_model::ClassTypeModel,
+            class_type_model::ClassTypeModel,
         },
         database_model::collection_model::DatabaseStats,
         education_model::education_model_model::EducationModel,
@@ -48,7 +48,6 @@ pub struct ConnDb {
     pub user: UserDb,
     pub class: MongoCrud<ClassModel>,
     pub class_group: ClassGroupDb,
-    pub class_room_type: MongoCrud<ClassRoomTypeModel>,
     pub class_room: MongoCrud<ClassRoomModel>,
     pub main_class: MongoCrud<ClassRoomSchema>,
     pub conversation: ConversationDb,
@@ -165,9 +164,6 @@ impl ConnDb {
                     },
                     class_room: MongoCrud {
                         collection: st_data.collection("class_room"),
-                    },
-                    class_room_type: MongoCrud {
-                        collection: st_data.collection("class_room.role"),
                     },
                     // images
                     avatars: MongoCrud {

@@ -12,7 +12,6 @@ use super::{
         activity_router::routers_activity,
         class_group_router::routers_class_group,
         class_room_router::{main_class_router, routers_class_room},
-        class_room_type_router::routers_class_room_type,
         class_router_router::routers_class,
         class_type_router::routers_class_type,
     },
@@ -57,7 +56,6 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_user(user_cfg, state.clone());
             }))
             .service(web::scope("/classes/room").configure(|user_cfg| {
-                routers_class_room_type(user_cfg, state.clone());
                 routers_class_room(user_cfg, state.clone());
             }))
             .service(scope("/classes/activities").configure(|user_cfg| {

@@ -1,5 +1,6 @@
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
+use futures::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     options::IndexOptions,
@@ -48,7 +49,88 @@ async fn get_other_collection(
 
     Ok(format_class_room)
 }
+// Optimized batch fetch function
+async fn get_many_other_collection(
+    state: Arc<AppState>,
+    items: Vec<ClassRoomModel>,
+) -> DbClassResult<Vec<ClassRoomModelGet>> {
+    let mut formatted_items: Vec<ClassRoomModelGet> = Vec::new();
 
+    // Collect unique trade, sector, and symbol IDs
+    let trade_ids: Vec<ObjectId> = items.iter().filter_map(|item| item.trade_id).collect();
+    let sector_ids: Vec<ObjectId> = items.iter().filter_map(|item| item.sector_id).collect();
+    let symbol_ids: Vec<ObjectId> = items.iter().filter_map(|item| item.symbol_id).collect();
+
+    // Fetch trades in batch
+    let trade_ids_vec: Vec<ObjectId> = trade_ids.into_iter().collect();
+    let mut trade_cursor = state
+        .db
+        .trade
+        .collection
+        .find(doc! {"_id": {"$in": trade_ids_vec} })
+        .await?;
+    let mut trade_map = HashMap::new();
+    while let Some(trade) = trade_cursor.next().await {
+        if let Ok(trade) = trade {
+            if let Some(id) = trade.id {
+                trade_map.insert(id, Some(trade.username).or(Some(trade.name)));
+            }
+        }
+    }
+
+    // Fetch sectors in batch
+    let sector_ids_vec: Vec<ObjectId> = sector_ids.into_iter().collect();
+    let mut sector_cursor = state
+        .db
+        .sector
+        .collection
+        .find(doc! {"_id": {"$in": sector_ids_vec} })
+        .await?;
+    let mut sector_map = HashMap::new();
+    while let Some(sector) = sector_cursor.next().await {
+        if let Ok(sector) = sector {
+            if let Some(id) = sector.id {
+                sector_map.insert(id, sector.username.or(Some(sector.name)));
+            }
+        }
+    }
+
+    // Fetch symbols in batch
+    let symbol_ids_vec: Vec<ObjectId> = symbol_ids.into_iter().collect();
+    let mut symbol_cursor = state
+        .db
+        .file
+        .collection
+        .find(doc! {"_id": {"$in": symbol_ids_vec} })
+        .await?;
+    let mut symbol_map = HashMap::new();
+    while let Some(symbol) = symbol_cursor.next().await {
+        if let Ok(symbol) = symbol {
+            if let Some(id) = symbol.id {
+                symbol_map.insert(id, Some(symbol.src));
+            }
+        }
+    }
+
+    // Map fetched data back to items
+    for item in items {
+        let mut formatted_item = ClassRoomModel::format(item.clone());
+
+        if let Some(id) = item.trade_id {
+            formatted_item.trade_id = trade_map.get(&id).cloned().flatten();
+        }
+        if let Some(id) = item.sector_id {
+            formatted_item.sector_id = sector_map.get(&id).cloned().flatten();
+        }
+        if let Some(id) = item.symbol_id {
+            formatted_item.symbol = symbol_map.get(&id).cloned().flatten();
+        }
+
+        formatted_items.push(formatted_item);
+    }
+
+    Ok(formatted_items)
+}
 pub async fn validate_class_room_username(
     state: Arc<AppState>,
     username: &str,
@@ -179,13 +261,7 @@ pub async fn get_all_class_room(state: Arc<AppState>) -> DbClassResult<Vec<Class
         .class_room
         .get_many(None, Some("class_room".to_string()))
         .await?;
-    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
-
-    for class_room in get {
-        let change = get_other_collection(state.clone(), class_room).await?;
-        class_rooms.push(change);
-    }
-
+    let class_rooms: Vec<ClassRoomModelGet> = get_many_other_collection(state.clone(), get).await?;
     Ok(class_rooms)
 }
 
@@ -204,13 +280,7 @@ pub async fn get_all_class_room_by_trade(
             Some("class_room".to_string()),
         )
         .await?;
-    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
-
-    for class_room in get {
-        let change = get_other_collection(state.clone(), class_room).await?;
-        class_rooms.push(change);
-    }
-
+    let class_rooms = get_many_other_collection(state, get).await?;
     Ok(class_rooms)
 }
 
@@ -229,13 +299,7 @@ pub async fn get_all_class_room_by_sector(
             Some("class_room".to_string()),
         )
         .await?;
-    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
-
-    for class_room in get {
-        let change = get_other_collection(state.clone(), class_room).await?;
-        class_rooms.push(change);
-    }
-
+    let class_rooms = get_many_other_collection(state, get).await?;
     Ok(class_rooms)
 }
 
@@ -255,13 +319,7 @@ pub async fn get_all_class_room_by_type(
         )
         .await?;
 
-    let mut class_rooms: Vec<ClassRoomModelGet> = Vec::new();
-
-    for class_room in get {
-        let change = get_other_collection(state.clone(), class_room).await?;
-        class_rooms.push(change);
-    }
-
+    let class_rooms = get_many_other_collection(state, get).await?;
     Ok(class_rooms)
 }
 

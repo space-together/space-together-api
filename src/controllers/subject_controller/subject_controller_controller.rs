@@ -1,8 +1,5 @@
 use crate::{
-    controllers::class_controller::{
-        class_room_controller::get_class_room_by_id,
-        class_room_type_controller::get_class_room_type_by_id,
-    },
+    controllers::class_controller::class_room_controller::get_class_room_by_id,
     error::db_class_error::{DbClassError, DbClassResult},
     libs::classes::db_crud::GetManyByField,
     models::subject_model::subject_model_model::{
@@ -181,12 +178,7 @@ pub async fn update_subject_by_id(
         let id = ObjectId::from_str(&class_room).map_err(|_| DbClassError::OtherError {
             err: format!("Invalid class room ID [{}], try another", class_room),
         })?;
-
-        if get_class_room_type_by_id(state.clone(), id).await.is_err() {
-            return Err(DbClassError::OtherError {
-                err: format!("Class room ID [{}] not found, use another", class_room),
-            });
-        }
+        get_class_room_by_id(state.clone(), id).await?;
     }
 
     // Update subject

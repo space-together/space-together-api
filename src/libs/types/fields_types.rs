@@ -11,7 +11,7 @@ pub enum IdType {
 impl IdType {
     pub fn to_object(&self) -> Option<ObjectId> {
         match self {
-            IdType::Object(id) => Some(id.clone()),
+            IdType::Object(id) => Some(*id),
             IdType::String(s) => ObjectId::parse_str(s).ok(),
         }
     }
