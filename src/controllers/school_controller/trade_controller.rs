@@ -35,7 +35,7 @@ async fn get_other_collection(
         }
     }
 
-    if let Some(symbol_id) = trade.symbol_id {
+    if let Some(symbol_id) = trade.symbol {
         let get_symbol = get_file_by_id(state.clone(), symbol_id).await?;
         format_trade.symbol = Some(get_symbol.src);
     }
@@ -211,7 +211,7 @@ pub async fn update_trade_by_id(
         .get_one_by_id(id, Some("trade".to_string()))
         .await?;
     if let Some(file) = trade.symbol {
-        trade.symbol = Some(handle_symbol_update(state.clone(), file, exit_trade.symbol_id).await?);
+        trade.symbol = Some(handle_symbol_update(state.clone(), file, exit_trade.symbol).await?);
     }
 
     let _ = state

@@ -111,15 +111,13 @@ pub async fn create_class_room(
                         err: format!("Trade ID not found [{}], please try another", trade_id),
                     })?;
 
-            if let Some(num_class_room) = trade.class_rooms {
-                if get_by_trade.len() >= num_class_room as usize {
-                    return Err(DbClassError::OtherError {
-                        err: format!(
-                            "You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",
-                            trade.name, num_class_room
-                        ),
-                    });
-                }
+            if get_by_trade.len() >= trade.max_classes as usize {
+                return Err(DbClassError::OtherError {
+                            err: format!(
+                                "You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",
+                                trade.name, trade.max_classes
+                            ),
+                        });
             }
         } else {
             class_room.trade_id = None
@@ -329,10 +327,8 @@ pub async fn update_class_room_by_id(
                         err: format!("Trade ID not found [{}], please try another", trade_id),
                     })?;
 
-            if let Some(num_class_room) = trade.class_rooms {
-                if get_by_trade.len() >= num_class_room as usize {
-                    return Err(DbClassError::OtherError { err: format!("You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",trade.name , num_class_room) });
-                }
+            if get_by_trade.len() >= trade.max_classes as usize {
+                return Err(DbClassError::OtherError { err: format!("You cannot add another classroom in [{}] because the maximum limit of [{}] classrooms has been reached. The class is full",trade.name , trade.max_classes) });
             }
         } else {
             class_room.trade_id = None
