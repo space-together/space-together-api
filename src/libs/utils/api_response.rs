@@ -9,16 +9,6 @@ pub struct ApiResponse {
     response_code: StatusCode,
 }
 
-impl ApiResponse {
-    pub fn new(status_code: u16, body: String) -> Self {
-        ApiResponse {
-            status_code,
-            body,
-            response_code: StatusCode::from_u16(status_code).unwrap(),
-        }
-    }
-}
-
 impl Responder for ApiResponse {
     type Body = BoxBody;
 

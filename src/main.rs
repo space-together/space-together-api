@@ -13,7 +13,6 @@ mod controllers;
 mod error;
 mod handlers;
 mod libs;
-mod middleware;
 mod models;
 mod routers;
 mod services;
