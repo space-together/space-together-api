@@ -1,6 +1,5 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use bcrypt::{hash, DEFAULT_COST};
 use regex::Regex;
 
 use itertools::Itertools;

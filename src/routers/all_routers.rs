@@ -6,6 +6,7 @@ use actix_web_actors::ws;
 use std::sync::Arc;
 
 use super::{
+    auth_router::user_register_router,
     class_router::{
         activities_type_router::routers_activities_type,
         activity_router::routers_activity,
@@ -87,7 +88,8 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/file").configure(|user_cfg| {
                 routers_file_type(user_cfg, state.clone());
                 routers_file(user_cfg, state.clone());
-            })),
+            }))
+            .route("/auth/register", web::post().to(user_register_router)),
     );
 
     cfg.service(

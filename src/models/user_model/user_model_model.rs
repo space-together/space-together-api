@@ -209,26 +209,36 @@ impl UserModelGet {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum AccountProviders {
+    Credentials,
+}
+
+#[allow(clippy::inherent_to_string)]
+impl AccountProviders {
+    pub(crate) fn to_string(&self) -> String {
+        match self {
+            AccountProviders::Credentials => "Credentials".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserAccount {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub user_id: ObjectId,
     pub session_id: Option<ObjectId>,
-    pub provider: String,
+    pub provider: AccountProviders,
     pub expires_at: Option<u64>,
-    pub session_token: String,
-    pub expires: DateTime,
     pub create_at: DateTime,
     pub updated_at: Option<DateTime>,
 }
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserAccountNew {
     pub user_id: String,
-    pub provider: String,
+    pub provider: AccountProviders,
     pub expires_at: Option<u64>,
     pub session_id: Option<String>,
-    pub session_token: String,
-    pub expires: DateTime,
 }
 
 impl UserAccount {
@@ -238,8 +248,6 @@ impl UserAccount {
             user_id: ObjectId::from_str(&data.user_id).unwrap(),
             provider: data.provider,
             expires_at: data.expires_at,
-            session_token: data.session_token,
-            expires: data.expires,
             session_id: data.session_id.map(|i| ObjectId::from_str(&i).unwrap()),
             create_at: DateTime::now(),
             updated_at: None,

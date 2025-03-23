@@ -6,7 +6,7 @@ use crate::{
 
 pub async fn collection_expires(db: &Database) -> Result<(), String> {
     let index = IndexModel::builder()
-        .keys(doc! { "expires": 1 }) // Index on 'expires' field
+        .keys(doc! { "expires_at": 1 }) // Index on 'expires_at' field
         .options(
             mongodb::options::IndexOptions::builder()
                 .expire_after(Some(std::time::Duration::from_secs(

@@ -1,9 +1,5 @@
 use chrono::{Duration, Utc};
-use futures::FutureExt;
-use mongodb::{
-    bson::{oid::ObjectId, DateTime},
-    IndexModel,
-};
+use mongodb::bson::{oid::ObjectId, DateTime};
 use rand::Rng;
 use std::sync::Arc;
 
@@ -15,7 +11,7 @@ use crate::{
     AppState,
 };
 
-pub const SESSION_EXPIRATION_SECONDS: i64 = 60 * 60 * 24 * 7;
+pub const SESSION_EXPIRATION_SECONDS: u64 = 60 * 60 * 24 * 7;
 
 #[derive(Debug, Clone)]
 pub struct CookieOptions {
@@ -52,21 +48,25 @@ pub fn generate_session_id() -> String {
         .collect::<String>()
 }
 
+pub fn expires_at() -> DateTime {
+    DateTime::from_millis(
+        (Utc::now() + Duration::seconds(SESSION_EXPIRATION_SECONDS as i64)).timestamp_millis(),
+    )
+}
+
 pub async fn create_user_session(
     user_id: ObjectId,
     cookies: &mut impl Cookies,
     state: Arc<AppState>,
-) -> Result<(), String> {
-    let session_id = generate_session_id();
+) -> Result<SessionModel, String> {
+    let session = generate_session_id();
 
     let session_data = SessionModelNew {
-        session_token: session_id.clone(),
+        session_token: session.clone(),
         user_id,
-        expires: DateTime::from_millis(
-            (Utc::now() + Duration::seconds(SESSION_EXPIRATION_SECONDS)).timestamp_millis(),
-        ),
+        expires: expires_at(),
     };
-    let _ = state
+    let session_id = state
         .db
         .user_session
         .create(
@@ -76,9 +76,14 @@ pub async fn create_user_session(
         .await
         .map_err(|e| e.to_string())?;
 
-    set_cookies(session_id, cookies);
+    set_cookies(session, cookies);
 
-    Ok(())
+    state
+        .db
+        .user_session
+        .get_one_by_id(session_id, Some("user_session".to_string()))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 fn set_cookies(session_id: String, cookies: &mut impl Cookies) {
@@ -86,7 +91,7 @@ fn set_cookies(session_id: String, cookies: &mut impl Cookies) {
         secure: Some(true),
         http_only: Some(true),
         same_site: Some("Strict".to_string()),
-        expires: Some(SESSION_EXPIRATION_SECONDS as u64),
+        expires: Some(SESSION_EXPIRATION_SECONDS),
     };
     cookies.set("session_id".to_string(), session_id, cookie_options);
 }
