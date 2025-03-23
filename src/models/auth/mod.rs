@@ -1,2 +1,1 @@
-pub mod adapter_model;
-pub mod login_model;
+pub mod session_model;

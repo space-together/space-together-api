@@ -13,7 +13,7 @@ use crate::{
         classes::db_crud::MongoCrud,
         db::{
             conversation_db::conversation_db_db::ConversationDb,
-            db_status::db_status_db::get_database_stats,
+            db_status::db_status_db::get_database_stats, index_db::collection_expires,
         },
         schemas::{
             education_schema::EducationSchema, main_class_schema::ClassRoomSchema,
@@ -21,6 +21,7 @@ use crate::{
         },
     },
     models::{
+        auth::session_model::SessionModel,
         class_model::{
             class_model_model::ClassModel, class_room_model::ClassRoomModel,
             class_type_model::ClassTypeModel,
@@ -35,6 +36,7 @@ use crate::{
             school_model_model::SchoolModel, sector_model::SectorModel, trade_model::TradeModel,
         },
         subject_model::{subject_model_model::SubjectModel, subject_type_model::SubjectTypeModel},
+        user_model::user_model_model::UserAccount,
     },
 };
 use dotenv::dotenv;
@@ -45,6 +47,7 @@ use std::env;
 pub struct ConnDb {
     pub user_role: UserRoleDb,
     pub user: UserDb,
+    pub user_account: MongoCrud<UserAccount>,
     pub class: MongoCrud<ClassModel>,
     pub class_group: ClassGroupDb,
     pub class_room: MongoCrud<ClassRoomModel>,
@@ -71,6 +74,8 @@ pub struct ConnDb {
     // files
     pub file_type: MongoCrud<FileTypeModel>,
     pub file: MongoCrud<FileModel>,
+    // auth
+    pub user_session: MongoCrud<SessionModel>,
 }
 
 impl ConnDb {
@@ -94,14 +99,22 @@ impl ConnDb {
                     Err(_) => None,
                 };
 
+                collection_expires(&st_data)
+                    .await
+                    .map_err(|e| DbError::OtherErrors { e: e.to_string() })?;
+
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
+                    // TODO :  to remove collection which are not needed : user role
                     user_role: UserRoleDb {
                         role: st_data.collection("users.role"),
                     },
                     user: UserDb {
                         user: st_data.collection("users"),
+                    },
+                    user_account: MongoCrud {
+                        collection: st_data.collection("user_accounts"),
                     },
                     class: MongoCrud {
                         collection: st_data.collection("Class"),
@@ -174,6 +187,10 @@ impl ConnDb {
                     },
                     file: MongoCrud {
                         collection: st_image.collection("files"),
+                    },
+                    // auth
+                    user_session: MongoCrud {
+                        collection: st_data.collection("user_sessions"),
                     },
                 })
             }

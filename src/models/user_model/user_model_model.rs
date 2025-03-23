@@ -1,13 +1,15 @@
+use std::str::FromStr;
+
 use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::libs::functions::characters_fn::{generate_username, hash_password};
+use crate::libs::functions::characters_fn::{generate_salt, generate_username, hash_password};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum Gender {
-    MALE,
-    FEMALE,
-    OTHER,
+    Male,
+    Female,
+    Other,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -23,9 +25,9 @@ pub enum UserRole {
 impl Gender {
     pub(crate) fn to_string(&self) -> String {
         match self {
-            Gender::FEMALE => "FEMALE".to_string(),
-            Gender::MALE => "MALE".to_string(),
-            Gender::OTHER => "OTHER".to_string(),
+            Gender::Female => "Female".to_string(),
+            Gender::Male => "Male".to_string(),
+            Gender::Other => "Other".to_string(),
         }
     }
 }
@@ -37,6 +39,7 @@ pub struct UserModel {
     pub name: String,             // name
     pub email: String,            // email
     pub password: Option<String>, // password
+    pub salt: Option<u64>,        // slat
     pub role: Option<UserRole>,   // role
     pub username: Option<String>, // username
     pub image: Option<String>,
@@ -90,11 +93,13 @@ pub struct UsersUpdateManyModelHandle {
 
 impl UserModel {
     pub fn new(user: UserModelNew) -> Self {
+        let salt = generate_salt();
         UserModel {
             id: None,
             role: Some(UserRole::STUDENT),
             name: user.name.clone(),
             email: user.email,
+            salt: user.password.clone().map(|_| salt),
             gender: None,
             age: None,
             image: None,
@@ -105,7 +110,10 @@ impl UserModel {
                 user.username
                     .unwrap_or_else(|| generate_username(&user.name)),
             ),
-            password: user.password.as_deref().map(hash_password),
+            password: user
+                .password
+                .clone()
+                .map(|p| hash_password(&p, user.password.map(|_| salt).unwrap_or_default())),
             create_at: Some(DateTime::now()),
             update_at: None,
         }
@@ -196,6 +204,45 @@ impl UserModelGet {
                     .try_to_rfc3339_string()
                     .unwrap_or_else(|_| "".to_string())
             }),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserAccount {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub user_id: ObjectId,
+    pub session_id: Option<ObjectId>,
+    pub provider: String,
+    pub expires_at: Option<u64>,
+    pub session_token: String,
+    pub expires: DateTime,
+    pub create_at: DateTime,
+    pub updated_at: Option<DateTime>,
+}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserAccountNew {
+    pub user_id: String,
+    pub provider: String,
+    pub expires_at: Option<u64>,
+    pub session_id: Option<String>,
+    pub session_token: String,
+    pub expires: DateTime,
+}
+
+impl UserAccount {
+    pub fn new(data: UserAccountNew) -> Self {
+        UserAccount {
+            id: None,
+            user_id: ObjectId::from_str(&data.user_id).unwrap(),
+            provider: data.provider,
+            expires_at: data.expires_at,
+            session_token: data.session_token,
+            expires: data.expires,
+            session_id: data.session_id.map(|i| ObjectId::from_str(&i).unwrap()),
+            create_at: DateTime::now(),
+            updated_at: None,
         }
     }
 }

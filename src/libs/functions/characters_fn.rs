@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use bcrypt::{hash, DEFAULT_COST};
 use regex::Regex;
 
@@ -174,8 +176,24 @@ pub fn generate_code() -> String {
     (0..5).map(|_| *chars.choose(&mut rng).unwrap()).collect()
 }
 
-pub fn hash_password(password: &str) -> String {
-    hash(password, DEFAULT_COST).expect("Failed to hash password")
+// Function to generate a salt (using system time)
+pub fn generate_salt() -> u64 {
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    timestamp as u64
+}
+
+pub fn hash_password(password: &str, salt: u64) -> String {
+    let mut hasher = DefaultHasher::new();
+    password.hash(&mut hasher);
+    salt.hash(&mut hasher);
+    hasher.finish().to_string()
+}
+
+fn verify_password(password: &str, salt: u64, stored_hash: &str) -> bool {
+    hash_password(password, salt) == stored_hash
 }
 
 // pub fn verify_password(hashed_password: &str, password: &str) -> bool {

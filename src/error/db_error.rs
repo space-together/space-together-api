@@ -7,6 +7,7 @@ pub enum DbError {
     QueryFailed { err: String },
     DatabaseStatusNotFound,
     CannotReadDocuments { err: String },
+    OtherErrors { e: String },
 }
 
 impl std::fmt::Display for DbError {
@@ -18,6 +19,9 @@ impl std::fmt::Display for DbError {
                     "Can not connect to database bcs : 😡 {} 😡 , try again later",
                     err
                 )
+            }
+            DbError::OtherErrors { e } => {
+                write!(f, "{}", e)
             }
             DbError::QueryFailed { err } => {
                 write!(f, "Query failed with error 😡 {} 😡", err)

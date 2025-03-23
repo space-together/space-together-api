@@ -1,7 +1,7 @@
 use crate::routers::all_routers::all_routers;
 use actix::{Actor, StreamHandler};
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use actix_web_actors::ws;
 use config::application_conf::AppConfig;
 use dotenv::dotenv;
@@ -58,6 +58,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .wrap(
                 Cors::default()
                     .allow_any_origin()
