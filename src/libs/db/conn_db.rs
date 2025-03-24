@@ -21,7 +21,7 @@ use crate::{
         },
     },
     models::{
-        auth::session_model::SessionModel,
+        auth::session_model::UserSessionModel,
         class_model::{
             class_model_model::ClassModel, class_room_model::ClassRoomModel,
             class_type_model::ClassTypeModel,
@@ -75,7 +75,7 @@ pub struct ConnDb {
     pub file_type: MongoCrud<FileTypeModel>,
     pub file: MongoCrud<FileModel>,
     // auth
-    pub user_session: MongoCrud<SessionModel>,
+    pub user_session: MongoCrud<UserSessionModel>,
 }
 
 impl ConnDb {

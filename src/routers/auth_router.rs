@@ -14,7 +14,7 @@ pub async fn user_register_router(
     state: Data<AppState>,
 ) -> impl Responder {
     match user_register(state.into_inner(), data.into_inner()).await {
-        Err(e) => HttpResponse::Created().json(ReqErrModel { message: e }),
+        Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
         Ok(d) => HttpResponse::Created().json(d),
     }
 }

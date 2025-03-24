@@ -2,7 +2,7 @@ use mongodb::bson::{oid::ObjectId, DateTime};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct SessionModel {
+pub struct UserSessionModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub user_id: ObjectId,
@@ -14,16 +14,27 @@ pub struct SessionModel {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct SessionModelNew {
+pub struct UserSessionModelGet {
+    pub id: String,
+    pub user_id: String,
+    pub session_token: String,
+    pub token: String,
+    pub expires_at: String,
+    pub created_at: String,
+    pub update_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserSessionModelNew {
     pub session_token: String,
     pub user_id: ObjectId,
     pub token: String,
     pub expires_at: DateTime,
 }
 
-impl SessionModel {
-    pub fn new(data: SessionModelNew) -> Self {
-        SessionModel {
+impl UserSessionModel {
+    pub fn new(data: UserSessionModelNew) -> Self {
+        UserSessionModel {
             id: None,
             session_token: data.session_token,
             token: data.token,
@@ -31,6 +42,19 @@ impl SessionModel {
             expires_at: data.expires_at,
             created_at: DateTime::now(),
             update_at: None,
+        }
+    }
+    pub fn format(data: Self) -> UserSessionModelGet {
+        UserSessionModelGet {
+            id: data.id.map_or("".to_string(), |i| i.to_string()),
+            session_token: data.session_token,
+            user_id: data.user_id.to_string(),
+            expires_at: data.expires_at.try_to_rfc3339_string().unwrap_or_default(),
+            update_at: data
+                .update_at
+                .map(|d| d.try_to_rfc3339_string().unwrap_or_default()),
+            created_at: data.created_at.try_to_rfc3339_string().unwrap_or_default(),
+            token: data.token,
         }
     }
 }

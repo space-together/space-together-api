@@ -1,5 +1,5 @@
 use aes_gcm::aead::{Aead, AeadCore, OsRng}; // Import AeadCore for generate_nonce
-use aes_gcm::{Aes256Gcm, Key, KeyInit, Nonce};
+use aes_gcm::{Aes256Gcm, Key, KeyInit};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
 use mongodb::bson::DateTime;
@@ -8,10 +8,7 @@ use std::sync::Arc;
 
 use crate::models::user_model::user_model_model::UserModel;
 use crate::{
-    models::{
-        auth::session_model::{SessionModel, SessionModelNew},
-        user_model::user_model_model::UserRole,
-    },
+    models::auth::session_model::{UserSessionModel, UserSessionModelNew},
     AppState,
 };
 
@@ -32,30 +29,30 @@ fn encrypt_data(data: &str) -> String {
     general_purpose::STANDARD.encode(combined) // ✅ Encode nonce + encrypted data
 }
 
-fn decrypt_data(encrypted: &str) -> String {
-    let key = Key::<Aes256Gcm>::from_slice(SECRET_KEY);
-    let cipher = Aes256Gcm::new(key);
-    let decoded_data = general_purpose::STANDARD
-        .decode(encrypted)
-        .expect("Base64 decode failed");
+// fn decrypt_data(encrypted: &str) -> String {
+//     let key = Key::<Aes256Gcm>::from_slice(SECRET_KEY);
+//     let cipher = Aes256Gcm::new(key);
+//     let decoded_data = general_purpose::STANDARD
+//         .decode(encrypted)
+//         .expect("Base64 decode failed");
 
-    if decoded_data.len() < 12 {
-        panic!("Invalid encrypted data format");
-    }
+//     if decoded_data.len() < 12 {
+//         panic!("Invalid encrypted data format");
+//     }
 
-    let (nonce_bytes, cipher_text) = decoded_data.split_at(12);
-    let nonce = Nonce::from_slice(nonce_bytes);
+//     let (nonce_bytes, cipher_text) = decoded_data.split_at(12);
+//     let nonce = Nonce::from_slice(nonce_bytes);
 
-    let decrypted = cipher
-        .decrypt(nonce, cipher_text)
-        .expect("Decryption failed");
-    String::from_utf8(decrypted).expect("UTF-8 conversion failed")
-}
+//     let decrypted = cipher
+//         .decrypt(nonce, cipher_text)
+//         .expect("Decryption failed");
+//     String::from_utf8(decrypted).expect("UTF-8 conversion failed")
+// }
 
 fn generate_token() -> String {
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
-        .take(32)
+        .take(123)
         .map(char::from)
         .collect()
 }
@@ -69,7 +66,7 @@ pub fn user_session_expires() -> DateTime {
 pub async fn create_user_session(
     user: UserModel,
     state: Arc<AppState>,
-) -> Result<SessionModel, String> {
+) -> Result<UserSessionModel, String> {
     let token = generate_token();
 
     let session_data = format!(
@@ -82,7 +79,7 @@ pub async fn create_user_session(
     );
 
     let encrypted_session = encrypt_data(&session_data);
-    let data = SessionModelNew {
+    let data = UserSessionModelNew {
         session_token: encrypted_session,
         user_id: user.id.unwrap_or_default(),
         expires_at: user_session_expires(),
@@ -92,7 +89,10 @@ pub async fn create_user_session(
     let session_id = state
         .db
         .user_session
-        .create(SessionModel::new(data), Some("user_session".to_string()))
+        .create(
+            UserSessionModel::new(data),
+            Some("user_session".to_string()),
+        )
         .await
         .map_err(|e| e.to_string())?;
 

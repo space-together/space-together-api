@@ -5,8 +5,11 @@ use crate::{
         auth::user_session::create_user_session,
         functions::object_id::change_insertoneresult_into_object_id,
     },
-    models::user_model::user_model_model::{
-        AccountProviders, UserAccount, UserAccountNew, UserModelNew,
+    models::{
+        auth::session_model::{UserSessionModel, UserSessionModelGet},
+        user_model::user_model_model::{
+            AccountProviders, UserAccount, UserAccountNew, UserModelNew,
+        },
     },
     AppState,
 };
@@ -16,7 +19,7 @@ use super::user_session::SESSION_EXPIRATION_SECONDS;
 pub async fn user_register(
     state: Arc<AppState>,
     data: UserModelNew,
-) -> Result<UserAccount, String> {
+) -> Result<UserSessionModelGet, String> {
     let create = state
         .db
         .user
@@ -52,12 +55,12 @@ pub async fn user_register(
         .await
         .map_err(|e| e.to_string())?;
 
-    let get_account = state
+    let _ = state
         .db
         .user_account
         .get_one_by_id(account, Some("user_account".to_string()))
         .await
         .map_err(|e| e.to_string())?;
 
-    Ok(get_account)
+    Ok(UserSessionModel::format(user_session))
 }

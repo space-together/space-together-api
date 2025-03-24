@@ -1,7 +1,8 @@
 use mongodb::{bson::doc, Database, IndexModel};
 
 use crate::{
-    libs::auth::user_session::SESSION_EXPIRATION_SECONDS, models::auth::session_model::SessionModel,
+    libs::auth::user_session::SESSION_EXPIRATION_SECONDS,
+    models::auth::session_model::UserSessionModel,
 };
 
 pub async fn collection_expires(db: &Database) -> Result<(), String> {
@@ -16,7 +17,7 @@ pub async fn collection_expires(db: &Database) -> Result<(), String> {
         )
         .build();
     // user_session
-    db.collection::<SessionModel>("user_sessions")
+    db.collection::<UserSessionModel>("user_sessions")
         .create_index(index)
         .await
         .map_err(|e| e.to_string())?;

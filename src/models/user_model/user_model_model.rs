@@ -213,14 +213,14 @@ pub enum AccountProviders {
     Credentials,
 }
 
-#[allow(clippy::inherent_to_string)]
-impl AccountProviders {
-    pub(crate) fn to_string(&self) -> String {
-        match self {
-            AccountProviders::Credentials => "Credentials".to_string(),
-        }
-    }
-}
+// #[allow(clippy::inherent_to_string)]
+// impl AccountProviders {
+//     pub(crate) fn to_string(&self) -> String {
+//         match self {
+//             AccountProviders::Credentials => "Credentials".to_string(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserAccount {
