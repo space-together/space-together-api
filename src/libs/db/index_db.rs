@@ -10,13 +10,13 @@ pub async fn collection_expires(db: &Database) -> Result<(), String> {
         .options(
             mongodb::options::IndexOptions::builder()
                 .expire_after(Some(std::time::Duration::from_secs(
-                    SESSION_EXPIRATION_SECONDS as u64,
+                    SESSION_EXPIRATION_SECONDS,
                 ))) // Auto-delete after expiration
                 .build(),
         )
         .build();
     // user_session
-    db.collection::<SessionModel>("user_session")
+    db.collection::<SessionModel>("user_sessions")
         .create_index(index)
         .await
         .map_err(|e| e.to_string())?;

@@ -45,6 +45,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketConnecti
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     dotenv().ok();
     let config = AppConfig::from_env().unwrap();
     let app_state = Arc::new(AppState {

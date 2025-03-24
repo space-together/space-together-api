@@ -31,12 +31,15 @@ lazy_static = "1.4.0"
 chrono = "0.4.39"
 actix-web-lab = "0.20.0"
 bcrypt = "0.16.0"
+aes-gcm = "0.10"
+base64 = "0.21"
 
 # WebSocket support
 actix-ws = "0.3.0"   # Already included, but actix-web-actors is needed for full WebSocket support
 actix-identity = "0.8.0"
 actix-session = "0.10.1"
 async-trait = "0.1.88"
+env_logger = "0.11.7"
 
 [dependencies.mongodb]
 version = "3.1.0"

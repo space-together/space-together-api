@@ -191,9 +191,9 @@ pub fn hash_password(password: &str, salt: u64) -> String {
     hasher.finish().to_string()
 }
 
-fn verify_password(password: &str, salt: u64, stored_hash: &str) -> bool {
-    hash_password(password, salt) == stored_hash
-}
+// fn verify_password(password: &str, salt: u64, stored_hash: &str) -> bool {
+//     hash_password(password, salt) == stored_hash
+// }
 
 // pub fn verify_password(hashed_password: &str, password: &str) -> bool {
 //     verify(password, hashed_password).unwrap_or(false)
