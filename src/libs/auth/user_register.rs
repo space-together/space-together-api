@@ -75,12 +75,7 @@ pub async fn user_login(
 
     match get_session_by_user_id(state.clone(), &user.id.unwrap()).await {
         Ok(session) => {
-            let updated_session = update_session_by_id(&state, session.id.unwrap())
-                .await
-                .map_err(|e| {
-                    error!("Failed to update session: {:#?}", e);
-                    "Failed to update session".to_string()
-                })?;
+            let updated_session = update_session_by_id(&state, &session.id.unwrap()).await?;
 
             let user_account_model = UserAccountPut {
                 user_id: Some(user.id.unwrap().to_string()),

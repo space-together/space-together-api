@@ -171,7 +171,7 @@ pub async fn get_session_by_user_id(
 
 pub async fn update_session_by_id(
     state: &Arc<AppState>,
-    id: ObjectId,
+    id: &ObjectId,
 ) -> Result<UserSessionModel, String> {
     let session = state
         .db
@@ -180,9 +180,11 @@ pub async fn update_session_by_id(
         .find_one_and_update(doc! {"_id": id}, doc! {"$set" : UserSessionModel::put()})
         .await
         .map_err(|e| e.to_string())?;
-
     match session {
-        Some(session) => Ok(session),
+        Some(d) => {
+            let get_session = get_session_by_user_id(state.clone(), &d.user_id).await?;
+            Ok(get_session)
+        }
         None => Err("Session not found".to_string()),
     }
 }
