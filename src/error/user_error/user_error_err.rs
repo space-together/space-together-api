@@ -9,6 +9,7 @@ pub enum UserError {
     InvalidId,
     InvalidUserRoleId,
     InvalidName { err: String },
+    InvalidEmail { err: String },
     InvalidUsername { err: String },
     UserRoleIsNotExit,
     CanNotGetAllUsers { err: String, field: String },
@@ -30,7 +31,10 @@ impl std::fmt::Display for UserError {
                 write!(f, "Invalid name: {}", err)
             }
             UserError::InvalidUsername { err } => {
-                write!(f, "Invalid username: {}", err)
+                write!(f, "Invalid username [{}],Please try other username", err)
+            }
+            UserError::InvalidEmail { err } => {
+                write!(f, "Invalid email [{}],Please try other email", err)
             }
             UserError::CanNotGetRole { error } => {
                 write!(f, "Can not get user role, bcs: 😡 {} 😡", error)

@@ -2,10 +2,13 @@ use aes_gcm::aead::{Aead, AeadCore, OsRng}; // Import AeadCore for generate_nonc
 use aes_gcm::{Aes256Gcm, Key, KeyInit};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
-use mongodb::bson::DateTime;
+use mongodb::bson::{doc, DateTime};
+use mongodb::options::IndexOptions;
+use mongodb::IndexModel;
 use rand::{distributions::Alphanumeric, Rng};
 use std::sync::Arc;
 
+use crate::models::auth::session_model::UserSessionModelGet;
 use crate::models::user_model::user_model_model::UserModel;
 use crate::{
     models::auth::session_model::{UserSessionModel, UserSessionModelNew},
@@ -75,7 +78,7 @@ pub async fn create_user_session(
         user.username.unwrap_or_default(),
         user.email,
         user.role,
-        user.image.clone().unwrap_or_default()
+        user.image.clone().unwrap_or_default(),
     );
 
     let encrypted_session = encrypt_data(&session_data);
@@ -85,6 +88,19 @@ pub async fn create_user_session(
         expires_at: user_session_expires(),
         token,
     };
+
+    // create index token
+    let index_token = IndexModel::builder()
+        .keys(doc! {"token": 1})
+        .options(IndexOptions::builder().unique(true).build())
+        .build();
+    let _ = state
+        .db
+        .user_session
+        .collection
+        .create_index(index_token)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let session_id = state
         .db
@@ -102,4 +118,22 @@ pub async fn create_user_session(
         .get_one_by_id(session_id, Some("user_session".to_string()))
         .await
         .map_err(|e| e.to_string())
+}
+
+pub async fn get_user_session(
+    token: &str,
+    state: Arc<AppState>,
+) -> Result<UserSessionModelGet, String> {
+    let session = state
+        .db
+        .user_session
+        .collection
+        .find_one(doc! {"token": token})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match session {
+        Some(session) => Ok(UserSessionModel::format(session)),
+        None => Err("Session not found".to_string()),
+    }
 }

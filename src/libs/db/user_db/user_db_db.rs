@@ -11,7 +11,7 @@ use mongodb::{
 
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
-    libs::functions::characters_fn::{is_valid_name, is_valid_username},
+    libs::functions::characters_fn::{is_valid_email, is_valid_name, is_valid_username},
     models::user_model::user_model_model::{
         UserModel, UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
     },
@@ -80,6 +80,9 @@ impl UserDb {
 
         if let Err(err) = is_valid_name(&user.name) {
             return Err(UserError::InvalidName { err });
+        }
+        if let Err(e) = is_valid_email(&user.email) {
+            return Err(UserError::InvalidEmail { err: e });
         }
 
         if self.get_user_by_email(user.email.clone()).await.is_ok() {
