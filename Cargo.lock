@@ -2655,6 +2655,7 @@ dependencies = [
  "slog-envlogger",
  "slog-term",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

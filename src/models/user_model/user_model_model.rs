@@ -208,19 +208,19 @@ impl UserModelGet {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum AccountProviders {
     Credentials,
 }
 
-// #[allow(clippy::inherent_to_string)]
-// impl AccountProviders {
-//     pub(crate) fn to_string(&self) -> String {
-//         match self {
-//             AccountProviders::Credentials => "Credentials".to_string(),
-//         }
-//     }
-// }
+#[allow(clippy::inherent_to_string)]
+impl AccountProviders {
+    pub(crate) fn to_string(&self) -> String {
+        match self {
+            AccountProviders::Credentials => "Credentials".to_string(),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserAccount {
@@ -229,7 +229,7 @@ pub struct UserAccount {
     pub user_id: ObjectId,
     pub session_id: Option<ObjectId>,
     pub provider: AccountProviders,
-    pub expires_at: Option<u64>,
+    pub expires_at: DateTime,
     pub create_at: DateTime,
     pub updated_at: Option<DateTime>,
 }
@@ -237,7 +237,14 @@ pub struct UserAccount {
 pub struct UserAccountNew {
     pub user_id: String,
     pub provider: AccountProviders,
-    pub expires_at: Option<u64>,
+    pub expires_at: DateTime,
+    pub session_id: Option<String>,
+}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserAccountPut {
+    pub user_id: Option<String>,
+    pub provider: Option<AccountProviders>,
+    pub expires_at: DateTime,
     pub session_id: Option<String>,
 }
 
@@ -253,4 +260,45 @@ impl UserAccount {
             updated_at: None,
         }
     }
+
+    pub fn put(data: UserAccountPut) -> Document {
+        let mut set_doc = Document::new();
+        let mut is_updated = false;
+
+        let mut insert_if_some = |key: &str, value: Option<bson::Bson>| {
+            if let Some(v) = value {
+                set_doc.insert(key, v);
+                is_updated = true;
+            }
+        };
+
+        insert_if_some(
+            "user_id",
+            data.user_id
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+        insert_if_some(
+            "provider",
+            data.provider.map(|p| bson::Bson::String(p.to_string())),
+        );
+        insert_if_some("expires_at", Some(bson::Bson::DateTime(data.expires_at)));
+        insert_if_some(
+            "session_id",
+            data.session_id
+                .map(|id| bson::Bson::ObjectId(ObjectId::from_str(&id).unwrap())),
+        );
+
+        if is_updated {
+            set_doc.insert("updated_at", bson::Bson::DateTime(DateTime::now()));
+        }
+
+        set_doc
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserLoginModel {
+    pub email: Option<String>,
+    pub password: Option<String>,
+    pub provider: AccountProviders,
 }

@@ -2,6 +2,7 @@ use aes_gcm::aead::{Aead, AeadCore, OsRng}; // Import AeadCore for generate_nonc
 use aes_gcm::{Aes256Gcm, Key, KeyInit};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
+use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{doc, DateTime};
 use mongodb::options::IndexOptions;
 use mongodb::IndexModel;
@@ -52,7 +53,7 @@ fn encrypt_data(data: &str) -> String {
 //     String::from_utf8(decrypted).expect("UTF-8 conversion failed")
 // }
 
-fn generate_token() -> String {
+pub fn generate_token() -> String {
     rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(123)
@@ -134,6 +135,54 @@ pub async fn get_user_session(
 
     match session {
         Some(session) => Ok(UserSessionModel::format(session)),
+        None => Err("Session not found".to_string()),
+    }
+}
+
+pub async fn delete_user_session(token: &str, state: Arc<AppState>) -> Result<String, String> {
+    let _ = state
+        .db
+        .user_session
+        .collection
+        .delete_one(doc! {"token": token})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok("Session deleted".to_string())
+}
+
+pub async fn get_session_by_user_id(
+    state: Arc<AppState>,
+    user_id: &ObjectId,
+) -> Result<UserSessionModel, String> {
+    let session = state
+        .db
+        .user_session
+        .collection
+        .find_one(doc! {"user_id": user_id})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match session {
+        Some(session) => Ok(session),
+        None => Err("Session not found".to_string()),
+    }
+}
+
+pub async fn update_session_by_id(
+    state: &Arc<AppState>,
+    id: ObjectId,
+) -> Result<UserSessionModel, String> {
+    let session = state
+        .db
+        .user_session
+        .collection
+        .find_one_and_update(doc! {"_id": id}, doc! {"$set" : UserSessionModel::put()})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match session {
+        Some(session) => Ok(session),
         None => Err("Session not found".to_string()),
     }
 }

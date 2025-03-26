@@ -1,5 +1,7 @@
-use mongodb::bson::{oid::ObjectId, DateTime};
+use mongodb::bson::{doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
+
+use crate::libs::auth::user_session::{generate_token, user_session_expires};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserSessionModel {
@@ -56,5 +58,14 @@ impl UserSessionModel {
             created_at: data.created_at.try_to_rfc3339_string().unwrap_or_default(),
             token: data.token,
         }
+    }
+
+    pub fn put() -> Document {
+        let doc = doc! {
+            "token": generate_token(),
+            "expires_at": user_session_expires(), // Ensure this returns `mongodb::bson::DateTime`
+            "update_at": DateTime::now(),
+        };
+        doc
     }
 }

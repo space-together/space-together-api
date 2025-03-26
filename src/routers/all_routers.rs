@@ -6,7 +6,10 @@ use actix_web_actors::ws;
 use std::sync::Arc;
 
 use super::{
-    auth_router::{get_user_session_router, user_register_router},
+    auth_router::{
+        delete_user_session_router, get_user_session_router, user_login_router,
+        user_register_router,
+    },
     class_router::{
         activities_type_router::routers_activities_type,
         activity_router::routers_activity,
@@ -90,7 +93,12 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 routers_file(user_cfg, state.clone());
             }))
             .route("/auth/register", web::post().to(user_register_router))
-            .route("/auth/session", web::get().to(get_user_session_router)),
+            .route("/auth/login", web::post().to(user_login_router))
+            .route("/auth/session", web::get().to(get_user_session_router))
+            .route(
+                "/auth/session",
+                web::delete().to(delete_user_session_router),
+            ),
     );
 
     cfg.service(
