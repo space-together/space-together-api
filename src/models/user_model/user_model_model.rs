@@ -3,7 +3,10 @@ use std::str::FromStr;
 use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::libs::functions::characters_fn::{generate_salt, generate_username, hash_password};
+use crate::libs::{
+    auth::user_session::user_session_expires,
+    functions::characters_fn::{generate_salt, generate_username, hash_password},
+};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum Gender {
@@ -293,6 +296,10 @@ impl UserAccount {
         }
 
         set_doc
+    }
+
+    pub fn put_expires() -> Document {
+        doc! {"expires_at" : user_session_expires()}
     }
 }
 

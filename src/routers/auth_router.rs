@@ -6,7 +6,7 @@ use actix_web::{
 use crate::{
     libs::auth::{
         user_register::{user_login, user_register},
-        user_session::{delete_user_session, get_user_session},
+        user_session::{delete_user_session, get_user_session, update_user_session_expires},
     },
     models::{
         request_error_model::ReqErrModel,
@@ -38,6 +38,22 @@ pub async fn user_login_router(
 pub async fn get_user_session_router(req: HttpRequest, state: Data<AppState>) -> impl Responder {
     if let Some(token) = req.headers().get("Authorization") {
         match get_user_session(token.to_str().unwrap(), state.into_inner()).await {
+            Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
+            Ok(d) => HttpResponse::Ok().json(d),
+        }
+    } else {
+        HttpResponse::BadRequest().json(ReqErrModel {
+            message: "Token not found".to_string(),
+        })
+    }
+}
+
+pub async fn update_user_session_expires_router(
+    req: HttpRequest,
+    state: Data<AppState>,
+) -> impl Responder {
+    if let Some(token) = req.headers().get("Authorization") {
+        match update_user_session_expires(token.to_str().unwrap(), &state.into_inner()).await {
             Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
             Ok(d) => HttpResponse::Ok().json(d),
         }

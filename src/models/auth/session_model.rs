@@ -68,4 +68,12 @@ impl UserSessionModel {
         };
         doc
     }
+
+    pub fn put_expires() -> Document {
+        let doc = doc! {
+          "expires_at": user_session_expires(),
+         "update_at": DateTime::now(),
+        };
+        doc
+    }
 }

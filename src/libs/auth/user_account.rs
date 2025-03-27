@@ -61,3 +61,23 @@ pub async fn update_user_account(
         None => Err("Account not found, please try other account".to_string()),
     }
 }
+
+pub async fn update_user_account_expires(
+    state: &Arc<AppState>,
+    user_id: &ObjectId,
+) -> Result<UserAccount, String> {
+    let update = state
+        .db
+        .user_account
+        .collection
+        .find_one_and_update(
+            doc! {"user_id" : &user_id},
+            doc! {"$set" : UserAccount::put_expires()},
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    match update {
+        Some(d) => Ok(d),
+        None => Err("Account not found, please try other account".to_string()),
+    }
+}

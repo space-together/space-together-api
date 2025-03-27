@@ -88,7 +88,7 @@ pub async fn user_login(
                 error!("Failed to update user account: {:#?}", e);
             }
 
-            Ok(UserSessionModel::format(updated_session))
+            Ok(updated_session)
         }
         Err(_) => {
             let user_session = create_user_session(user.clone(), state.clone()).await?;

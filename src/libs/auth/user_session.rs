@@ -16,6 +16,8 @@ use crate::{
     AppState,
 };
 
+use super::user_account::update_user_account_expires;
+
 const SECRET_KEY: &[u8; 32] = b"super_secret_key_123456789012343";
 pub const SESSION_EXPIRATION_SECONDS: u64 = 60 * 60 * 24 * 7;
 
@@ -172,7 +174,7 @@ pub async fn get_session_by_user_id(
 pub async fn update_session_by_id(
     state: &Arc<AppState>,
     id: &ObjectId,
-) -> Result<UserSessionModel, String> {
+) -> Result<UserSessionModelGet, String> {
     let session = state
         .db
         .user_session
@@ -183,8 +185,32 @@ pub async fn update_session_by_id(
     match session {
         Some(d) => {
             let get_session = get_session_by_user_id(state.clone(), &d.user_id).await?;
-            Ok(get_session)
+            Ok(UserSessionModel::format(get_session))
         }
-        None => Err("Session not found".to_string()),
+        None => Err("Session not found 😡".to_string()),
+    }
+}
+
+pub async fn update_user_session_expires(
+    token: &str,
+    state: &Arc<AppState>,
+) -> Result<UserSessionModelGet, String> {
+    let session = state
+        .db
+        .user_session
+        .collection
+        .find_one_and_update(
+            doc! {"token": token},
+            doc! {"$set" : UserSessionModel::put_expires()},
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    match session {
+        Some(d) => {
+            let get_session = get_session_by_user_id(state.clone(), &d.user_id).await?;
+            update_user_account_expires(state, &d.user_id).await?;
+            Ok(UserSessionModel::format(get_session))
+        }
+        None => Err("Session not found 😁".to_string()),
     }
 }
