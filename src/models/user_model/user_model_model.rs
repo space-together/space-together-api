@@ -214,6 +214,7 @@ impl UserModelGet {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum AccountProviders {
     Credentials,
+    Discord,
 }
 
 #[allow(clippy::inherent_to_string)]
@@ -221,6 +222,7 @@ impl AccountProviders {
     pub(crate) fn to_string(&self) -> String {
         match self {
             AccountProviders::Credentials => "Credentials".to_string(),
+            AccountProviders::Discord => "Discord   ".to_string(),
         }
     }
 }

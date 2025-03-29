@@ -13,6 +13,7 @@ pub struct ServerConfig {
 
 #[derive(Deserialize)]
 pub struct OathConfig {
+    pub redirect_url_web: String,
     pub discord_client_id: String,
     pub discord_client_secret: String,
 }
