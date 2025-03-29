@@ -57,6 +57,12 @@ async fn main() -> std::io::Result<()> {
         config.server.host, config.server.port
     );
 
+    // println!("Discord Client ID: {}", config.oath.discord_client_id);
+    // println!(
+    //     "Discord Client Secret: {}",
+    //     config.oath.discord_client_secret
+    // );
+
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

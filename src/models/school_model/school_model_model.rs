@@ -48,7 +48,8 @@ impl SchoolMember {
 pub struct SchoolModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>, // Unique identifier for the school
-    pub owner: ObjectId,                        // user how create school
+    pub creator_id: ObjectId, // user how create school
+    // basic information
     pub username: String,                       // school username
     pub name: String,                           // School name
     pub code: String,                           // Unique school code
@@ -70,7 +71,7 @@ pub struct SchoolModel {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SchoolModelGet {
     pub id: String,                                // Unique identifier for the school
-    pub owner: String,                             // user how create school
+    pub creator_id: String,                        // user how create school
     pub username: String,                          // school username
     pub name: String,                              // School name
     pub code: String,                              // Unique school code
@@ -92,7 +93,7 @@ pub struct SchoolModelGet {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SchoolModelNew {
-    pub owner: String,               // user how create school
+    pub creator_id: String,          // user how create school
     pub name: String,                // School name
     pub description: Option<String>, // Brief description of the school
     pub address: AddressModel,       // School address
@@ -105,7 +106,7 @@ impl SchoolModel {
     pub fn new(school: SchoolModelNew) -> Self {
         SchoolModel {
             id: None,
-            owner: ObjectId::from_str(&school.owner).unwrap(),
+            creator_id: ObjectId::from_str(&school.creator_id).unwrap(),
             username: generate_username(&school.name),
             name: school.name,
             description: school.description,
@@ -129,7 +130,7 @@ impl SchoolModel {
         SchoolModelGet {
             id: school.id.map_or("".to_string(), |id| id.to_string()),
             code: school.code,
-            owner: school.owner.to_string(),
+            creator_id: school.creator_id.to_string(),
             name: school.name,
             username: school.username,
             description: school.description,

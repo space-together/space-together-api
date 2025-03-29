@@ -18,7 +18,7 @@ pub async fn controller_school_create(
     state: Arc<AppState>,
     school: SchoolModelNew,
 ) -> DbClassResult<SchoolModelGet> {
-    let owner_id = match ObjectId::from_str(&school.owner) {
+    let owner_id = match ObjectId::from_str(&school.creator_id) {
         Err(_) => return Err(DbClassError::InvalidId),
         Ok(e) => e,
     };

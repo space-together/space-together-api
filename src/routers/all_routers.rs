@@ -43,6 +43,7 @@ use crate::{
 };
 
 pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
+    cfg.service(web::resource("/").route(web::get().to(welcome)));
     cfg.service(
         scope("/api/v0.0.1")
             .route("/", web::get().to(manual_hello))
@@ -107,7 +108,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
 
     cfg.service(
         scope("/api/v0.0.2")
-            .route("/", web::get().to(manual_hello_v2))
+            .route("/", web::get().to(version_v002))
             .service(web::scope("/education").configure(|user_cfg| {
                 education_routers(user_cfg, state.clone());
             }))
@@ -143,6 +144,27 @@ pub async fn websocket_handler(
 async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there! 🌼 this is space-together api version v0.0.1")
 }
-async fn manual_hello_v2() -> impl Responder {
+async fn version_v002() -> impl Responder {
     HttpResponse::Ok().body("Hey there! 🌼 this is space-together api version v0.0.2")
+}
+
+async fn welcome() -> impl Responder {
+    HttpResponse::Ok().json(serde_json::json!({
+        "message": "Welcome to the space-together API! We are happy to have you here. 😁💐🌼🌻",
+        "description": "Space-Together is a school management system designed to help students, teachers, and school staff communicate and collaborate effectively. It works both online and offline, providing access to notes, books, homework, and notifications and other activities happen in school.",
+        "routes": {
+            "versions" : [
+                {
+                    "version": "v0.0.1",
+                    "description": "This is the first version of the API, which includes basic functionality for user authentication, school management, and class management.",
+                    "url" :"/api/v0.0.1"
+                },
+                {
+                    "version": "v0.0.2",
+                    "description": "This is the second version of the API, which includes additional features and improvements based on user feedback.",
+                    "url" :"/api/v0.0.2"
+                }
+            ]
+        }
+    }))
 }

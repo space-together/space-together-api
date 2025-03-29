@@ -12,8 +12,15 @@ pub struct ServerConfig {
 }
 
 #[derive(Deserialize)]
+pub struct OathConfig {
+    pub discord_client_id: String,
+    pub discord_client_secret: String,
+}
+
+#[derive(Deserialize)]
 pub struct AppConfig {
     pub server: ServerConfig,
+    pub oath: OathConfig,
 }
 
 impl AppConfig {
