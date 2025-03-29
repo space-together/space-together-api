@@ -1,16 +1,17 @@
 use actix_web::{
-    web::{Data, Json},
+    web::{Data, Json, Path},
     HttpRequest, HttpResponse, Responder,
 };
 
 use crate::{
     libs::auth::{
+        oauth2::oauth2::oauth2_provider_url,
         user_register::{user_login, user_register},
         user_session::{delete_user_session, get_user_session, update_user_session_expires},
     },
     models::{
         request_error_model::ReqErrModel,
-        user_model::user_model_model::{UserLoginModel, UserModelNew},
+        user_model::user_model_model::{AccountProviders, UserLoginModel, UserModelNew},
     },
     AppState,
 };
@@ -74,5 +75,15 @@ pub async fn delete_user_session_router(req: HttpRequest, state: Data<AppState>)
         HttpResponse::BadRequest().json(ReqErrModel {
             message: "Token not found".to_string(),
         })
+    }
+}
+
+pub async fn oauth2_provider_url_router(
+    state: Data<AppState>,
+    provider: Path<AccountProviders>,
+) -> impl Responder {
+    match oauth2_provider_url(&state.into_inner(), provider.into_inner()).await {
+        Ok(res) => HttpResponse::Ok().json(res),
+        Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
     }
 }

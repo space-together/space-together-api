@@ -17,6 +17,7 @@ pub struct OAuthClient {
     pub client_secret: String,
     pub redirect_uri: String,
     pub scopes: Vec<String>,
+    pub code_verifier: String,
     pub state: String,
     pub urls: OAuthUrls,
     pub user_info: UserInfo,
@@ -57,12 +58,12 @@ pub struct TokenResponse {
     pub token_type: String,
 }
 
-pub fn create_discord_oath2_provider(state: &str) -> OAuthClient {
+pub fn create_discord_oath2_provider(state: &str, code_verifier: &str) -> OAuthClient {
     let provider = AccountProviders::Discord;
     let config = AppConfig::from_env().unwrap();
     let client_id = config.oath.discord_client_id;
     let client_secret = config.oath.discord_client_secret;
-    let redirect_uri = config.oath.redirect_url_web;
+    let redirect_uri = format!("{}/discord", config.oath.redirect_url_web);
     let scopes = vec!["identify".to_string(), "email".to_string()];
 
     OAuthClient {
@@ -80,5 +81,6 @@ pub fn create_discord_oath2_provider(state: &str) -> OAuthClient {
         user_info: UserInfo {
             parser: discord_user_parser,
         },
+        code_verifier: code_verifier.to_string(),
     }
 }

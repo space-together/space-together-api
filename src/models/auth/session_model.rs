@@ -1,3 +1,4 @@
+use chrono::Utc;
 use mongodb::bson::{doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
@@ -76,4 +77,42 @@ impl UserSessionModel {
         };
         doc
     }
+}
+
+// VerificationToken
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct VerificationToken {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub state: Option<String>,
+    pub code_verifier: Option<String>,
+    pub expires_at: DateTime,
+    pub created_at: DateTime,
+    pub update_at: Option<DateTime>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct VerificationTokenNew {
+    pub state: Option<String>,
+    pub code_verifier: Option<String>,
+}
+
+impl VerificationToken {
+    pub fn new(token: VerificationTokenNew) -> Self {
+        VerificationToken {
+            id: None,
+            state: token.state,
+            code_verifier: token.code_verifier,
+            expires_at: user_session_expires(),
+            created_at: DateTime::now(),
+            update_at: None,
+        }
+    }
+}
+
+pub fn verification_token_expires() -> DateTime {
+    DateTime::from_millis(
+        (Utc::now() + Duration::seconds(SESSION_EXPIRATION_SECONDS as i64)).timestamp_millis(),
+    )
 }

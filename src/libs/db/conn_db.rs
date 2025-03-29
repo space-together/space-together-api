@@ -21,7 +21,7 @@ use crate::{
         },
     },
     models::{
-        auth::session_model::UserSessionModel,
+        auth::session_model::{UserSessionModel, VerificationToken},
         class_model::{
             class_model_model::ClassModel, class_room_model::ClassRoomModel,
             class_type_model::ClassTypeModel,
@@ -76,6 +76,7 @@ pub struct ConnDb {
     pub file: MongoCrud<FileModel>,
     // auth
     pub user_session: MongoCrud<UserSessionModel>,
+    pub verification_token: MongoCrud<VerificationToken>,
 }
 
 impl ConnDb {
@@ -191,6 +192,9 @@ impl ConnDb {
                     // auth
                     user_session: MongoCrud {
                         collection: st_data.collection("user_sessions"),
+                    },
+                    verification_token: MongoCrud {
+                        collection: st_data.collection("verification_tokens"),
                     },
                 })
             }

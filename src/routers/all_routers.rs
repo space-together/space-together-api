@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use super::{
     auth_router::{
-        delete_user_session_router, get_user_session_router, update_user_session_expires_router,
-        user_login_router, user_register_router,
+        delete_user_session_router, get_user_session_router, oauth2_provider_url_router,
+        update_user_session_expires_router, user_login_router, user_register_router,
     },
     class_router::{
         activities_type_router::routers_activities_type,
@@ -98,11 +98,15 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .route("/auth/session", web::get().to(get_user_session_router))
             .route(
                 "/auth/session",
-                web::put().to(update_user_session_expires_router),
+                web::post().to(update_user_session_expires_router),
             )
             .route(
-                "/auth/session",
-                web::delete().to(delete_user_session_router),
+                "/auth/session/delete",
+                web::post().to(delete_user_session_router),
+            )
+            .route(
+                "/auth/oauth2/{provider}",
+                web::get().to(oauth2_provider_url_router),
             ),
     );
 

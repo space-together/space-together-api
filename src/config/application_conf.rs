@@ -19,9 +19,15 @@ pub struct OathConfig {
 }
 
 #[derive(Deserialize)]
+pub struct SecretKeysConfig {
+    pub app_secret: String,
+}
+
+#[derive(Deserialize)]
 pub struct AppConfig {
     pub server: ServerConfig,
     pub oath: OathConfig,
+    pub secret_key: SecretKeysConfig,
 }
 
 impl AppConfig {

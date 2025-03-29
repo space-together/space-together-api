@@ -9,7 +9,10 @@ use mongodb::IndexModel;
 use rand::{distributions::Alphanumeric, Rng};
 use std::sync::Arc;
 
-use crate::models::auth::session_model::UserSessionModelGet;
+use crate::config::application_conf::AppConfig;
+use crate::models::auth::session_model::{
+    UserSessionModelGet, VerificationToken, VerificationTokenNew,
+};
 use crate::models::user_model::user_model_model::UserModel;
 use crate::{
     models::auth::session_model::{UserSessionModel, UserSessionModelNew},
@@ -18,22 +21,11 @@ use crate::{
 
 use super::user_account::update_user_account_expires;
 
-const SECRET_KEY: &[u8; 32] = b"super_secret_key_123456789012343";
+use once_cell::sync::Lazy;
+
+static SECRET_KEY: Lazy<String> =
+    Lazy::new(|| AppConfig::from_env().unwrap().secret_key.app_secret);
 pub const SESSION_EXPIRATION_SECONDS: u64 = 60 * 60 * 24 * 7;
-
-fn encrypt_data(data: &str) -> String {
-    let key = Key::<Aes256Gcm>::from_slice(SECRET_KEY);
-    let cipher = Aes256Gcm::new(key);
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng); // ✅ Now correctly importing AeadCore
-    let encrypted = cipher
-        .encrypt(&nonce, data.as_bytes())
-        .expect("Encryption failed");
-
-    let mut combined = nonce.to_vec();
-    combined.extend_from_slice(&encrypted);
-
-    general_purpose::STANDARD.encode(combined) // ✅ Encode nonce + encrypted data
-}
 
 // fn decrypt_data(encrypted: &str) -> String {
 //     let key = Key::<Aes256Gcm>::from_slice(SECRET_KEY);
@@ -54,6 +46,20 @@ fn encrypt_data(data: &str) -> String {
 //         .expect("Decryption failed");
 //     String::from_utf8(decrypted).expect("UTF-8 conversion failed")
 // }
+
+fn encrypt_data(data: &str) -> String {
+    let key = Key::<Aes256Gcm>::from_slice(SECRET_KEY);
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng); // ✅ Now correctly importing AeadCore
+    let encrypted = cipher
+        .encrypt(&nonce, data.as_bytes())
+        .expect("Encryption failed");
+
+    let mut combined = nonce.to_vec();
+    combined.extend_from_slice(&encrypted);
+
+    general_purpose::STANDARD.encode(combined) // ✅ Encode nonce + encrypted data
+}
 
 pub fn generate_token() -> String {
     rand::thread_rng()
@@ -213,4 +219,47 @@ pub async fn update_user_session_expires(
         }
         None => Err("Session not found 😁".to_string()),
     }
+}
+
+pub async fn create_verification_token(
+    state: &Arc<AppState>,
+    state_data: &Option<String>,
+    code_verification: &Option<String>,
+) -> Result<VerificationToken, String> {
+    let index = IndexModel::builder()
+        .keys(doc! {"code_verifier" : 1 , "state" : 1})
+        .options(IndexOptions::builder().unique(true).build())
+        .build();
+
+    if let Err(err) = state
+        .db
+        .verification_token
+        .collection
+        .create_index(index)
+        .await
+    {
+        return Err(err.to_string());
+    }
+    let token = VerificationTokenNew {
+        state: state_data.clone(),
+        code_verifier: code_verification.clone(),
+    };
+
+    let create = state
+        .db
+        .verification_token
+        .create(
+            VerificationToken::new(token),
+            Some("verification_token".to_string()),
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    let data = state
+        .db
+        .verification_token
+        .get_one_by_id(create, Some("verification_token".to_string()))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(data)
+}
 }

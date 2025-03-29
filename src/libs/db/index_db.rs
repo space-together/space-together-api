@@ -18,8 +18,14 @@ pub async fn collection_expires(db: &Database) -> Result<(), String> {
         .build();
     // user_session
     db.collection::<UserSessionModel>("user_sessions")
-        .create_index(index)
+        .create_index(index.clone())
         .await
         .map_err(|e| e.to_string())?;
+    // verification_token
+    db.collection::<UserSessionModel>("verification_tokens")
+        .create_index(index.clone())
+        .await
+        .map_err(|e| e.to_string())?;
+
     Ok(())
 }

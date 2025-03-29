@@ -1,10 +1,9 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use regex::Regex;
-
 use itertools::Itertools;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::{distributions::Alphanumeric, seq::SliceRandom, thread_rng, Rng};
+use regex::Regex;
+use sha2::{Digest, Sha256};
 
 pub fn is_valid_name(name: &str) -> Result<String, String> {
     // Define a regular expression that allows letters, spaces, and some special characters
@@ -199,3 +198,20 @@ pub fn verify_password(password: &str, salt: u64, stored_hash: &str) -> bool {
 //     let datetime_regex = Regex::new(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$").unwrap();
 //     datetime_regex.is_match(date)
 // }
+
+pub fn generate_hashed_state(num: u32) -> String {
+    // Generate a random alphanumeric string
+    let state: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(num as usize)
+        .map(char::from)
+        .collect();
+
+    // Create a SHA-256 hasher
+    let mut hasher = Sha256::new();
+    hasher.update(state.as_bytes()); // Hash the generated state
+    let result = hasher.finalize();
+
+    // Convert the hash to a hexadecimal string
+    format!("{:x}", result)
+}
