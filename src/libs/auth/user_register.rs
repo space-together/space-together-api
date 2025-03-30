@@ -27,13 +27,13 @@ pub async fn user_register(
     data: UserModelNew,
     provider: &Option<AccountProviders>,
 ) -> Result<UserSessionModelGet, String> {
-    let create_result = state.db.user.create_user(data).await;
-    let user_id = match create_result {
-        Ok(i) => change_insertoneresult_into_object_id(i),
-        Err(e) => {
-            return Err(e.to_string());
-        }
-    };
+    let user_id = state
+        .db
+        .user
+        .create_user(data)
+        .await
+        .map_err(|e| e.to_string())
+        .map(change_insertoneresult_into_object_id)?;
 
     let get_user = state
         .db
@@ -43,13 +43,12 @@ pub async fn user_register(
         .map_err(|e| e.to_string())?;
 
     let user_session = create_user_session(get_user.clone(), state.clone()).await?;
+
     create_user_account(
         state,
         user_id,
-        user_session.id.expect("Expect user id but is not fount"),
-        provider
-            .clone()
-            .map_or(AccountProviders::Credentials, |f| f),
+        user_session.id.ok_or("User ID not found")?,
+        provider.clone().unwrap_or(AccountProviders::Credentials),
     )
     .await?;
 
@@ -83,58 +82,39 @@ pub async fn user_login(
         return Err("Invalid email or password".to_string());
     }
 
-    get_user_session_if_exit(&state, &user, &None).await
+    get_user_session_if_exists(&state, &user, &None).await
 }
 
 pub async fn oauth2_login(
     state: &Arc<AppState>,
     data: &UserModelNew,
 ) -> Result<UserSessionModelGet, String> {
-    let user = state.db.user.get_user_by_email(data.email.clone()).await;
-    match user {
-        Ok(res) => {
-            // update user account
-            get_user_session_if_exit(state, &res, &data.provider).await
-        }
+    match state.db.user.get_user_by_email(data.email.clone()).await {
+        Ok(res) => get_user_session_if_exists(state, &res, &data.provider).await,
         Err(_) => {
             let mut create_user =
                 user_register(state.clone(), data.clone(), &data.provider).await?;
             create_user.redirect = Some(true);
             Ok(create_user)
-        } //user not exit
+        }
     }
 }
 
-async fn get_user_session_if_exit(
+async fn get_user_session_if_exists(
     state: &Arc<AppState>,
     user: &UserModel,
     provider: &Option<AccountProviders>,
 ) -> Result<UserSessionModelGet, String> {
-    match get_session_by_user_id(
-        state.clone(),
-        &user.id.expect("Expect user id but is not fount"),
-    )
-    .await
-    {
+    match get_session_by_user_id(state.clone(), &user.id.ok_or("User ID not found")?).await {
         Ok(session) => {
             let updated_session =
-                update_session_by_id(state, &session.id.expect("Expect user id but is not fount"))
-                    .await?;
+                update_session_by_id(state, &session.id.ok_or("User ID not found")?).await?;
 
             let user_account_model = UserAccountPut {
-                user_id: Some(
-                    user.id
-                        .expect("Expect user id but is not fount")
-                        .to_string(),
-                ),
+                user_id: Some(user.id.ok_or("User ID not found")?.to_string()),
                 provider: provider.clone(),
                 expires_at: user_session_expires(),
-                session_id: Some(
-                    session
-                        .id
-                        .expect("Expect user id but is not fount")
-                        .to_string(),
-                ),
+                session_id: Some(session.id.ok_or("User ID not found")?.to_string()),
             };
 
             if let Err(e) = update_user_account(state.clone(), user_account_model).await {
@@ -147,11 +127,9 @@ async fn get_user_session_if_exit(
             let user_session = create_user_session(user.clone(), state.clone()).await?;
             create_user_account(
                 state.clone(),
-                user.id.expect("Expect user id but is not fount"),
-                user_session.id.expect("Expect user id but is not fount"),
-                provider
-                    .clone()
-                    .map_or(AccountProviders::Credentials, |f| f),
+                user.id.ok_or("User ID not found")?,
+                user_session.id.ok_or("User ID not found")?,
+                provider.clone().unwrap_or(AccountProviders::Credentials),
             )
             .await?;
             Ok(UserSessionModel::format(user_session))

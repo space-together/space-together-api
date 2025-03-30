@@ -3030,7 +3030,6 @@ dependencies = [
  "jsonwebtoken",
  "lazy_static",
  "mongodb",
- "once_cell",
  "rand",
  "regex",
  "reqwest",

@@ -1,5 +1,5 @@
-use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng}; // Import AeadCore for generate_nonce
-use aes_gcm::{Aes256Gcm, Key};
+use aes_gcm::aead::{Aead, AeadCore, OsRng}; // Import AeadCore for generate_nonce
+use aes_gcm::{Aes256Gcm, Key, KeyInit};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
 use mongodb::bson::oid::ObjectId;
@@ -21,21 +21,24 @@ use crate::{
 
 use super::user_account::update_user_account_expires;
 
-fn get_secret_key() -> String {
-    AppConfig::from_env().unwrap().secret_key.app_secret
+fn get_secret_key() -> Result<String, String> {
+    AppConfig::from_env()
+        .map(|res| res.secret_key.app_secret)
+        .map_err(|e| e.to_string())
 }
 
-fn encrypt_data(data: &str) -> String {
-    let key = Key::<Aes256Gcm>::from_slice(get_secret_key().as_bytes());
+fn encrypt_data(data: &str) -> Result<String, String> {
+    let key_str = get_secret_key()?;
+    let key = Key::<Aes256Gcm>::from_slice(key_str.as_bytes());
     let cipher = Aes256Gcm::new(key);
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
     let encrypted = cipher
         .encrypt(&nonce, data.as_bytes())
-        .expect("Encryption failed");
+        .map_err(|_| "Encryption failed".to_string())?;
 
     let mut combined = nonce.to_vec();
     combined.extend_from_slice(&encrypted);
-    general_purpose::STANDARD.encode(combined)
+    Ok(general_purpose::STANDARD.encode(combined))
 }
 
 pub fn generate_token() -> String {
@@ -65,7 +68,8 @@ pub async fn create_user_session(
         user.role,
         user.image.clone().unwrap_or_default(),
     );
-    let encrypted_session = encrypt_data(&session_data);
+
+    let encrypted_session = encrypt_data(&session_data)?;
     let data = UserSessionModelNew {
         session_token: encrypted_session,
         user_id: user.id.unwrap_or_default(),
@@ -77,7 +81,8 @@ pub async fn create_user_session(
         .keys(doc! {"token": 1})
         .options(IndexOptions::builder().unique(true).build())
         .build();
-    let _ = state
+
+    state
         .db
         .user_session
         .collection
@@ -107,17 +112,15 @@ pub async fn get_user_session(
     token: &str,
     state: Arc<AppState>,
 ) -> Result<UserSessionModelGet, String> {
-    let session = state
+    state
         .db
         .user_session
         .collection
         .find_one(doc! {"token": token})
         .await
-        .map_err(|e| e.to_string())?;
-    match session {
-        Some(session) => Ok(UserSessionModel::format(session)),
-        None => Err("Session not found".to_string()),
-    }
+        .map_err(|e| e.to_string())?
+        .map(UserSessionModel::format)
+        .ok_or("Session not found".to_string())
 }
 
 pub async fn delete_user_session(token: &str, state: Arc<AppState>) -> Result<String, String> {
@@ -128,7 +131,28 @@ pub async fn delete_user_session(token: &str, state: Arc<AppState>) -> Result<St
         .delete_one(doc! {"token": token})
         .await
         .map_err(|e| e.to_string())?;
+
     Ok("Session deleted".to_string())
+}
+
+pub async fn update_session_by_id(
+    state: &Arc<AppState>,
+    id: &ObjectId,
+) -> Result<UserSessionModelGet, String> {
+    let session = state
+        .db
+        .user_session
+        .collection
+        .find_one_and_update(doc! {"_id": id}, doc! {"$set" : UserSessionModel::put()})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match session {
+        Some(d) => get_session_by_user_id(state.clone(), &d.user_id)
+            .await
+            .map(UserSessionModel::format),
+        None => Err("Session not found".to_string()),
+    }
 }
 
 pub async fn update_user_session_expires(
@@ -145,12 +169,94 @@ pub async fn update_user_session_expires(
         )
         .await
         .map_err(|e| e.to_string())?;
+
     match session {
         Some(d) => {
-            let get_session = get_user_session(&d.token, state.clone()).await?;
+            let get_session = get_session_by_user_id(state.clone(), &d.user_id).await?;
             update_user_account_expires(state, &d.user_id).await?;
             Ok(UserSessionModel::format(get_session))
         }
         None => Err("Session not found".to_string()),
+    }
+}
+
+pub async fn get_session_by_user_id(
+    state: Arc<AppState>,
+    user_id: &ObjectId,
+) -> Result<UserSessionModel, String> {
+    let session = state
+        .db
+        .user_session
+        .collection
+        .find_one(doc! {"user_id": user_id})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    session.ok_or_else(|| "Session not found".to_string())
+}
+
+// verification oauth token
+pub async fn create_verification_token(
+    state: &Arc<AppState>,
+    state_data: &Option<String>,
+    code_verification: &Option<String>,
+) -> Result<VerificationToken, String> {
+    let index = IndexModel::builder()
+        .keys(doc! {"code_verifier" : 1 , "state" : 1})
+        .options(IndexOptions::builder().unique(true).build())
+        .build();
+
+    if let Err(err) = state
+        .db
+        .verification_token
+        .collection
+        .create_index(index)
+        .await
+    {
+        return Err(err.to_string());
+    }
+    let token = VerificationTokenNew {
+        state: state_data.clone(),
+        code_verifier: code_verification.clone(),
+    };
+
+    let create = state
+        .db
+        .verification_token
+        .create(
+            VerificationToken::new(token),
+            Some("verification_token".to_string()),
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    let data = state
+        .db
+        .verification_token
+        .get_one_by_id(create, Some("verification_token".to_string()))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(data)
+}
+
+// get verification token
+
+pub async fn get_verification_token_by_state(
+    state: &Arc<AppState>,
+    data_state: &str,
+) -> Result<VerificationToken, String> {
+    let token = state
+        .db
+        .verification_token
+        .collection
+        .find_one(doc! {"state" : data_state})
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match token {
+        Some(res) => Ok(res),
+        None => Err(format!(
+            "No verification Token found by [{}], token should be expired or not stored",
+            data_state
+        )),
     }
 }

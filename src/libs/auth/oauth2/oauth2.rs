@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::oauth2_providers::{
-    create_discord_oath2_provider, OAuthClient, ParsedUser, TokenResponse,
+    create_discord_oauth2_provider, OAuthClient, ParsedUser, TokenResponse,
 };
 
 use serde_json::Value;
@@ -109,7 +109,7 @@ pub async fn oauth2_provider_url(
         AccountProviders::Discord => {
             let data_state = generate_hashed_state(32);
             let code_verifier = generate_hashed_state(41);
-            let discord_client = create_discord_oath2_provider(&data_state, &code_verifier);
+            let discord_client = create_discord_oauth2_provider(&data_state, &code_verifier)?;
             let url = OAuthClient::create_auth_url(
                 &discord_client.urls.auth,
                 &discord_client.client_id,
@@ -153,13 +153,13 @@ pub async fn fetch_oauth_token(
 
         AccountProviders::Discord => {
             let get_verification = get_verification_token_by_state(state, &token.state).await?;
-            let discord_client = create_discord_oath2_provider(
+            let discord_client = create_discord_oauth2_provider(
                 get_verification.state.as_deref().ok_or("Missing state")?,
                 get_verification
                     .code_verifier
                     .as_deref()
                     .ok_or("Missing code verifier")?,
-            );
+            )?;
             let user_session = fetch_oauth_token_by_provider(
                 state,
                 &FetchOauthTokenModel {
