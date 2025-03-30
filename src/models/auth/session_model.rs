@@ -1,8 +1,11 @@
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use mongodb::bson::{doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::libs::auth::user_session::{generate_token, user_session_expires};
+use crate::{
+    config::application_conf::VERIFICATION_TOKEN_EXPIRATION_SECONDS,
+    libs::auth::user_session::{generate_token, user_session_expires},
+};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserSessionModel {
@@ -23,6 +26,7 @@ pub struct UserSessionModelGet {
     pub session_token: String,
     pub token: String,
     pub expires_at: String,
+    pub redirect: Option<bool>,
     pub created_at: String,
     pub update_at: Option<String>,
 }
@@ -58,6 +62,7 @@ impl UserSessionModel {
                 .map(|d| d.try_to_rfc3339_string().unwrap_or_default()),
             created_at: data.created_at.try_to_rfc3339_string().unwrap_or_default(),
             token: data.token,
+            redirect: None,
         }
     }
 
@@ -104,7 +109,7 @@ impl VerificationToken {
             id: None,
             state: token.state,
             code_verifier: token.code_verifier,
-            expires_at: user_session_expires(),
+            expires_at: verification_token_expires(),
             created_at: DateTime::now(),
             update_at: None,
         }
@@ -113,6 +118,7 @@ impl VerificationToken {
 
 pub fn verification_token_expires() -> DateTime {
     DateTime::from_millis(
-        (Utc::now() + Duration::seconds(SESSION_EXPIRATION_SECONDS as i64)).timestamp_millis(),
+        (Utc::now() + Duration::seconds(VERIFICATION_TOKEN_EXPIRATION_SECONDS as i64))
+            .timestamp_millis(),
     )
 }

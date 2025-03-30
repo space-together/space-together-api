@@ -1,7 +1,7 @@
 use mongodb::{bson::doc, Database, IndexModel};
 
 use crate::{
-    libs::auth::user_session::SESSION_EXPIRATION_SECONDS,
+    config::application_conf::SESSION_EXPIRATION_SECONDS,
     models::auth::session_model::UserSessionModel,
 };
 

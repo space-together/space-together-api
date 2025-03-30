@@ -60,6 +60,8 @@ pub struct UserModelNew {
     pub name: String,
     pub email: String,
     pub username: Option<String>,
+    pub image: Option<String>,
+    pub provider: Option<AccountProviders>,
     pub password: Option<String>,
 }
 
@@ -105,7 +107,7 @@ impl UserModel {
             salt: user.password.clone().map(|_| salt),
             gender: None,
             age: None,
-            image: None,
+            image: user.image,
             phone: None,
             bio: None,
             disable: Some(false),
@@ -308,6 +310,7 @@ impl UserAccount {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserLoginModel {
     pub email: Option<String>,
+    // pub name:
     pub password: Option<String>,
     pub provider: AccountProviders,
 }

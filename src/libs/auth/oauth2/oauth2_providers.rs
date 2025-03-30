@@ -33,6 +33,7 @@ pub struct ParsedUser {
     pub id: String,
     pub email: String,
     pub name: String,
+    pub image: Option<String>,
 }
 
 fn discord_user_parser(data: Value) -> Result<ParsedUser, String> {
@@ -42,13 +43,17 @@ fn discord_user_parser(data: Value) -> Result<ParsedUser, String> {
         pub username: String,
         pub global_name: Option<String>,
         pub email: String,
+        pub avatar: Option<String>,
     }
 
     let user: DiscordUser = serde_json::from_value(data).map_err(|e| e.to_string())?;
     Ok(ParsedUser {
-        id: user.id,
+        id: user.id.clone(),
         name: user.global_name.unwrap_or(user.username),
         email: user.email,
+        image: user
+            .avatar
+            .map(|i| format!("https://cdn.discordapp.com/avatars/{}/${}.png", user.id, i)),
     })
 }
 

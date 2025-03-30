@@ -15,10 +15,11 @@ pub async fn create_user_account(
     state: Arc<AppState>,
     user_id: ObjectId,
     session_id: ObjectId,
+    provider: AccountProviders,
 ) -> Result<UserAccount, String> {
     let user_account = UserAccountNew {
         user_id: user_id.to_string(),
-        provider: AccountProviders::Credentials,
+        provider: provider,
         session_id: Some(session_id.to_string()),
         expires_at: user_session_expires(),
     };
