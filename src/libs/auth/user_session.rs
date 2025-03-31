@@ -1,5 +1,5 @@
-use aes_gcm::aead::{Aead, AeadCore, OsRng}; // Import AeadCore for generate_nonce
-use aes_gcm::{Aes256Gcm, Key, KeyInit};
+use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng};
+use aes_gcm::{Aes256Gcm, Key};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
 use mongodb::bson::oid::ObjectId;
@@ -32,13 +32,15 @@ fn encrypt_data(data: &str) -> Result<String, String> {
     let key = Key::<Aes256Gcm>::from_slice(key_str.as_bytes());
     let cipher = Aes256Gcm::new(key);
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    let encrypted = cipher
-        .encrypt(&nonce, data.as_bytes())
-        .map_err(|_| "Encryption failed".to_string())?;
 
-    let mut combined = nonce.to_vec();
-    combined.extend_from_slice(&encrypted);
-    Ok(general_purpose::STANDARD.encode(combined))
+    match cipher.encrypt(&nonce, data.as_bytes()) {
+        Ok(encrypted) => {
+            let mut combined = nonce.to_vec();
+            combined.extend_from_slice(&encrypted);
+            Ok(general_purpose::STANDARD.encode(combined))
+        }
+        Err(_) => Err("Encryption failed".to_string()),
+    }
 }
 
 pub fn generate_token() -> String {
@@ -59,10 +61,11 @@ pub async fn create_user_session(
     user: UserModel,
     state: Arc<AppState>,
 ) -> Result<UserSessionModel, String> {
+    let user_id = user.id.ok_or("User ID is missing")?;
     let token = generate_token();
     let session_data = format!(
         "{}|{}|{}|{:#?}|{}",
-        user.id.unwrap_or_default(),
+        user_id,
         user.username.unwrap_or_default(),
         user.email,
         user.role,
@@ -72,13 +75,13 @@ pub async fn create_user_session(
     let encrypted_session = encrypt_data(&session_data)?;
     let data = UserSessionModelNew {
         session_token: encrypted_session,
-        user_id: user.id.unwrap_or_default(),
+        user_id,
         expires_at: user_session_expires(),
         token,
     };
 
     let index_token = IndexModel::builder()
-        .keys(doc! {"token": 1})
+        .keys(doc! {"session_token": 1, "token" : 1})
         .options(IndexOptions::builder().unique(true).build())
         .build();
 
@@ -108,31 +111,18 @@ pub async fn create_user_session(
         .map_err(|e| e.to_string())
 }
 
-pub async fn get_user_session(
-    token: &str,
+pub async fn get_session_by_user_id(
     state: Arc<AppState>,
-) -> Result<UserSessionModelGet, String> {
+    user_id: &ObjectId,
+) -> Result<UserSessionModel, String> {
     state
         .db
         .user_session
         .collection
-        .find_one(doc! {"token": token})
+        .find_one(doc! {"user_id": user_id})
         .await
         .map_err(|e| e.to_string())?
-        .map(UserSessionModel::format)
         .ok_or("Session not found".to_string())
-}
-
-pub async fn delete_user_session(token: &str, state: Arc<AppState>) -> Result<String, String> {
-    state
-        .db
-        .user_session
-        .collection
-        .delete_one(doc! {"token": token})
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok("Session deleted".to_string())
 }
 
 pub async fn update_session_by_id(
@@ -143,7 +133,10 @@ pub async fn update_session_by_id(
         .db
         .user_session
         .collection
-        .find_one_and_update(doc! {"_id": id}, doc! {"$set" : UserSessionModel::put()})
+        .find_one_and_update(
+            doc! {"_id": id},
+            doc! {"$set" : {"expires_at": user_session_expires()}},
+        )
         .await
         .map_err(|e| e.to_string())?;
 
@@ -180,19 +173,31 @@ pub async fn update_user_session_expires(
     }
 }
 
-pub async fn get_session_by_user_id(
-    state: Arc<AppState>,
-    user_id: &ObjectId,
-) -> Result<UserSessionModel, String> {
-    let session = state
+pub async fn delete_user_session(token: &str, state: Arc<AppState>) -> Result<String, String> {
+    state
         .db
         .user_session
         .collection
-        .find_one(doc! {"user_id": user_id})
+        .delete_one(doc! {"token": token})
         .await
         .map_err(|e| e.to_string())?;
 
-    session.ok_or_else(|| "Session not found".to_string())
+    Ok("Session deleted".to_string())
+}
+
+pub async fn get_user_session(
+    token: &str,
+    state: Arc<AppState>,
+) -> Result<UserSessionModelGet, String> {
+    state
+        .db
+        .user_session
+        .collection
+        .find_one(doc! {"token": token})
+        .await
+        .map_err(|e| e.to_string())?
+        .map(UserSessionModel::format)
+        .ok_or("Session not found".to_string())
 }
 
 // verification oauth token

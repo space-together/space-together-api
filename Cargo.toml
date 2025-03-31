@@ -51,3 +51,6 @@ features = ["sync"]
 [[bin]]
 name = "space-together-api"
 path = "src/main.rs"
+
+[profile.dev]
+incremental = true

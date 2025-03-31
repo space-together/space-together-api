@@ -19,7 +19,7 @@ pub async fn create_user_account(
 ) -> Result<UserAccount, String> {
     let user_account = UserAccountNew {
         user_id: user_id.to_string(),
-        provider: provider,
+        provider,
         session_id: Some(session_id.to_string()),
         expires_at: user_session_expires(),
     };
