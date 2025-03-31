@@ -44,36 +44,39 @@ impl OAuthClient {
         code_verifier: &str,
         redirect_url: &str,
     ) -> Result<ParsedUser, String> {
-        let token_response = self
+        match self
             .fetch_token(code, code_verifier, redirect_url)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())
+        {
+            Ok(token_response) => {
+                let client = Client::new();
+                let response = client
+                    .get(&self.urls.user)
+                    .header(
+                        "Authorization",
+                        format!(
+                            "{} {}",
+                            token_response.token_type, token_response.access_token
+                        ),
+                    )
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-        let client = Client::new();
-        let response = client
-            .get(&self.urls.user)
-            .header(
-                "Authorization",
-                format!(
-                    "{} {}",
-                    token_response.token_type, token_response.access_token
-                ),
-            )
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let user_data: Value = response.json().await.map_err(|e| e.to_string())?;
-        (self.user_info.parser)(user_data)
+                let user_data: Value = response.json().await.map_err(|e| e.to_string())?;
+                (self.user_info.parser)(user_data)
+            }
+            Err(e) => Err(format!("fetch token [{}]", e)),
+        }
     }
 
-    async fn fetch_token(
+    pub async fn fetch_token(
         &self,
         code: &str,
         code_verifier: &str,
         redirect_url: &str,
-    ) -> Result<TokenResponse, reqwest::Error> {
-        let client = Client::new();
+    ) -> Result<TokenResponse, String> {
         let mut params = HashMap::new();
         params.insert("code", code);
         params.insert("redirect_uri", redirect_url);
@@ -82,11 +85,45 @@ impl OAuthClient {
         params.insert("client_secret", &self.client_secret);
         params.insert("code_verifier", code_verifier);
 
-        let response = client.post(&self.urls.token).form(&params).send().await?;
+        let client = Client::new();
+        let response = client
+            .post(&self.urls.token)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Accept", "application/json")
+            .form(&params)
+            .send()
+            .await;
 
-        let token_response: TokenResponse = response.json().await?;
-        Ok(token_response)
+        match response {
+            Ok(resp) => {
+                let status = resp.status();
+                let body_text = resp
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Failed to read body".to_string());
+
+                if !status.is_success() {
+                    eprintln!(
+                        "Error fetching token: Status: {}, Response: {}",
+                        status, body_text
+                    );
+                    return Err(format!("Error: {} - {}", status, body_text));
+                }
+
+                // Parse response JSON
+                match serde_json::from_str::<TokenResponse>(&body_text) {
+                    Ok(token_response) => Ok(token_response),
+                    Err(_) => Err(format!("Failed to parse token response: {}", body_text)),
+                }
+            }
+            Err(err) => {
+                eprintln!("Request failed: {}", err);
+                Err("Failed to send request".to_string())
+            }
+        }
     }
+
+    //https://discord.com/api/oauth2/token?code=J96rSfB3vZLXB11kyOYcPI1cMwDBQM&redirect_uri=http://localhost:4789/api/oauth/discord&grant_type=authorization_code&client_secret=my_secret&code_verifier=08c39be418d823228b5eecf665e23881d089d3ee6fafd213c5c1522f5fb6bcff
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

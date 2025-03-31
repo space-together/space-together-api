@@ -1,7 +1,7 @@
-use crate::{
-    config::application_conf::AppConfig, models::user_model::user_model_model::AccountProviders,
-};
-use serde::Deserialize;
+use std::collections::HashMap;
+
+use crate::config::application_conf::AppConfig;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Struct holding OAuth2 URLs
@@ -13,7 +13,6 @@ pub struct OAuthUrls {
 
 /// Represents an OAuth2 client
 pub struct OAuthClient {
-    pub provider: AccountProviders,
     pub client_id: String,
     pub client_secret: String,
     pub redirect_uri: String,
@@ -33,17 +32,18 @@ pub struct UserInfo {
 /// Parsed user information from OAuth2 provider
 #[derive(Debug, Deserialize)]
 pub struct ParsedUser {
-    pub id: String,
     pub email: String,
     pub name: String,
     pub image: Option<String>,
 }
 
 /// OAuth2 token response
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TokenResponse {
     pub access_token: String,
     pub token_type: String,
+    #[serde(flatten)]
+    pub extra: Option<HashMap<String, serde_json::Value>>, // Capture unexpected fields
 }
 
 /// Parses Discord user data from JSON response
@@ -60,7 +60,6 @@ fn discord_user_parser(data: Value) -> Result<ParsedUser, String> {
     let user: DiscordUser = serde_json::from_value(data).map_err(|e| e.to_string())?;
 
     Ok(ParsedUser {
-        id: user.id.clone(),
         name: user.global_name.unwrap_or(user.username),
         email: user.email,
         image: user
@@ -77,7 +76,6 @@ pub fn create_discord_oauth2_provider(
     let config = AppConfig::from_env().map_err(|e| e.to_string())?;
 
     Ok(OAuthClient {
-        provider: AccountProviders::Discord,
         client_id: config.oath.discord_client_id,
         client_secret: config.oath.discord_client_secret,
         redirect_uri: format!("{}/discord", config.oath.redirect_url_web),

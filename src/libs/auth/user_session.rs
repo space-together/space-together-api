@@ -1,5 +1,5 @@
 use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng};
-use aes_gcm::{Aes256Gcm, Key};
+use aes_gcm::{Aes256Gcm, Key}; //Nonce
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
 use mongodb::bson::oid::ObjectId;
@@ -52,6 +52,31 @@ fn encrypt_data(data: &str) -> Result<String, String> {
         Err(_) => Err("Encryption failed".to_string()),
     }
 }
+
+// fn decrypt_data(encrypted_data: &str) -> Result<String, String> {
+//     let key = get_secret_key()?; // Ensure this function returns the correct key
+//     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+
+//     // Decode Base64
+//     let decoded = match general_purpose::STANDARD.decode(encrypted_data) {
+//         Ok(data) => data,
+//         Err(_) => return Err("Base64 decoding failed".to_string()),
+//     };
+
+//     // Split nonce and encrypted message
+//     if decoded.len() < 12 {
+//         return Err("Invalid encrypted data".to_string());
+//     }
+//     let (nonce_bytes, ciphertext) = decoded.split_at(12); // First 12 bytes = nonce
+
+//     let nonce = Nonce::from_slice(nonce_bytes);
+
+//     // Decrypt
+//     match cipher.decrypt(nonce, ciphertext) {
+//         Ok(decrypted) => String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()),
+//         Err(_) => Err("Decryption failed".to_string()),
+//     }
+// }
 
 pub fn generate_token() -> String {
     rand::thread_rng()
