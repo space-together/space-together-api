@@ -27,7 +27,7 @@ async fn validate_username(
     })?;
 
     if let Ok(existing_education) = get_education_by_username(state.clone(), username.to_string()).await {
-        if id_to_exclude.map_or(true, |exclude_id| existing_education.id != exclude_id.to_string()) {
+        if id_to_exclude.is_none_or(|exclude_id| existing_education.id != exclude_id.to_string()) {
             return Err(DbClassError::OtherError {
                 err: format!("Username '{}' is already in use, please try another.", username),
             });

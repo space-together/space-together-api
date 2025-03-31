@@ -7,11 +7,13 @@ use crate::{
     libs::auth::{
         oauth2::oauth2::{fetch_oauth_token, oauth2_provider_url, FetchOauthTokenModel},
         user_register::{user_login, user_register},
-        user_session::{delete_user_session, get_user_session, update_user_session_expires},
+        user_session::{
+            create_user_session, delete_user_session, get_user_session, update_user_session_expires,
+        },
     },
     models::{
         request_error_model::ReqErrModel,
-        user_model::user_model_model::{AccountProviders, UserLoginModel, UserModelNew},
+        user_model::user_model_model::{AccountProviders, UserLoginModel, UserModel, UserModelNew},
     },
     AppState,
 };
@@ -93,6 +95,17 @@ pub async fn fetch_oauth_token_router(
     token: Json<FetchOauthTokenModel>,
 ) -> impl Responder {
     match fetch_oauth_token(&state.into_inner(), token.into_inner()).await {
+        Ok(res) => HttpResponse::Ok().json(res),
+        Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
+    }
+}
+
+// user session
+pub async fn create_user_session_router(
+    state: Data<AppState>,
+    user: Json<UserModel>,
+) -> impl Responder {
+    match create_user_session(user.into_inner(), state.into_inner()).await {
         Ok(res) => HttpResponse::Ok().json(res),
         Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
     }

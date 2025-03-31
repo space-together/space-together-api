@@ -106,7 +106,7 @@ pub async fn controller_conversation_by_member(
                         message
                             .seen_by
                             .as_ref()
-                            .map_or(true, |seen_by| !seen_by.contains(&id.to_string()))
+                            .is_none_or(|seen_by| !seen_by.contains(&id.to_string()))
                     });
 
                     if has_unread_messages {

@@ -21,16 +21,26 @@ use crate::{
 
 use super::user_account::update_user_account_expires;
 
-fn get_secret_key() -> Result<String, String> {
-    AppConfig::from_env()
+fn get_secret_key() -> Result<[u8; 32], String> {
+    let key_str = AppConfig::from_env()
         .map(|res| res.secret_key.app_secret)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    let mut key_bytes = [0u8; 32];
+    let key_slice = key_str.as_bytes();
+
+    if key_slice.len() >= 32 {
+        key_bytes.copy_from_slice(&key_slice[..32]); // Truncate
+    } else {
+        key_bytes[..key_slice.len()].copy_from_slice(key_slice); // Pad with zeros
+    }
+
+    Ok(key_bytes)
 }
 
 fn encrypt_data(data: &str) -> Result<String, String> {
-    let key_str = get_secret_key()?;
-    let key = Key::<Aes256Gcm>::from_slice(key_str.as_bytes());
-    let cipher = Aes256Gcm::new(key);
+    let key = get_secret_key()?; // Now it's exactly 32 bytes
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
     match cipher.encrypt(&nonce, data.as_bytes()) {
@@ -135,7 +145,7 @@ pub async fn update_session_by_id(
         .collection
         .find_one_and_update(
             doc! {"_id": id},
-            doc! {"$set" : {"expires_at": user_session_expires()}},
+            doc! {"$set" : {"expires_at": user_session_expires(), "update_at" : DateTime::now()}},
         )
         .await
         .map_err(|e| e.to_string())?;

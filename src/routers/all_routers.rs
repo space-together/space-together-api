@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use super::{
     auth_router::{
-        delete_user_session_router, fetch_oauth_token_router, get_user_session_router,
-        oauth2_provider_url_router, update_user_session_expires_router, user_login_router,
-        user_register_router,
+        create_user_session_router, delete_user_session_router, fetch_oauth_token_router,
+        get_user_session_router, oauth2_provider_url_router, update_user_session_expires_router,
+        user_login_router, user_register_router,
     },
     class_router::{
         activities_type_router::routers_activities_type,
@@ -93,7 +93,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/file").configure(|user_cfg| {
                 routers_file_type(user_cfg, state.clone());
                 routers_file(user_cfg, state.clone());
-            }))
+            })) // base oath
             .route("/auth/register", web::post().to(user_register_router))
             .route("/auth/login", web::post().to(user_login_router))
             .route("/auth/session", web::get().to(get_user_session_router))
@@ -105,6 +105,7 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
                 "/auth/session/delete",
                 web::post().to(delete_user_session_router),
             )
+            .route("/session", web::post().to(create_user_session_router)) // oauth provide
             .route(
                 "/auth/oauth2/fetch",
                 web::post().to(fetch_oauth_token_router),
