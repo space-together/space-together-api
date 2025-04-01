@@ -155,15 +155,15 @@ pub async fn controller_users_get_all_by_role(
     Ok(formatted_users)
 }
 
-/// authentication by user
+// authentication by user
 
-pub async fn update_user_by_session(
-    state: Arc<AppState>,
-    user: UserModelPut,
-    session: &str,
-) -> UserResult<UserModelGet> {
-    let decode_session = decrypt_user_session_data(session)
-        .map_err(|e| UserError::SomeError { err: e.to_string() })?;
+// pub async fn update_user_by_session(
+//     state: Arc<AppState>,
+//     user: UserModelPut,
+//     session: &str,
+// ) -> UserResult<UserModelGet> {
+//     let decode_session = decrypt_user_session_data(session)
+//         .map_err(|e| UserError::SomeError { err: e.to_string() })?;
 
-    controller_user_update_by_id(user, id, state)
-}
+//     controller_user_update_by_id(user, id, state)
+// }
