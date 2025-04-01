@@ -120,35 +120,15 @@ pub async fn controller_user_delete_by_username(
 pub async fn controller_get_all_users(state: Arc<AppState>) -> UserResult<Vec<UserModelGet>> {
     let users = state.db.user.get_all_users().await?;
 
-    let mut formatted_users = Vec::new();
-    for user in users {
-        formatted_users.push(user);
-    }
-
-    Ok(formatted_users)
+    Ok(users)
 }
 
 pub async fn controller_users_get_all_by_role(
     state: Arc<AppState>,
-    role: String,
+    role: &str,
 ) -> UserResult<Vec<UserModelGet>> {
-    let role_data = state
-        .db
-        .user_role
-        .get_user_role_by_rl(role.clone())
-        .await
-        .map_err(|err| UserError::CanNotGetRole {
-            error: err.to_string(),
-        })?;
-
-    let users = state.db.user.get_users_by_rl(role_data.id.unwrap()).await?;
-
-    let mut formatted_users = Vec::new();
-    for user in users {
-        formatted_users.push(user);
-    }
-
-    Ok(formatted_users)
+    let users = state.db.user.get_users_by_rl(role).await?;
+    Ok(users)
 }
 
 // authentication by user

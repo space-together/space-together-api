@@ -188,7 +188,7 @@ pub async fn handle_user_get_all_by_role(
     state: Data<AppState>,
     role: Path<String>,
 ) -> impl Responder {
-    match controller_users_get_all_by_role(state.into_inner(), role.into_inner()).await {
+    match controller_users_get_all_by_role(state.into_inner(), &role.into_inner()).await {
         Ok(res) => HttpResponse::Ok().json(res),
         Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
             message: err.to_string(),

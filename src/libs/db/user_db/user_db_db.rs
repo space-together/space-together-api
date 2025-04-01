@@ -144,11 +144,7 @@ impl UserDb {
         }
     }
 
-    async fn find_many_by_field(
-        &self,
-        field: &str,
-        value: ObjectId,
-    ) -> UserResult<Vec<UserModelGet>> {
+    async fn find_many_by_field(&self, field: &str, value: &str) -> UserResult<Vec<UserModelGet>> {
         let mut cursor = self.user.find(doc! { field: value }).await.map_err(|err| {
             UserError::CanNotGetAllUsers {
                 err: err.to_string(),
@@ -257,7 +253,7 @@ impl UserDb {
         self.update_by_field(user, "username", username).await
     }
 
-    pub async fn get_users_by_rl(&self, role: ObjectId) -> UserResult<Vec<UserModelGet>> {
+    pub async fn get_users_by_rl(&self, role: &str) -> UserResult<Vec<UserModelGet>> {
         self.find_many_by_field("role", role).await
     }
 
