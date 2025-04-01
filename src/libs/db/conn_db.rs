@@ -5,7 +5,7 @@ use super::{
     },
     conversation_db::message_db::MessageDb,
     request_db::{request_db_db::RequestDb, request_type_db::RequestTypeDb},
-    user_db::{user_db_db::UserDb, user_role_db::UserRoleDb},
+    user_db::user_db_db::UserDb,
 };
 use crate::{
     error::db_error::{DbError, DbResult},
@@ -45,7 +45,6 @@ use std::env;
 
 #[derive(Debug)]
 pub struct ConnDb {
-    pub user_role: UserRoleDb,
     pub user: UserDb,
     pub user_account: MongoCrud<UserAccount>,
     pub class: MongoCrud<ClassModel>,
@@ -107,10 +106,6 @@ impl ConnDb {
                 println!("Database connected successfully 🌼");
 
                 Ok(Self {
-                    // TODO :  to remove collection which are not needed : user role
-                    user_role: UserRoleDb {
-                        role: st_data.collection("users.role"),
-                    },
                     user: UserDb {
                         user: st_data.collection("users"),
                     },
