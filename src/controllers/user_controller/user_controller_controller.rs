@@ -14,8 +14,6 @@ use crate::{
     AppState,
 };
 
-use super::user_role_controller::validate_user_role;
-
 pub async fn controller_create_user(
     user: UserModelNew,
     state: Arc<AppState>,
@@ -34,7 +32,6 @@ pub async fn controller_user_update_by_id(
     id: ObjectId,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    let _ = validate_user_role(&state, user.role.clone()).await?;
     let updated_user = state.db.user.update_user_by_id(user, id).await?;
     let user_data = state
         .db
@@ -49,7 +46,6 @@ pub async fn controller_user_update_by_username(
     username: String,
     state: Arc<AppState>,
 ) -> UserResult<UserModelGet> {
-    let _ = validate_user_role(&state, user.role.clone()).await?;
     let updated_user = state
         .db
         .user

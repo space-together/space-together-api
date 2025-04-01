@@ -7,6 +7,7 @@ use mongodb::bson::{doc, DateTime};
 use mongodb::options::IndexOptions;
 use mongodb::IndexModel;
 use rand::{distributions::Alphanumeric, Rng};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::config::application_conf::{AppConfig, SESSION_EXPIRATION_SECONDS};
@@ -38,6 +39,7 @@ fn get_secret_key() -> Result<[u8; 32], String> {
     Ok(key_bytes)
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UserSessionModelDecode {
     pub user_id: String,
     pub username: String,

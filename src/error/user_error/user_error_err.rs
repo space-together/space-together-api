@@ -7,7 +7,6 @@ pub enum UserError {
     UserNotFound { field: String, value: String },
     CanNotFindUser { err: String },
     InvalidId,
-    InvalidUserRoleId,
     InvalidName { err: String },
     InvalidEmail { err: String },
     InvalidUsername { err: String },
@@ -58,7 +57,6 @@ impl std::fmt::Display for UserError {
                 write!(f, "Can't find user bcs : 😡 {} 😡, try again later", err)
             }
             UserError::InvalidId => write!(f, "Invalid id, please try other id"),
-            UserError::InvalidUserRoleId => write!(f, "Invalid user role id, please try other id"),
             UserError::UserRoleIsNotExit => {
                 write!(f, "User's role is not exit, try other user role")
             }

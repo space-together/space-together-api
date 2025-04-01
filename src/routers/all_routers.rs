@@ -36,7 +36,7 @@ use super::{
         subject_router_router::{routers_subject, subject_routers},
         subject_type_router::routers_subject_type,
     },
-    user_router::{user_role_router::routers_user_role, user_router_router::routers_user},
+    user_router::user_router_router::routers_user,
 };
 use crate::{
     handlers::database_handle::all_end_point_handle::list_all_endpoints, AppState,
@@ -51,7 +51,6 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .route("/endpoints", web::get().to(list_all_endpoints)) // Debug route
             .app_data(web::Data::new(state.clone()))
             .service(web::scope("/users").configure(|user_cfg| {
-                routers_user_role(user_cfg, state.clone());
                 routers_user(user_cfg, state.clone());
             }))
             .service(web::scope("/classes/room").configure(|user_cfg| {
