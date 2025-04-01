@@ -9,7 +9,7 @@ use crate::{
         functions::object_id::change_insertoneresult_into_object_id,
     },
     models::user_model::user_model_model::{
-        UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
+        UserModelGet, UserModelNew, UserModelPut, UserRole, UsersUpdateManyModel,
     },
     AppState,
 };
@@ -31,7 +31,20 @@ pub async fn controller_user_update_by_id(
     user: UserModelPut,
     id: ObjectId,
     state: Arc<AppState>,
+    token: &str,
 ) -> UserResult<UserModelGet> {
+    let user_session =
+        decrypt_user_session_data(token).map_err(|e| UserError::SomeError { err: e })?;
+
+    if let Ok(user) = state.db.user.get_user_by_id(id).await {
+        let format = UserModelGet::format(user);
+        if format.id != user_session.user_id || user_session.role != UserRole::ADMIN {
+            return Err(UserError::SomeError {
+                err: "You not allow to update other user account".to_string(),
+            });
+        }
+    }
+
     let updated_user = state.db.user.update_user_by_id(user, id).await?;
     let user_data = state
         .db
@@ -129,17 +142,4 @@ pub async fn controller_users_get_all_by_role(
 ) -> UserResult<Vec<UserModelGet>> {
     let users = state.db.user.get_users_by_rl(role).await?;
     Ok(users)
-}
-
-// authentication by user
-
-pub async fn update_user_by_user_session(
-    state: Arc<AppState>,
-    user: UserModelPut,
-    session: &str,
-) -> UserResult<UserModelGet> {
-    let decode_session = decrypt_user_session_data(session)
-        .map_err(|e| UserError::SomeError { err: e.to_string() })?;
-
-    controller_user_update_by_username(user, decode_session.username, state).await
 }

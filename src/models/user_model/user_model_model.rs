@@ -9,19 +9,34 @@ use crate::libs::{
 };
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub enum Gender {
-    Male,
-    Female,
-    Other,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum UserRole {
     STUDENT,
     TEACHER,
     SCHOOLSTAFF,
     ADMIN,
     PARENT,
+}
+
+impl FromStr for UserRole {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ADMIN" => Ok(UserRole::ADMIN),
+            "STUDENT" => Ok(UserRole::STUDENT),
+            "SCHOOLSTAFF" => Ok(UserRole::SCHOOLSTAFF),
+            "PARENT" => Ok(UserRole::PARENT),
+            "TEACHER" => Ok(UserRole::TEACHER),
+            _ => Err(format!("Invalid UserRole: {}", s)),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub enum Gender {
+    Male,
+    Female,
+    Other,
 }
 
 #[allow(clippy::inherent_to_string)]

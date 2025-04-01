@@ -14,7 +14,7 @@ use crate::config::application_conf::{AppConfig, SESSION_EXPIRATION_SECONDS};
 use crate::models::auth::session_model::{
     UserSessionModelGet, VerificationToken, VerificationTokenNew,
 };
-use crate::models::user_model::user_model_model::UserModel;
+use crate::models::user_model::user_model_model::{UserModel, UserRole};
 use crate::{
     models::auth::session_model::{UserSessionModel, UserSessionModelNew},
     AppState,
@@ -44,7 +44,7 @@ pub struct UserSessionModelDecode {
     pub user_id: String,
     pub username: String,
     pub email: String,
-    pub role: String,
+    pub role: UserRole,
     pub image: String,
 }
 
@@ -75,7 +75,9 @@ pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<UserSessionMode
         user_id: parts[0].to_string(),
         username: parts[1].to_string(),
         email: parts[2].to_string(),
-        role: parts[3].to_string(),
+        role: parts[3]
+            .parse::<UserRole>()
+            .map_err(|_| "Invalid user role".to_string())?,
         image: parts[4].to_string(),
     })
 }
@@ -246,7 +248,7 @@ pub async fn delete_user_session(token: &str, state: Arc<AppState>) -> Result<St
 
 pub async fn get_user_session(
     token: &str,
-    state: Arc<AppState>,
+    state: &Arc<AppState>,
 ) -> Result<UserSessionModelGet, String> {
     state
         .db

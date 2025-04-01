@@ -40,7 +40,7 @@ pub async fn user_login_router(
 
 pub async fn get_user_session_router(req: HttpRequest, state: Data<AppState>) -> impl Responder {
     if let Some(token) = req.headers().get("Authorization") {
-        match get_user_session(token.to_str().unwrap(), state.into_inner()).await {
+        match get_user_session(token.to_str().unwrap(), &state.into_inner()).await {
             Err(e) => HttpResponse::BadRequest().json(ReqErrModel { message: e }),
             Ok(d) => HttpResponse::Ok().json(d),
         }
