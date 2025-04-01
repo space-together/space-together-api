@@ -197,17 +197,8 @@ pub async fn fetch_oauth_token(
                     .as_deref()
                     .ok_or("Missing code verifier")?,
             )?;
-            let user_session = fetch_oauth_token_by_provider(
-                state,
-                &FetchOauthTokenModel {
-                    provider: AccountProviders::Discord,
-                    code: token.code,
-                    state: token.state,
-                    code_verifier: get_verification.code_verifier,
-                },
-                &discord_client,
-            )
-            .await?;
+            let user_session =
+                fetch_oauth_token_by_provider(state, &token, &discord_client).await?;
             Ok(user_session)
         }
     }
@@ -221,10 +212,11 @@ async fn fetch_oauth_token_by_provider(
     let oauth_user = OAuthClient::fetch_user(
         provider,
         &token.code,
-        token
+        &token
             .code_verifier
-            .as_deref()
-            .ok_or("Missing code verifier")?,
+            .clone()
+            .expect("Some thing went for get verification code")
+            .to_string(),
         &provider.redirect_uri,
     )
     .await
