@@ -8,6 +8,7 @@ use crate::{
         handle_get_user_by_username, handle_user_delete_by_id, handle_user_delete_by_username,
         handle_user_delete_many, handle_user_get_all_by_role, handle_user_update_by_id,
         handle_user_update_by_username, handle_user_update_many,
+        update_user_by_user_session_handle,
     },
     AppState,
 };
@@ -34,6 +35,7 @@ pub fn routers_user(cfg: &mut ServiceConfig, state: Arc<AppState>) -> &mut Servi
             .route("/delete-many", post().to(handle_user_delete_many))
             .route("/update-many", post().to(handle_user_update_many))
             .route("/rl/{role}", get().to(handle_user_get_all_by_role))
+            .route("/session", put().to(update_user_by_user_session_handle))
             .route("/{id}", get().to(handle_get_user_by_id))
             .route("/{id}", delete().to(handle_user_delete_by_id))
             .route("/{id}", put().to(handle_user_update_by_id)),

@@ -40,7 +40,7 @@ fn get_secret_key() -> Result<[u8; 32], String> {
 
 pub struct UserSessionModelDecode {
     pub user_id: String,
-    pub user: String,
+    pub username: String,
     pub email: String,
     pub role: String,
     pub image: String,
@@ -61,29 +61,43 @@ fn encrypt_user_session_data(data: &str) -> Result<String, String> {
     }
 }
 
-pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<String, String> {
-    let key = get_secret_key()?; // Ensure this function returns the correct key
+pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<UserSessionModelDecode, String> {
+    let decrypted = decrypt_user_session_data_raw(encrypted_data)?; // Reuse decryption logic
+    let parts: Vec<&str> = decrypted.split('|').collect();
+
+    if parts.len() != 5 {
+        return Err("Invalid decrypted user session format".to_string());
+    }
+
+    Ok(UserSessionModelDecode {
+        user_id: parts[0].to_string(),
+        username: parts[1].to_string(),
+        email: parts[2].to_string(),
+        role: parts[3].to_string(),
+        image: parts[4].to_string(),
+    })
+}
+
+// Helper function to keep decryption logic clean
+fn decrypt_user_session_data_raw(encrypted_data: &str) -> Result<String, String> {
+    let key = get_secret_key()?;
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
 
-    // Decode Base64
-    let decoded = match general_purpose::STANDARD.decode(encrypted_data) {
-        Ok(data) => data,
-        Err(_) => return Err("Base64 decoding failed".to_string()),
-    };
+    let decoded = general_purpose::STANDARD
+        .decode(encrypted_data)
+        .map_err(|_| "Base64 decoding failed".to_string())?;
 
-    // Split nonce and encrypted message
     if decoded.len() < 12 {
-        return Err("Invalid encrypted data".to_string());
+        return Err("Invalid user encrypted data".to_string());
     }
-    let (nonce_bytes, ciphertext) = decoded.split_at(12); // First 12 bytes = nonce
 
+    let (nonce_bytes, ciphertext) = decoded.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
 
-    // Decrypt
-    match cipher.decrypt(nonce, ciphertext) {
-        Ok(decrypted) => String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()),
-        Err(_) => Err("Decryption user session failed".to_string()),
-    }
+    cipher
+        .decrypt(nonce, ciphertext)
+        .map_err(|_| "Decryption failed".to_string())
+        .and_then(|decrypted| String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()))
 }
 
 pub fn generate_token() -> String {

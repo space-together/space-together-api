@@ -1,6 +1,6 @@
 use actix_web::{
     web::{Data, Json, Path},
-    HttpResponse, Responder,
+    HttpRequest, HttpResponse, Responder,
 };
 use mongodb::bson::oid::ObjectId;
 
@@ -11,7 +11,7 @@ use crate::{
         controller_user_delete_many, controller_user_get_by_username,
         controller_user_get_user_by_email, controller_user_update_by_id,
         controller_user_update_by_username, controller_user_update_many,
-        controller_users_get_all_by_role,
+        controller_users_get_all_by_role, update_user_by_user_session,
     },
     libs::functions::{characters_fn::is_valid_email, object_id::change_string_into_object_id},
     models::{
@@ -193,5 +193,31 @@ pub async fn handle_user_get_all_by_role(
         Err(err) => HttpResponse::BadRequest().json(ReqErrModel {
             message: err.to_string(),
         }),
+    }
+}
+
+// auth update user by user session
+pub async fn update_user_by_user_session_handle(
+    state: Data<AppState>,
+    user: Json<UserModelPut>,
+    req: HttpRequest,
+) -> impl Responder {
+    if let Some(token) = req.headers().get("Authorization") {
+        match update_user_by_user_session(
+            state.into_inner(),
+            user.into_inner(),
+            token.to_str().unwrap(),
+        )
+        .await
+        {
+            Err(e) => HttpResponse::BadRequest().json(ReqErrModel {
+                message: e.to_string(),
+            }),
+            Ok(d) => HttpResponse::Ok().json(d),
+        }
+    } else {
+        HttpResponse::BadRequest().json(ReqErrModel {
+            message: "Token not found".to_string(),
+        })
     }
 }
