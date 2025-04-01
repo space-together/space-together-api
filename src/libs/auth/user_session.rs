@@ -1,5 +1,5 @@
 use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng};
-use aes_gcm::{Aes256Gcm, Key}; //Nonce
+use aes_gcm::{Aes256Gcm, Key, Nonce};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
 use mongodb::bson::oid::ObjectId;
@@ -38,7 +38,15 @@ fn get_secret_key() -> Result<[u8; 32], String> {
     Ok(key_bytes)
 }
 
-fn encrypt_data(data: &str) -> Result<String, String> {
+pub struct UserSessionModelDecode {
+    pub user_id: String,
+    pub user: String,
+    pub email: String,
+    pub role: String,
+    pub image: String,
+}
+
+fn encrypt_user_session_data(data: &str) -> Result<String, String> {
     let key = get_secret_key()?; // Now it's exactly 32 bytes
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
@@ -53,30 +61,30 @@ fn encrypt_data(data: &str) -> Result<String, String> {
     }
 }
 
-// fn decrypt_data(encrypted_data: &str) -> Result<String, String> {
-//     let key = get_secret_key()?; // Ensure this function returns the correct key
-//     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<String, String> {
+    let key = get_secret_key()?; // Ensure this function returns the correct key
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
 
-//     // Decode Base64
-//     let decoded = match general_purpose::STANDARD.decode(encrypted_data) {
-//         Ok(data) => data,
-//         Err(_) => return Err("Base64 decoding failed".to_string()),
-//     };
+    // Decode Base64
+    let decoded = match general_purpose::STANDARD.decode(encrypted_data) {
+        Ok(data) => data,
+        Err(_) => return Err("Base64 decoding failed".to_string()),
+    };
 
-//     // Split nonce and encrypted message
-//     if decoded.len() < 12 {
-//         return Err("Invalid encrypted data".to_string());
-//     }
-//     let (nonce_bytes, ciphertext) = decoded.split_at(12); // First 12 bytes = nonce
+    // Split nonce and encrypted message
+    if decoded.len() < 12 {
+        return Err("Invalid encrypted data".to_string());
+    }
+    let (nonce_bytes, ciphertext) = decoded.split_at(12); // First 12 bytes = nonce
 
-//     let nonce = Nonce::from_slice(nonce_bytes);
+    let nonce = Nonce::from_slice(nonce_bytes);
 
-//     // Decrypt
-//     match cipher.decrypt(nonce, ciphertext) {
-//         Ok(decrypted) => String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()),
-//         Err(_) => Err("Decryption failed".to_string()),
-//     }
-// }
+    // Decrypt
+    match cipher.decrypt(nonce, ciphertext) {
+        Ok(decrypted) => String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()),
+        Err(_) => Err("Decryption user session failed".to_string()),
+    }
+}
 
 pub fn generate_token() -> String {
     rand::thread_rng()
@@ -107,7 +115,7 @@ pub async fn create_user_session(
         user.image.clone().unwrap_or_default(),
     );
 
-    let encrypted_session = encrypt_data(&session_data)?;
+    let encrypted_session = encrypt_user_session_data(&session_data)?;
     let data = UserSessionModelNew {
         session_token: encrypted_session,
         user_id,

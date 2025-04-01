@@ -4,7 +4,10 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
-    libs::functions::object_id::change_insertoneresult_into_object_id,
+    libs::{
+        auth::user_session::decrypt_user_session_data,
+        functions::object_id::change_insertoneresult_into_object_id,
+    },
     models::user_model::user_model_model::{
         UserModelGet, UserModelNew, UserModelPut, UsersUpdateManyModel,
     },
@@ -150,4 +153,17 @@ pub async fn controller_users_get_all_by_role(
     }
 
     Ok(formatted_users)
+}
+
+/// authentication by user
+
+pub async fn update_user_by_session(
+    state: Arc<AppState>,
+    user: UserModelPut,
+    session: &str,
+) -> UserResult<UserModelGet> {
+    let decode_session = decrypt_user_session_data(session)
+        .map_err(|e| UserError::SomeError { err: e.to_string() })?;
+
+    controller_user_update_by_id(user, id, state)
 }
