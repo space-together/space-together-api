@@ -65,7 +65,7 @@ impl UserSessionModel {
             redirect: None,
         }
     }
-
+    // TODO: add to update user session after update account
     pub fn put() -> Document {
         let doc = doc! {
             "token": generate_token(),
