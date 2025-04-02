@@ -26,7 +26,6 @@ pub async fn controller_create_user(
         .await?;
     Ok(UserModelGet::format(user_data))
 }
-
 pub async fn controller_user_update_by_id(
     user: UserModelPut,
     id: ObjectId,
@@ -36,22 +35,35 @@ pub async fn controller_user_update_by_id(
     let user_session =
         decrypt_user_session_data(token).map_err(|e| UserError::SomeError { err: e })?;
 
-    if let Ok(user) = state.db.user.get_user_by_id(id).await {
-        let format = UserModelGet::format(user);
-        if format.id != user_session.user_id || user_session.role != UserRole::ADMIN {
-            return Err(UserError::SomeError {
-                err: "You not allow to update other user account".to_string(),
-            });
-        }
+    let existing_user =
+        state
+            .db
+            .user
+            .get_user_by_id(id)
+            .await
+            .map_err(|_| UserError::SomeError {
+                err: "User does not exist".to_string(),
+            })?;
+
+    // Allow update if the user is the same or if they are an admin
+    if existing_user.id.unwrap().to_string() != user_session.user_id
+        && user_session.role != UserRole::ADMIN
+    {
+        return Err(UserError::SomeError {
+            err: "You are not allowed to update this account".to_string(),
+        });
     }
 
     let updated_user = state.db.user.update_user_by_id(user, id).await?;
-    let user_data = state
-        .db
-        .user
-        .get_user_by_id(updated_user.id.unwrap())
-        .await?;
-    Ok(UserModelGet::format(user_data))
+
+    if let Some(user_id) = updated_user.id {
+        let user_data = state.db.user.get_user_by_id(user_id).await?;
+        Ok(UserModelGet::format(user_data))
+    } else {
+        Err(UserError::SomeError {
+            err: "Failed to retrieve updated user".to_string(),
+        })
+    }
 }
 
 pub async fn controller_user_update_by_username(

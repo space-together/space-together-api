@@ -62,27 +62,6 @@ fn encrypt_user_session_data(data: &str) -> Result<String, String> {
         Err(_) => Err("Encryption failed".to_string()),
     }
 }
-
-pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<UserSessionModelDecode, String> {
-    let decrypted = decrypt_user_session_data_raw(encrypted_data)?; // Reuse decryption logic
-    let parts: Vec<&str> = decrypted.split('|').collect();
-
-    if parts.len() != 5 {
-        return Err("Invalid decrypted user session format".to_string());
-    }
-
-    Ok(UserSessionModelDecode {
-        user_id: parts[0].to_string(),
-        username: parts[1].to_string(),
-        email: parts[2].to_string(),
-        role: parts[3]
-            .parse::<UserRole>()
-            .map_err(|_| "Invalid user role".to_string())?,
-        image: parts[4].to_string(),
-    })
-}
-
-// Helper function to keep decryption logic clean
 fn decrypt_user_session_data_raw(encrypted_data: &str) -> Result<String, String> {
     let key = get_secret_key()?;
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
@@ -102,6 +81,33 @@ fn decrypt_user_session_data_raw(encrypted_data: &str) -> Result<String, String>
         .decrypt(nonce, ciphertext)
         .map_err(|_| "Decryption failed".to_string())
         .and_then(|decrypted| String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()))
+}
+
+pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<UserSessionModelDecode, String> {
+    let decrypted = decrypt_user_session_data_raw(encrypted_data)?;
+    let parts: Vec<&str> = decrypted.split('|').collect();
+
+    if parts.len() != 5 {
+        return Err("Invalid decrypted user session format".to_string());
+    }
+
+    let role = parts[3]
+        .replace("Some(", "")
+        .replace(")", "")
+        .replace("\n", "")
+        .trim()
+        .trim_end_matches(',')
+        .to_string();
+
+    Ok(UserSessionModelDecode {
+        user_id: parts[0].to_string(),
+        username: parts[1].to_string(),
+        email: parts[2].to_string(),
+        role: role
+            .parse::<UserRole>()
+            .map_err(|_| "Invalid user role".to_string())?,
+        image: parts[4].to_string(),
+    })
 }
 
 pub fn generate_token() -> String {
