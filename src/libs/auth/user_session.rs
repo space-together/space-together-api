@@ -1,5 +1,5 @@
 use aes_gcm::aead::{Aead, AeadCore, KeyInit, OsRng};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
+use aes_gcm::{Aes256Gcm, Key}; //Nonce
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{Duration, Utc};
 use mongodb::bson::oid::ObjectId;
@@ -62,53 +62,54 @@ fn encrypt_user_session_data(data: &str) -> Result<String, String> {
         Err(_) => Err("Encryption failed".to_string()),
     }
 }
-fn decrypt_user_session_data_raw(encrypted_data: &str) -> Result<String, String> {
-    let key = get_secret_key()?;
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
 
-    let decoded = general_purpose::STANDARD
-        .decode(encrypted_data)
-        .map_err(|_| "Base64 decoding failed".to_string())?;
+// fn decrypt_user_session_data_raw(encrypted_data: &str) -> Result<String, String> {
+//     let key = get_secret_key()?;
+//     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
 
-    if decoded.len() < 12 {
-        return Err("Invalid user encrypted data".to_string());
-    }
+//     let decoded = general_purpose::STANDARD
+//         .decode(encrypted_data)
+//         .map_err(|_| "Base64 decoding failed".to_string())?;
 
-    let (nonce_bytes, ciphertext) = decoded.split_at(12);
-    let nonce = Nonce::from_slice(nonce_bytes);
+//     if decoded.len() < 12 {
+//         return Err("Invalid user encrypted data".to_string());
+//     }
 
-    cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|_| "Decryption failed".to_string())
-        .and_then(|decrypted| String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()))
-}
+//     let (nonce_bytes, ciphertext) = decoded.split_at(12);
+//     let nonce = Nonce::from_slice(nonce_bytes);
 
-pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<UserSessionModelDecode, String> {
-    let decrypted = decrypt_user_session_data_raw(encrypted_data)?;
-    let parts: Vec<&str> = decrypted.split('|').collect();
+//     cipher
+//         .decrypt(nonce, ciphertext)
+//         .map_err(|_| "Decryption failed".to_string())
+//         .and_then(|decrypted| String::from_utf8(decrypted).map_err(|_| "Invalid UTF-8".to_string()))
+// }
 
-    if parts.len() != 5 {
-        return Err("Invalid decrypted user session format".to_string());
-    }
+// pub fn decrypt_user_session_data(encrypted_data: &str) -> Result<UserSessionModelDecode, String> {
+//     let decrypted = decrypt_user_session_data_raw(encrypted_data)?;
+//     let parts: Vec<&str> = decrypted.split('|').collect();
 
-    let role = parts[3]
-        .replace("Some(", "")
-        .replace(")", "")
-        .replace("\n", "")
-        .trim()
-        .trim_end_matches(',')
-        .to_string();
+//     if parts.len() != 5 {
+//         return Err("Invalid decrypted user session format".to_string());
+//     }
 
-    Ok(UserSessionModelDecode {
-        user_id: parts[0].to_string(),
-        username: parts[1].to_string(),
-        email: parts[2].to_string(),
-        role: role
-            .parse::<UserRole>()
-            .map_err(|_| "Invalid user role".to_string())?,
-        image: parts[4].to_string(),
-    })
-}
+//     let role = parts[3]
+//         .replace("Some(", "")
+//         .replace(")", "")
+//         .replace("\n", "")
+//         .trim()
+//         .trim_end_matches(',')
+//         .to_string();
+
+//     Ok(UserSessionModelDecode {
+//         user_id: parts[0].to_string(),
+//         username: parts[1].to_string(),
+//         email: parts[2].to_string(),
+//         role: role
+//             .parse::<UserRole>()
+//             .map_err(|_| "Invalid user role".to_string())?,
+//         image: parts[4].to_string(),
+//     })
+// }
 
 pub fn generate_token() -> String {
     rand::thread_rng()

@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use mongodb::bson::oid::ObjectId;
 
 use crate::{
     error::user_error::user_error_err::{UserError, UserResult},
     libs::{
-        auth::user_session::decrypt_user_session_data,
+        auth::user_session::get_user_session,
         functions::object_id::change_insertoneresult_into_object_id,
     },
     models::user_model::user_model_model::{
@@ -26,20 +26,26 @@ pub async fn controller_create_user(
         .await?;
     Ok(UserModelGet::format(user_data))
 }
+
+// async fn update_user_by_field(state : &Arc<AppState> , field : &str) {
+
+// }
+
 pub async fn controller_user_update_by_id(
     user: UserModelPut,
     id: ObjectId,
     state: Arc<AppState>,
     token: &str,
 ) -> UserResult<UserModelGet> {
-    let user_session =
-        decrypt_user_session_data(token).map_err(|e| UserError::SomeError { err: e })?;
-
+    let user_session = get_user_session(token, &state)
+        .await
+        .map_err(|e| UserError::SomeError { err: e })?;
+    let user_id = ObjectId::from_str(&user_session.user_id).map_err(|_| UserError::InvalidId)?;
     let existing_user =
         state
             .db
             .user
-            .get_user_by_id(id)
+            .get_user_by_id(user_id)
             .await
             .map_err(|_| UserError::SomeError {
                 err: "User does not exist".to_string(),
@@ -47,7 +53,7 @@ pub async fn controller_user_update_by_id(
 
     // Allow update if the user is the same or if they are an admin
     if existing_user.id.unwrap().to_string() != user_session.user_id
-        && user_session.role != UserRole::ADMIN
+        && existing_user.role != Some(UserRole::ADMIN)
     {
         return Err(UserError::SomeError {
             err: "You are not allowed to update this account".to_string(),

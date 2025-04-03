@@ -90,7 +90,7 @@ pub async fn handle_user_update_by_id(
                     user.into_inner(),
                     _id,
                     state.into_inner(),
-                    &token.to_str().unwrap(),
+                    token.to_str().unwrap(),
                 )
                 .await
                 {
