@@ -51,6 +51,20 @@ impl Gender {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Location {
+    pub country: Option<String>,
+    pub province: Option<String>,
+    pub district: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct BirthdayDate {
+    pub year: u32,
+    pub month: u32,
+    pub day: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserModel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
@@ -62,6 +76,7 @@ pub struct UserModel {
     pub username: Option<String>, // username
     pub image: Option<String>,
     pub bio: Option<String>,
+    pub location: Option<Location>,
     pub phone: Option<String>,       //phone number
     pub gender: Option<Gender>,      // gender
     pub age: Option<DateTime>,       // age
@@ -90,7 +105,8 @@ pub struct UserModelPut {
     pub phone: Option<String>,
     pub image: Option<String>,
     pub gender: Option<Gender>,
-    pub age: Option<String>,
+    pub location: Option<Location>,
+    pub age: Option<BirthdayDate>,
     pub bio: Option<String>,
     pub disable: Option<bool>,
 }
@@ -124,6 +140,7 @@ impl UserModel {
             age: None,
             image: user.image,
             phone: None,
+            location: None,
             bio: None,
             disable: Some(false),
             username: Some(
@@ -152,13 +169,21 @@ impl UserModel {
 
         insert_if_some("role", user.role.map(bson::Bson::String));
         insert_if_some("bio", user.bio.map(bson::Bson::String));
+        insert_if_some(
+            "location",
+            user.location
+                .map(|location| bson::to_document(&location).unwrap_or_default().into()),
+        );
 
         insert_if_some("image", user.image.map(bson::Bson::String));
         insert_if_some(
             "age",
-            user.age
-                .map(|age| bson::Bson::DateTime(DateTime::parse_rfc3339_str(&age).unwrap())),
+            user.age.map(|age| {
+                let date_str = format!("{:04}-{:02}-{:02}T00:00:00Z", age.year, age.month, age.day);
+                bson::Bson::DateTime(DateTime::parse_rfc3339_str(&date_str).unwrap())
+            }),
         );
+
         insert_if_some("name", user.name.map(bson::Bson::String));
         insert_if_some("disable", user.disable.map(bson::Bson::Boolean));
         insert_if_some("username", user.username.map(bson::Bson::String));
@@ -193,6 +218,7 @@ pub struct UserModelGet {
     pub gender: Option<Gender>,
     pub bio: Option<String>,
     pub age: Option<String>,
+    pub location: Option<Location>,
     pub create_at: Option<String>,
     pub update_at: Option<String>,
 }
@@ -207,6 +233,7 @@ impl UserModelGet {
             email: user.email,
             image: user.image,
             gender: user.gender,
+            location: user.location,
             age: user.age.map(|age| {
                 age.try_to_rfc3339_string()
                     .unwrap_or_else(|_| "".to_string())
