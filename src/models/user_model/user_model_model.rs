@@ -3,9 +3,12 @@ use std::str::FromStr;
 use mongodb::bson::{self, doc, oid::ObjectId, DateTime, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::libs::{
-    auth::user_session::user_session_expires,
-    functions::characters_fn::{generate_salt, generate_username, hash_password},
+use crate::{
+    libs::{
+        auth::user_session::user_session_expires,
+        functions::characters_fn::{generate_salt, generate_username, hash_password},
+    },
+    models::other_model::address_model::AddressModel,
 };
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -51,13 +54,6 @@ impl Gender {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Location {
-    pub country: Option<String>,
-    pub province: Option<String>,
-    pub district: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct BirthdayDate {
     pub year: u32,
     pub month: u32,
@@ -76,7 +72,7 @@ pub struct UserModel {
     pub username: Option<String>, // username
     pub image: Option<String>,
     pub bio: Option<String>,
-    pub location: Option<Location>,
+    pub location: Option<AddressModel>,
     pub phone: Option<String>,       //phone number
     pub gender: Option<Gender>,      // gender
     pub age: Option<DateTime>,       // age
@@ -105,7 +101,7 @@ pub struct UserModelPut {
     pub phone: Option<String>,
     pub image: Option<String>,
     pub gender: Option<Gender>,
-    pub location: Option<Location>,
+    pub location: Option<AddressModel>,
     pub age: Option<BirthdayDate>,
     pub bio: Option<String>,
     pub disable: Option<bool>,
@@ -218,7 +214,7 @@ pub struct UserModelGet {
     pub gender: Option<Gender>,
     pub bio: Option<String>,
     pub age: Option<String>,
-    pub location: Option<Location>,
+    pub location: Option<AddressModel>,
     pub create_at: Option<String>,
     pub update_at: Option<String>,
 }

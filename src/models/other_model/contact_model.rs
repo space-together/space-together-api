@@ -11,11 +11,11 @@ pub struct SocialMediaModel {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ContactModel {
-    pub primary_phone: String,
-    pub secondary_phone: Option<String>,
+    pub phone_1: String,
+    pub phone_2: Option<String>,
     pub emergency_contact: Option<String>,
-    pub primary_email: String, // Primary contact email of the school
-    pub secondary_email: Option<String>, // Secondary contact email, if any
+    pub email_1: String,         // Primary contact email of the school
+    pub email_2: Option<String>, // Secondary contact email, if any
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

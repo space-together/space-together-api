@@ -29,11 +29,11 @@ use crate::{
         database_model::collection_model::DatabaseStats,
         education_model::education_model_model::EducationModel,
         file_model::{file_model_model::FileModel, file_type_model::FileTypeModel},
-        images_model::{
-            profile_images_model::ProfileImageModel, school_logo_model::SchoolLogoModel,
-        },
+        images_model::profile_images_model::ProfileImageModel,
         school_model::{
-            school_model_model::SchoolModel, sector_model::SectorModel, trade_model::TradeModel,
+            school_model_model::{SchoolMemberModel, SchoolModel},
+            sector_model::SectorModel,
+            trade_model::TradeModel,
         },
         subject_model::{subject_model_model::SubjectModel, subject_type_model::SubjectTypeModel},
         user_model::user_model_model::UserAccount,
@@ -60,16 +60,16 @@ pub struct ConnDb {
     pub request: RequestDb,
     pub education: MongoCrud<EducationModel>,
     pub educations: MongoCrud<EducationSchema>,
-    pub school: MongoCrud<SchoolModel>,
     pub trade: MongoCrud<TradeModel>,
     pub sector: MongoCrud<SectorModel>,
     pub class_type: MongoCrud<ClassTypeModel>,
     pub subject_type: MongoCrud<SubjectTypeModel>,
     pub subject: MongoCrud<SubjectModel>,
     pub subjects: MongoCrud<SubjectSchema>,
+    pub school: MongoCrud<SchoolModel>,
+    pub school_member: MongoCrud<SchoolMemberModel>,
     // images
     pub avatars: MongoCrud<ProfileImageModel>,
-    pub school_logo: MongoCrud<SchoolLogoModel>,
     // files
     pub file_type: MongoCrud<FileTypeModel>,
     pub file: MongoCrud<FileModel>,
@@ -143,8 +143,12 @@ impl ConnDb {
                     educations: MongoCrud {
                         collection: st_data.collection("educations"),
                     },
+                    // school
                     school: MongoCrud {
                         collection: st_data.collection("schools"),
+                    },
+                    school_member: MongoCrud {
+                        collection: st_data.collection("school_members"),
                     },
                     sector: MongoCrud {
                         collection: st_data.collection("sector"),
@@ -173,9 +177,6 @@ impl ConnDb {
                     // images
                     avatars: MongoCrud {
                         collection: st_image.collection("avatars"),
-                    },
-                    school_logo: MongoCrud {
-                        collection: st_image.collection("school_logo"),
                     },
                     // files
                     file_type: MongoCrud {

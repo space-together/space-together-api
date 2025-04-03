@@ -14,15 +14,6 @@ pub struct SchoolLogoModel {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SchoolLogoModelGet {
-    pub id: String,
-    pub school_id: String, // school id
-    pub src: String,
-    pub create_on: String, // create on
-    pub update_on: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SchoolLogoModelNew {
     pub school_id: String, // school id
     pub src: String,
