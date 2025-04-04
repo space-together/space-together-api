@@ -1,125 +1,89 @@
 use std::{str::FromStr, sync::Arc};
 
-use futures::future::join_all;
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{doc, oid::ObjectId};
 
 use crate::{
-    error::db_class_error::{DbClassError, DbClassResult},
+    controllers::user_controller::user_controller_controller::{
+        controller_get_user_by_id, get_user_by_token,
+    },
     models::{
-        images_model::school_logo_model::{SchoolLogoModel, SchoolLogoModelNew},
-        school_model::school_model_model::{SchoolModel, SchoolModelGet, SchoolModelNew},
+        school_model::school_model_model::{
+            SchoolModel, SchoolModelGet, SchoolModelNew, SchoolModelPut,
+        },
+        user_model::user_model_model::UserRole,
     },
     AppState,
 };
 
-use super::school_controller_logo::fetch_school_logo;
-
-pub async fn controller_school_create(
-    state: Arc<AppState>,
-    school: SchoolModelNew,
-) -> DbClassResult<SchoolModelGet> {
-    let owner_id = match ObjectId::from_str(&school.creator_id) {
-        Err(_) => return Err(DbClassError::InvalidId),
-        Ok(e) => e,
-    };
-    let get_owner = state.db.user.get_user_by_id(owner_id).await;
-
-    if let Err(e) = get_owner {
-        return Err(DbClassError::OtherError { err: e.to_string() });
+pub async fn create_school(
+    state: &Arc<AppState>,
+    school: &SchoolModelNew,
+    token: &str,
+) -> Result<SchoolModelGet, String> {
+    let user = get_user_by_token(state, token).await?;
+    if user.role != Some(UserRole::SCHOOLSTAFF) || user.role != Some(UserRole::ADMIN) {
+        return Err("You are not allowed to create a school".to_string());
+    }
+    let creator_id = ObjectId::from_str(&school.creator_id)
+        .map_err(|_| "Creator id is not a valid ObjectId".to_string())?;
+    let get_creator = controller_get_user_by_id(state.clone(), creator_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    if get_creator.role != Some(UserRole::SCHOOLSTAFF) && get_creator.role != Some(UserRole::ADMIN)
+    {
+        return Err("You are not allowed to create a school".to_string());
+    }
+    // check if the creator is the same as the user
+    if Some(get_creator.id.to_string()) != Some(user.id.unwrap().to_string()) {
+        return Err("You are not allowed to create a school".to_string());
     }
 
-    let collection = Some("School".to_string());
-    let create = state
+    let school_id = state
         .db
         .school
-        .create(SchoolModel::new(school.clone()), collection.clone())
-        .await;
-    match create {
-        Err(e) => Err(e),
-        Ok(i) => match state.db.school.get_one_by_id(i, collection.clone()).await {
-            Err(err) => Err(err),
-            Ok(k) => {
-                // create school logo
-                let collection_logo = Some("School".to_string());
-                let mut format_school = SchoolModel::format(k.clone());
-
-                if let Some(i) = school.logo_uri.clone() {
-                    let new_logo = SchoolLogoModelNew {
-                        school_id: k.id.unwrap().to_string(),
-                        src: i,
-                    };
-                    let create_logo = state
-                        .db
-                        .school_logo
-                        .create(SchoolLogoModel::new(new_logo), collection_logo.clone())
-                        .await;
-
-                    match create_logo {
-                        Err(e) => return Err(DbClassError::OtherError { err: e.to_string() }),
-                        Ok(i) => match state.db.school_logo.get_one_by_id(i, collection_logo).await
-                        {
-                            Err(e) => return Err(DbClassError::OtherError { err: e.to_string() }),
-                            Ok(logo) => {
-                                format_school.logo_uri = Some(SchoolLogoModel::format(logo))
-                            }
-                        },
-                    }
-                }
-
-                Ok(format_school)
-            }
-        },
-    }
+        .create(SchoolModel::new(school.clone()), Some("school".to_string()))
+        .await
+        .map_err(|e| e.to_string())?;
+    state
+        .db
+        .school
+        .get_one_by_id(school_id, Some("School".to_string()))
+        .await
+        .map_err(|e| e.to_string())
+        .map(|d| SchoolModel::format(&d))
 }
 
-pub async fn controller_school_get(state: Arc<AppState>) -> DbClassResult<Vec<SchoolModelGet>> {
-    let collection = Some("School".to_string());
-
-    // Fetch schools
-    let school_results = state.db.school.get_many(None, collection.clone()).await?;
-    let schools: Vec<SchoolModelGet> = school_results
-        .into_iter()
-        .map(SchoolModel::format)
-        .collect();
-
-    // Fetch logos concurrently
-    let school_logo_futures = schools
-        .iter()
-        .map(|school| fetch_school_logo(&state, &school.id, collection.clone()));
-    let logos_results = join_all(school_logo_futures).await;
-
-    // Combine schools and their logos
-    let schools_with_logo: Vec<SchoolModelGet> = schools
-        .into_iter()
-        .zip(logos_results)
-        .map(|(mut school, logo_result)| {
-            if let Ok(logo) = logo_result {
-                school.logo_uri = logo.map(SchoolLogoModel::format);
-            }
-            school
-        })
-        .collect();
-
-    Ok(schools_with_logo)
-}
-
-pub async fn controller_school_get_by_id(
-    state: Arc<AppState>,
+pub async fn get_school_by_id(
+    state: &Arc<AppState>,
     id: ObjectId,
-) -> DbClassResult<SchoolModelGet> {
-    let collection = Some("School".to_string());
-    let get = state.db.school.get_one_by_id(id, collection.clone()).await;
-    match get {
-        Err(e) => Err(e),
-        Ok(k) => {
-            let mut school = SchoolModel::format(k);
-            let get_logo = fetch_school_logo(&state, &school.id, collection).await;
-            if let Ok(logo) = get_logo {
-                school.logo_uri = logo.map(SchoolLogoModel::format);
-            }
-            Ok(school)
-        }
-    }
+) -> Result<SchoolModelGet, String> {
+    state
+        .db
+        .school
+        .get_one_by_id(id, Some("school".to_string()))
+        .await
+        .map_err(|e| e.to_string())
+        .map(|d| SchoolModel::format(&d))
 }
 
-// pub async fn controller_school_update_by_id(state: Arc<AppState> , id: ObjectId , school: SchoolModelPut)
+pub async fn update_school_by_id(
+    state: &Arc<AppState>,
+    id: ObjectId,
+    school: &SchoolModelPut,
+) -> Result<SchoolModelGet, String> {
+    let update = state
+        .db
+        .school
+        .collection
+        .find_one_and_update(
+            doc! {"_id": id},
+            doc! {"$set" : SchoolModel::put(school.clone())},
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    match update {
+        Some(d) => Ok(get_school_by_id(state, d.id.unwrap()).await?),
+        None => Err("School not found".to_string()),
+    }
+}

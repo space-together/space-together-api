@@ -267,7 +267,6 @@ pub async fn get_user_session(
         .map(UserSessionModel::format)
         .ok_or("Session not found".to_string())
 }
-
 // verification oauth token
 pub async fn create_verification_token(
     state: &Arc<AppState>,

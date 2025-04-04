@@ -9,7 +9,7 @@ use crate::{
         functions::object_id::change_insertoneresult_into_object_id,
     },
     models::user_model::user_model_model::{
-        UserModelGet, UserModelNew, UserModelPut, UserRole, UsersUpdateManyModel,
+        UserModel, UserModelGet, UserModelNew, UserModelPut, UserRole, UsersUpdateManyModel,
     },
     AppState,
 };
@@ -160,4 +160,16 @@ pub async fn controller_users_get_all_by_role(
 ) -> UserResult<Vec<UserModelGet>> {
     let users = state.db.user.get_users_by_rl(role).await?;
     Ok(users)
+}
+
+pub async fn get_user_by_token(state: &Arc<AppState>, token: &str) -> Result<UserModel, String> {
+    let user_session = get_user_session(token, state).await?;
+    let user_id = ObjectId::from_str(&user_session.user_id).map_err(|_| "Invalid user ID")?;
+    let user_data = state
+        .db
+        .user
+        .get_user_by_id(user_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(user_data)
 }

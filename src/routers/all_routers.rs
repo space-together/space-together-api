@@ -29,8 +29,8 @@ use super::{
         request_router_router::routers_request, request_type_router::routers_request_type,
     },
     school_router::{
-        school_router_auth::routers_school_auth, school_router_router::routers_school,
-        sector_router::routers_sector, trade_router::routers_trade,
+        school_router_router::routers_school, sector_router::routers_sector,
+        trade_router::routers_trade,
     },
     subject_router::{
         subject_router_router::{routers_subject, subject_routers},
@@ -86,7 +86,6 @@ pub fn all_routers(cfg: &mut ServiceConfig, state: Arc<AppState>) {
             .service(web::scope("/school").configure(|user_cfg| {
                 routers_sector(user_cfg, state.clone());
                 routers_trade(user_cfg, state.clone());
-                routers_school_auth(user_cfg, state.clone());
                 routers_school(user_cfg, state.clone());
             }))
             .service(web::scope("/file").configure(|user_cfg| {

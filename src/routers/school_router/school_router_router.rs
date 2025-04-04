@@ -1,8 +1,10 @@
-use actix_web::web::{self, get};
+use actix_web::web::{self, get, post};
 use std::sync::Arc;
 
 use crate::{
-    handlers::school_handle::school_handle_handle::{handle_school_get, handle_school_get_by_id},
+    handlers::school_handle::school_handle_handle::{
+        create_school_handle, get_school_by_id_handle,
+    },
     AppState,
 };
 
@@ -13,7 +15,7 @@ pub fn routers_school(
     cfg.service(
         web::scope("")
             .app_data(web::Data::new(state.clone()))
-            .route("", get().to(handle_school_get))
-            .route("/{id}", get().to(handle_school_get_by_id)),
+            .route("", post().to(create_school_handle))
+            .route("/{id}", get().to(get_school_by_id_handle)),
     )
 }
