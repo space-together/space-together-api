@@ -257,15 +257,17 @@ pub async fn get_user_session(
     token: &str,
     state: &Arc<AppState>,
 ) -> Result<UserSessionModelGet, String> {
-    state
+    match state
         .db
         .user_session
         .collection
         .find_one(doc! {"token": token})
         .await
         .map_err(|e| e.to_string())?
-        .map(UserSessionModel::format)
-        .ok_or("Session not found".to_string())
+    {
+        Some(d) => Ok(UserSessionModel::format(d)),
+        None => Err("Session not found".to_string()),
+    }
 }
 // verification oauth token
 pub async fn create_verification_token(

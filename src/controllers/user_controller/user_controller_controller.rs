@@ -37,24 +37,12 @@ pub async fn controller_user_update_by_id(
     state: Arc<AppState>,
     token: &str,
 ) -> UserResult<UserModelGet> {
-    let user_session = get_user_session(token, &state)
+    let user_session = get_user_by_token(token, &state)
         .await
         .map_err(|e| UserError::SomeError { err: e })?;
-    let user_id = ObjectId::from_str(&user_session.user_id).map_err(|_| UserError::InvalidId)?;
-    let existing_user =
-        state
-            .db
-            .user
-            .get_user_by_id(user_id)
-            .await
-            .map_err(|_| UserError::SomeError {
-                err: "User does not exist".to_string(),
-            })?;
 
     // Allow update if the user is the same or if they are an admin
-    if existing_user.id.unwrap().to_string() != user_session.user_id
-        && existing_user.role != Some(UserRole::ADMIN)
-    {
+    if id != user_session.id.unwrap() && user_session.role != Some(UserRole::ADMIN) {
         return Err(UserError::SomeError {
             err: "You are not allowed to update this account".to_string(),
         });
@@ -162,7 +150,7 @@ pub async fn controller_users_get_all_by_role(
     Ok(users)
 }
 
-pub async fn get_user_by_token(state: &Arc<AppState>, token: &str) -> Result<UserModel, String> {
+pub async fn get_user_by_token(token: &str, state: &Arc<AppState>) -> Result<UserModel, String> {
     let user_session = get_user_session(token, state).await?;
     let user_id = ObjectId::from_str(&user_session.user_id).map_err(|_| "Invalid user ID")?;
     let user_data = state

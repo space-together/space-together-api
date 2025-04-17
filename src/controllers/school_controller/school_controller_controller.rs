@@ -20,7 +20,7 @@ pub async fn create_school(
     school: &SchoolModelNew,
     token: &str,
 ) -> Result<SchoolModelGet, String> {
-    let user = get_user_by_token(state, token).await?;
+    let user = get_user_by_token(token, state).await?;
     if user.role != Some(UserRole::SCHOOLSTAFF) || user.role != Some(UserRole::ADMIN) {
         return Err("You are not allowed to create a school".to_string());
     }
@@ -31,10 +31,6 @@ pub async fn create_school(
         .map_err(|e| e.to_string())?;
     if get_creator.role != Some(UserRole::SCHOOLSTAFF) && get_creator.role != Some(UserRole::ADMIN)
     {
-        return Err("You are not allowed to create a school".to_string());
-    }
-    // check if the creator is the same as the user
-    if Some(get_creator.id.to_string()) != Some(user.id.unwrap().to_string()) {
         return Err("You are not allowed to create a school".to_string());
     }
 

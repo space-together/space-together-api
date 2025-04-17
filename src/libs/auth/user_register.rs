@@ -76,7 +76,9 @@ pub async fn user_login(
         .password
         .clone()
         .ok_or("Password not set for user".to_string())?;
-    let salt = user.salt.ok_or("Salt missing for user".to_string())?;
+    let salt = user
+        .salt
+        .ok_or("Your not allowed to login using password, try other account".to_string())?;
 
     if !verify_password(&password, salt, &stored_hash) {
         return Err("Invalid email or password".to_string());
