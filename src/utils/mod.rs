@@ -11,6 +11,7 @@ pub mod mongo_utils;
 pub mod names;
 pub mod object_id;
 pub mod partial_macro;
+pub mod request_context;
 pub mod route_utils;
 pub mod school_token;
 pub mod school_utils;

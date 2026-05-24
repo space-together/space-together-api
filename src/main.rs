@@ -54,9 +54,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(crate::middleware::logging::RequestLoggingMiddleware)
             .wrap(cors)
-            .wrap(crate::middleware::tenant_middleware::TenantMiddleware::new(
-                mongo_manager.clone(),
-            ))
+            .wrap(crate::middleware::tenant_middleware::TenantMiddleware::new())
             .app_data(state.clone())
             .configure(api::init_routes)
     })
