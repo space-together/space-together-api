@@ -52,6 +52,11 @@ Important route wiring:
 - Put business rules in `src/services`, not directly in route handlers.
 - Keep MongoDB details inside services/repositories unless an existing module
   already does otherwise.
+- For database reads, writes, updates, deletes, pagination, aggregation, and
+  counts, prefer `src/repositories/base_repo.rs` and its `BaseRepository`
+  helpers such as `get_all`, `find_one`, `create`, `update_one_and_fetch`,
+  `update_many_and_fetch`, `delete_one`, `aggregate_with_paginate`,
+  `aggregate_one`, and `count` before writing direct MongoDB calls.
 - Use existing domain structs and `make_partial!` for update payloads when
   adding partial-update models.
 - Preserve existing response style: success returns JSON data; validation and
@@ -114,4 +119,3 @@ reviewing the rendered Markdown or JSON validity is enough.
   files in the relevant sibling client repositories.
 - Keep secrets out of commits. Do not commit `.env` values or credentials.
 - Use ASCII in new files unless the surrounding file already needs Unicode.
-
