@@ -10,12 +10,27 @@ use crate::config::state::AppState;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum WsMessage {
-    MessageCreated { conversation_id: String, message_id: String },
-    MessageRead { message_id: String, user_id: String },
-    MessageDeleted { message_id: String },
-    ConversationCreated { conversation_id: String },
-    ParticipantAdded { conversation_id: String, user_id: String },
-    Error { message: String },
+    MessageCreated {
+        conversation_id: String,
+        message_id: String,
+    },
+    MessageRead {
+        message_id: String,
+        user_id: String,
+    },
+    MessageDeleted {
+        message_id: String,
+    },
+    ConversationCreated {
+        conversation_id: String,
+    },
+    ParticipantAdded {
+        conversation_id: String,
+        user_id: String,
+    },
+    Error {
+        message: String,
+    },
     Ping,
     Pong,
 }
@@ -44,7 +59,7 @@ async fn websocket_handler(
 
     // Verify user is participant in conversation
     let db = state.db.get_db(&format!("school_{}", school_id.to_hex()));
-    
+
     let conv_service = crate::services::conversation_service::ConversationService::new(&db);
     let conversation_oid = ObjectId::parse_str(&conversation_id)
         .map_err(|_| actix_web::error::ErrorBadRequest("Invalid conversation ID"))?;
@@ -65,13 +80,16 @@ async fn websocket_handler(
 
     // Spawn task to handle WebSocket messages
     actix_web::rt::spawn(async move {
-        log::info!("WebSocket connection established for conversation: {}", conversation_id);
+        log::info!(
+            "WebSocket connection established for conversation: {}",
+            conversation_id
+        );
 
         while let Some(msg) = stream.next().await {
             match msg {
                 Ok(Message::Text(text)) => {
                     log::debug!("Received text message: {}", text);
-                    
+
                     // Parse incoming message
                     if let Ok(ws_msg) = serde_json::from_str::<WsMessage>(&text) {
                         match ws_msg {
@@ -96,7 +114,10 @@ async fn websocket_handler(
             }
         }
 
-        log::info!("WebSocket connection closed for conversation: {}", conversation_id);
+        log::info!(
+            "WebSocket connection closed for conversation: {}",
+            conversation_id
+        );
     });
 
     Ok(response)

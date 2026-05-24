@@ -2,7 +2,9 @@ use chrono::{NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::domain::{parent::Parent, school_staff::SchoolStaff, student::Student, teacher::Teacher, user::User};
+use crate::domain::{
+    parent::Parent, school_staff::SchoolStaff, student::Student, teacher::Teacher, user::User,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]

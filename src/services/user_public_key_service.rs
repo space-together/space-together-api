@@ -65,8 +65,11 @@ impl UserPublicKeyService {
                 }
             };
 
-            repo.update_one_raw(&crate::models::id_model::IdType::ObjectId(existing_key.id.unwrap()), update_doc)
-                .await?;
+            repo.update_one_raw(
+                &crate::models::id_model::IdType::ObjectId(existing_key.id.unwrap()),
+                update_doc,
+            )
+            .await?;
 
             self.get_public_key(user_id).await
         } else {
@@ -95,7 +98,7 @@ impl UserPublicKeyService {
     pub async fn get_public_key(&self, user_id: ObjectId) -> Result<UserPublicKey, AppError> {
         // Ensure indexes exist
         self.ensure_indexes().await?;
-        
+
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
 
         repo.find_one::<UserPublicKey>(doc! { "user_id": user_id.to_hex() }, None)
@@ -126,21 +129,14 @@ impl UserPublicKeyService {
 
         let filter = doc! { "user_id": { "$in": user_ids.clone() } };
 
-        let cursor = self
-            .collection
-            .find(filter)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to fetch public keys: {}", e),
-            })?;
+        let cursor = self.collection.find(filter).await.map_err(|e| AppError {
+            message: format!("Failed to fetch public keys: {}", e),
+        })?;
 
         use futures::stream::TryStreamExt;
-        let keys: Vec<UserPublicKey> = cursor
-            .try_collect()
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to collect public keys: {}", e),
-            })?;
+        let keys: Vec<UserPublicKey> = cursor.try_collect().await.map_err(|e| AppError {
+            message: format!("Failed to collect public keys: {}", e),
+        })?;
 
         // Check if all requested users have public keys
         if keys.len() != user_ids.len() {
@@ -152,10 +148,7 @@ impl UserPublicKeyService {
                 .collect();
 
             return Err(AppError {
-                message: format!(
-                    "Public key not found for users: {}",
-                    missing_ids.join(", ")
-                ),
+                message: format!("Public key not found for users: {}", missing_ids.join(", ")),
             });
         }
 
@@ -198,21 +191,14 @@ impl UserPublicKeyService {
 
         let filter = doc! { "user_id": { "$in": user_ids.clone() } };
 
-        let cursor = self
-            .collection
-            .find(filter)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to fetch public keys: {}", e),
-            })?;
+        let cursor = self.collection.find(filter).await.map_err(|e| AppError {
+            message: format!("Failed to fetch public keys: {}", e),
+        })?;
 
         use futures::stream::TryStreamExt;
-        let keys: Vec<UserPublicKey> = cursor
-            .try_collect()
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to collect public keys: {}", e),
-            })?;
+        let keys: Vec<UserPublicKey> = cursor.try_collect().await.map_err(|e| AppError {
+            message: format!("Failed to collect public keys: {}", e),
+        })?;
 
         // Identify missing user IDs
         let found_ids: Vec<ObjectId> = keys.iter().map(|k| k.user_id).collect();
@@ -277,7 +263,10 @@ impl UserPublicKeyService {
                             created_at: created_key.created_at,
                         });
                     }
-                    Err(e) if e.message.contains("duplicate key error") || e.message.contains("E11000") => {
+                    Err(e)
+                        if e.message.contains("duplicate key error")
+                            || e.message.contains("E11000") =>
+                    {
                         // Key was created by another request, fetch it
                         match self.get_public_key(user_id).await {
                             Ok(existing_key) => {
@@ -317,10 +306,10 @@ impl UserPublicKeyService {
     async fn try_create_public_key(&self, user_id: ObjectId) -> Result<UserPublicKey, AppError> {
         // Ensure indexes exist (including unique index on user_id)
         self.ensure_indexes().await?;
-        
+
         // Generate a new public key
         let public_key = crate::utils::crypto_utils::generate_rsa_public_key()?;
-        
+
         // Try to insert directly (will fail if key already exists due to unique index)
         let new_key = UserPublicKey {
             id: None,

@@ -1,13 +1,16 @@
+use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, Document},
     Collection, Database,
 };
-use futures::TryStreamExt;
 
 use crate::{
     domain::{
         common_details::Paginated,
-        role::{Permission, PermissionScope, Role, RolePartial, RoleType, RoleWithRelations, UserRoleAssignment},
+        role::{
+            Permission, PermissionScope, Role, RolePartial, RoleType, RoleWithRelations,
+            UserRoleAssignment,
+        },
     },
     errors::AppError,
     models::{
@@ -111,11 +114,9 @@ impl RoleService {
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
 
-        repo.find_one::<Role>(filter, None)
-            .await?
-            .ok_or(AppError {
-                message: "Role not found".into(),
-            })
+        repo.find_one::<Role>(filter, None).await?.ok_or(AppError {
+            message: "Role not found".into(),
+        })
     }
 
     pub async fn get_all(
@@ -172,8 +173,11 @@ impl RoleService {
         }
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        repo.update_one_and_fetch::<Role>(id, extract_valid_fields(Role::from_partial(update.clone())?))
-            .await
+        repo.update_one_and_fetch::<Role>(
+            id,
+            extract_valid_fields(Role::from_partial(update.clone())?),
+        )
+        .await
     }
 
     pub async fn delete_role(&self, id: &IdType) -> Result<Role, AppError> {

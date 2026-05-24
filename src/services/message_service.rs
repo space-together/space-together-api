@@ -1,10 +1,7 @@
 use crate::{
     domain::message::{Message, MessageWithRelations},
     errors::AppError,
-    models::{
-        id_model::IdType,
-        mongo_model::IndexDef,
-    },
+    models::{id_model::IdType, mongo_model::IndexDef},
     pipeline::message_pipeline::message_pipeline,
     repositories::base_repo::BaseRepository,
     utils::mongo_utils::extract_valid_fields,
@@ -40,11 +37,7 @@ impl MessageService {
             IndexDef::single("deleted_at", false),
         ];
 
-        let repo = BaseRepository::new(
-            self.collection
-                .clone()
-                .clone_with_type::<Document>(),
-        );
+        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
 
         repo.ensure_indexes(&indexes).await?;
         Ok(())
@@ -56,7 +49,9 @@ impl MessageService {
         {
             let mut ids = self.recent_message_ids.write().await;
             if ids.contains(&dto.client_message_id) {
-                return Err(AppError { message: "Duplicate message detected".to_string() });
+                return Err(AppError {
+                    message: "Duplicate message detected".to_string(),
+                });
             }
             ids.insert(dto.client_message_id.clone());
 
@@ -66,13 +61,18 @@ impl MessageService {
         }
 
         if dto.encrypted_payload.len() > 100 * 1024 {
-            return Err(AppError { message: "Encrypted payload too large".to_string() });
+            return Err(AppError {
+                message: "Encrypted payload too large".to_string(),
+            });
         }
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
 
         let message = repo
-            .create::<Message>(extract_valid_fields(dto.to_document()?), Some(&["client_message_id"]))
+            .create::<Message>(
+                extract_valid_fields(dto.to_document()?),
+                Some(&["client_message_id"]),
+            )
             .await?;
 
         Ok(message)

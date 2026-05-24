@@ -1,14 +1,16 @@
-use std::str::FromStr;
-
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, get, patch, post, web};
-use mongodb::bson::{doc, oid::ObjectId};
+use actix_web::{get, patch, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 
 use crate::{
-    config::state::AppState, domain::{
+    config::state::AppState,
+    domain::{
         auth::{LoginUser, RegisterUser},
         auth_user::AuthUserDto,
         user::UpdateUserDto,
-    }, errors::AppError, middleware::jwt_middleware::JwtMiddleware, models::{id_model::IdType, request_error_model::ReqErrModel}, repositories::user_repo::UserRepo, services::{auth_service::AuthService, school_service::SchoolService, user_service::UserService}
+    },
+    middleware::jwt_middleware::JwtMiddleware,
+    models::request_error_model::ReqErrModel,
+    repositories::user_repo::UserRepo,
+    services::{auth_service::AuthService, user_service::UserService},
 };
 
 #[post("/register")]
@@ -42,10 +44,7 @@ async fn login_user(data: web::Json<LoginUser>, state: web::Data<AppState>) -> i
     let auth_service = AuthService::new(&user_repo);
 
     match auth_service.login(data.into_inner(), &state).await {
-        Ok(response) => {
-           
-            HttpResponse::Ok().json(response)
-        },
+        Ok(response) => HttpResponse::Ok().json(response),
         Err(message) => HttpResponse::Unauthorized().json(message),
     }
 }

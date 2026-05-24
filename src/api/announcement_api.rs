@@ -10,10 +10,7 @@ use crate::{
     handler::delete_target_handler::delete_target_handler,
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{
-        announcement_service::AnnouncementService, 
-        event_service::EventService,
-    },
+    services::{announcement_service::AnnouncementService, event_service::EventService},
     utils::{api_utils::build_extra_match, db_utils::get_database},
 };
 
@@ -146,7 +143,7 @@ async fn create_announcement(
             "message": e
         }));
     }
-    
+
     let db = get_database(&req, &state);
     let service = AnnouncementService::new(&db);
 
@@ -188,7 +185,7 @@ async fn update_announcement(
             "message": e
         }));
     }
-    
+
     let id = IdType::from_string(path.into_inner());
     let db = get_database(&req, &state);
     let service = AnnouncementService::new(&db);

@@ -50,9 +50,10 @@ impl ExamService {
         self.ensure_indexes().await?;
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let mut doc = extract_valid_fields(mongodb::bson::to_document(&exam).map_err(|e| AppError {
-            message: format!("Failed to serialize exam: {}", e),
-        })?);
+        let mut doc =
+            extract_valid_fields(mongodb::bson::to_document(&exam).map_err(|e| AppError {
+                message: format!("Failed to serialize exam: {}", e),
+            })?);
         doc.insert("is_deleted", false);
 
         repo.create::<Exam>(doc, None).await
@@ -65,11 +66,9 @@ impl ExamService {
         };
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        repo.find_one::<Exam>(filter, None)
-            .await?
-            .ok_or(AppError {
-                message: "Exam not found".into(),
-            })
+        repo.find_one::<Exam>(filter, None).await?.ok_or(AppError {
+            message: "Exam not found".into(),
+        })
     }
 
     pub async fn get_all(
@@ -110,9 +109,10 @@ impl ExamService {
 
     pub async fn update(&self, id: &IdType, update: &ExamPartial) -> Result<Exam, AppError> {
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let update_doc = extract_valid_fields(mongodb::bson::to_document(update).map_err(|e| AppError {
-            message: format!("Failed to serialize update: {}", e),
-        })?);
+        let update_doc =
+            extract_valid_fields(mongodb::bson::to_document(update).map_err(|e| AppError {
+                message: format!("Failed to serialize update: {}", e),
+            })?);
 
         repo.update_one_and_fetch::<Exam>(id, update_doc).await
     }

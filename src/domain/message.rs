@@ -2,7 +2,10 @@ use chrono::{DateTime, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{domain::common_details::RelatedUser, helpers::object_id_helpers, schema::common_schema::ActorRef};
+use crate::{
+    domain::common_details::RelatedUser, helpers::object_id_helpers,
+    schema::common_schema::ActorRef,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]

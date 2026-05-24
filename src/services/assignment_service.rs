@@ -67,8 +67,11 @@ impl AssignmentService {
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
         repo.ensure_indexes(&assignment_indexes).await?;
 
-        let submission_repo =
-            BaseRepository::new(self.submission_collection.clone().clone_with_type::<Document>());
+        let submission_repo = BaseRepository::new(
+            self.submission_collection
+                .clone()
+                .clone_with_type::<Document>(),
+        );
         submission_repo.ensure_indexes(&submission_indexes).await?;
 
         Ok(())
@@ -78,10 +81,7 @@ impl AssignmentService {
     // ASSIGNMENT CRUD
     // =========================
 
-    pub async fn create_assignment(
-        &self,
-        dto: Assignment,
-    ) -> Result<Assignment, AppError> {
+    pub async fn create_assignment(&self, dto: Assignment) -> Result<Assignment, AppError> {
         self.ensure_indexes().await?;
 
         if dto.title.trim().is_empty() {
@@ -355,19 +355,16 @@ impl AssignmentService {
         Ok(is_late)
     }
 
-    pub async fn create_submission(
-        &self,
-        dto: Submission,
-    ) -> Result<Submission, AppError> {
+    pub async fn create_submission(&self, dto: Submission) -> Result<Submission, AppError> {
         self.ensure_indexes().await?;
 
         // Validate assignment exists
-        let assignment_id_type = dto
-            .assignment_id
-            .map(|id| IdType::ObjectId(id))
-            .ok_or(AppError {
-                message: "Assignment ID is required".into(),
-            })?;
+        let assignment_id_type =
+            dto.assignment_id
+                .map(|id| IdType::ObjectId(id))
+                .ok_or(AppError {
+                    message: "Assignment ID is required".into(),
+                })?;
 
         let assignment = self
             .find_one_assignment(Some(&assignment_id_type), None)
@@ -387,13 +384,11 @@ impl AssignmentService {
         if let (Some(assignment_id), Some(student_id)) = (dto.assignment_id, dto.student_id) {
             let existing = self
                 .submission_collection
-                .find_one(
-                    doc! {
-                        "assignment_id": assignment_id,
-                        "student_id": student_id,
-                        "is_deleted": false
-                    }
-                )
+                .find_one(doc! {
+                    "assignment_id": assignment_id,
+                    "student_id": student_id,
+                    "is_deleted": false
+                })
                 .await
                 .map_err(|e| AppError {
                     message: format!("Failed to check existing submission: {}", e),
@@ -419,8 +414,11 @@ impl AssignmentService {
             submission.file_url = Some(cloud_res.secure_url);
         }
 
-        let repo =
-            BaseRepository::new(self.submission_collection.clone().clone_with_type::<Document>());
+        let repo = BaseRepository::new(
+            self.submission_collection
+                .clone()
+                .clone_with_type::<Document>(),
+        );
         repo.create::<Submission>(extract_valid_fields(submission.to_document()?), None)
             .await
     }
@@ -437,8 +435,11 @@ impl AssignmentService {
             filter.insert("_id", IdType::to_object_id(id)?);
         }
 
-        let repo =
-            BaseRepository::new(self.submission_collection.clone().clone_with_type::<Document>());
+        let repo = BaseRepository::new(
+            self.submission_collection
+                .clone()
+                .clone_with_type::<Document>(),
+        );
         repo.find_one::<Submission>(filter, None)
             .await?
             .ok_or(AppError {
@@ -453,8 +454,11 @@ impl AssignmentService {
         skip: Option<i64>,
         extra_match: Option<Document>,
     ) -> Result<Paginated<Submission>, AppError> {
-        let repo =
-            BaseRepository::new(self.submission_collection.clone().clone_with_type::<Document>());
+        let repo = BaseRepository::new(
+            self.submission_collection
+                .clone()
+                .clone_with_type::<Document>(),
+        );
 
         let mut match_doc = extra_match.unwrap_or_default();
         match_doc.insert("is_deleted", false);
@@ -487,8 +491,11 @@ impl AssignmentService {
         skip: Option<i64>,
         extra_match: Option<Document>,
     ) -> Result<Paginated<SubmissionWithRelations>, AppError> {
-        let repo =
-            BaseRepository::new(self.submission_collection.clone().clone_with_type::<Document>());
+        let repo = BaseRepository::new(
+            self.submission_collection
+                .clone()
+                .clone_with_type::<Document>(),
+        );
 
         let mut match_stage = extra_match.unwrap_or_default();
         match_stage.insert("is_deleted", false);
@@ -496,13 +503,7 @@ impl AssignmentService {
         if let Some(f) = filter {
             let search = build_search_filter(
                 Some(f),
-                &[
-                    "_id",
-                    "assignment_id",
-                    "student_id",
-                    "graded_by",
-                    "status",
-                ],
+                &["_id", "assignment_id", "student_id", "graded_by", "status"],
             );
             match_stage.extend(search);
         }
@@ -575,8 +576,11 @@ impl AssignmentService {
             }
         }
 
-        let repo =
-            BaseRepository::new(self.submission_collection.clone().clone_with_type::<Document>());
+        let repo = BaseRepository::new(
+            self.submission_collection
+                .clone()
+                .clone_with_type::<Document>(),
+        );
         repo.update_one_and_fetch::<Submission>(
             id,
             extract_valid_fields(Submission::from_partial(update_data)?),
@@ -602,10 +606,7 @@ impl AssignmentService {
 
             if score > assignment.max_score {
                 return Err(AppError {
-                    message: format!(
-                        "Score cannot exceed max score of {}",
-                        assignment.max_score
-                    ),
+                    message: format!("Score cannot exceed max score of {}", assignment.max_score),
                 });
             }
         }

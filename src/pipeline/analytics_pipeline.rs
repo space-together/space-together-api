@@ -197,9 +197,7 @@ pub fn pass_fail_distribution_pipeline(
 }
 
 // ========== FEE COLLECTION SUMMARY PIPELINE ==========
-pub fn fee_collection_summary_pipeline(
-    school_id: mongodb::bson::oid::ObjectId,
-) -> Vec<Document> {
+pub fn fee_collection_summary_pipeline(school_id: mongodb::bson::oid::ObjectId) -> Vec<Document> {
     vec![
         doc! {
             "$match": {

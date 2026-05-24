@@ -10,7 +10,10 @@ use crate::{
         education_year::{EducationYear, EducationYearPartial, EducationYearWithOthers, Term},
     },
     errors::AppError,
-    models::{id_model::IdType, mongo_model::{CountDoc, IndexDef}},
+    models::{
+        id_model::IdType,
+        mongo_model::{CountDoc, IndexDef},
+    },
     pipeline::academic_year_pipeline::academic_year_pipeline,
     repositories::base_repo::BaseRepository,
     utils::mongo_utils::{build_search_filter, extract_valid_fields},
@@ -187,12 +190,16 @@ impl EducationYearService {
     // ============================================
     // DELETE (SOFT DELETE)
     // ============================================
-    pub async fn delete(&self, id: &IdType, user_id: mongodb::bson::oid::ObjectId) -> Result<EducationYear, AppError> {
+    pub async fn delete(
+        &self,
+        id: &IdType,
+        user_id: mongodb::bson::oid::ObjectId,
+    ) -> Result<EducationYear, AppError> {
         let education_year = self.find_one(Some(id), None).await?;
 
         // Soft delete: set deleted_at and deleted_by
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        
+
         let update_doc = doc! {
             "$set": {
                 "deleted_at": mongodb::bson::to_bson(&Utc::now()).unwrap(),
@@ -210,7 +217,7 @@ impl EducationYearService {
     // ============================================
     pub async fn restore(&self, id: &IdType) -> Result<EducationYear, AppError> {
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        
+
         let update_doc = doc! {
             "$unset": {
                 "deleted_at": "",
@@ -238,10 +245,7 @@ impl EducationYearService {
         let mut match_stage = extra_match.unwrap_or_default();
 
         if let Some(f) = filter {
-            let search = build_search_filter(
-                Some(f),
-                &["label", "_id", "curriculum_id"],
-            );
+            let search = build_search_filter(Some(f), &["label", "_id", "curriculum_id"]);
             match_stage.extend(search);
         }
 
@@ -250,7 +254,6 @@ impl EducationYearService {
         repo.aggregate_with_paginate::<EducationYearWithOthers>(pipeline, limit, skip)
             .await
     }
-
 
     pub async fn find_one_with_relations(
         &self,

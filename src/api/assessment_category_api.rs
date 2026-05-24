@@ -8,8 +8,12 @@ use crate::{
     },
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{assessment_category_service::AssessmentCategoryService, event_service::EventService},
-    utils::{api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value},
+    services::{
+        assessment_category_service::AssessmentCategoryService, event_service::EventService,
+    },
+    utils::{
+        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    },
 };
 
 #[get("")]
@@ -68,15 +72,20 @@ async fn validate_weight(
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
         },
-        None => return HttpResponse::BadRequest().json(serde_json::json!({
-            "message": "education_year_id is required"
-        })),
+        None => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "message": "education_year_id is required"
+            }))
+        }
     };
 
     let db = get_database(&req, &state);
     let service = AssessmentCategoryService::new(&db);
 
-    match service.get_total_weight(&class_subject_id, &education_year_id).await {
+    match service
+        .get_total_weight(&class_subject_id, &education_year_id)
+        .await
+    {
         Ok(total) => HttpResponse::Ok().json(serde_json::json!({
             "total_weight": total,
             "remaining": 100.0 - total

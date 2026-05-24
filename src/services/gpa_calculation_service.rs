@@ -40,17 +40,21 @@ impl GpaCalculationService {
     pub async fn ensure_indexes(&self) -> Result<(), AppError> {
         let indexes = vec![
             IndexDef::compound(
-                vec![("school_id", 1), ("student_id", 1), ("education_year_id", 1)],
+                vec![
+                    ("school_id", 1),
+                    ("student_id", 1),
+                    ("education_year_id", 1),
+                ],
                 false,
             ),
-            IndexDef::compound(vec![("school_id", 1), ("class_id", 1), ("exam_id", 1)], false),
+            IndexDef::compound(
+                vec![("school_id", 1), ("class_id", 1), ("exam_id", 1)],
+                false,
+            ),
         ];
 
-        let repo = BaseRepository::new(
-            self.result_collection
-                .clone()
-                .clone_with_type::<Document>(),
-        );
+        let repo =
+            BaseRepository::new(self.result_collection.clone().clone_with_type::<Document>());
         repo.ensure_indexes(&indexes).await?;
         Ok(())
     }
@@ -133,7 +137,8 @@ impl GpaCalculationService {
             .await?;
 
         let grade = if let Some(scale) = grading_scale {
-            self.grading_service.calculate_grade(&scale, average_percentage)
+            self.grading_service
+                .calculate_grade(&scale, average_percentage)
         } else {
             "N/A".to_string()
         };
@@ -257,14 +262,14 @@ impl GpaCalculationService {
             "exam_id": result.exam_id
         };
 
-        let repo = BaseRepository::new(
-            self.result_collection
-                .clone()
-                .clone_with_type::<Document>(),
-        );
+        let repo =
+            BaseRepository::new(self.result_collection.clone().clone_with_type::<Document>());
 
         // Check if result already exists
-        if let Some(existing) = repo.find_one::<StudentTermResult>(filter.clone(), None).await? {
+        if let Some(existing) = repo
+            .find_one::<StudentTermResult>(filter.clone(), None)
+            .await?
+        {
             // Update existing result
             let update_doc = mongodb::bson::to_document(result).map_err(|e| AppError {
                 message: format!("Failed to serialize result: {}", e),
@@ -319,7 +324,10 @@ impl GpaCalculationService {
                 {
                     Ok(result) => results.push(result),
                     Err(e) => {
-                        eprintln!("Failed to calculate result for student {}: {}", student_id, e.message);
+                        eprintln!(
+                            "Failed to calculate result for student {}: {}",
+                            student_id, e.message
+                        );
                     }
                 }
             }
@@ -338,11 +346,8 @@ impl GpaCalculationService {
             "exam_id": exam_id
         };
 
-        let repo = BaseRepository::new(
-            self.result_collection
-                .clone()
-                .clone_with_type::<Document>(),
-        );
+        let repo =
+            BaseRepository::new(self.result_collection.clone().clone_with_type::<Document>());
 
         repo.find_one::<StudentTermResult>(filter, None).await
     }

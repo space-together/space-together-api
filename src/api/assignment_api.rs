@@ -8,17 +8,18 @@ use crate::{
         auth_user::AuthUserDto,
         common_details::UserRole,
     },
-    guards::role_guard::{require_permission, require_feature_enabled, require_parent_child_access},
+    guards::role_guard::{
+        require_feature_enabled, require_parent_child_access, require_permission,
+    },
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{
-        assignment_service::AssignmentService, 
-        event_service::EventService,
-        role_service::RoleService,
-        feature_service::FeatureService,
-        parent_service::ParentService,
+        assignment_service::AssignmentService, event_service::EventService,
+        feature_service::FeatureService, parent_service::ParentService, role_service::RoleService,
     },
-    utils::{api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value},
+    utils::{
+        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    },
 };
 
 // =========================
@@ -80,7 +81,7 @@ async fn create_assignment(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let db = get_database(&req, &state);
-    
+
     // Check if assignments feature is enabled
     let school_id = match get_school_id_from_request(&req) {
         Some(id) => id,
@@ -90,17 +91,20 @@ async fn create_assignment(
             }));
         }
     };
-    
+
     let feature_service = FeatureService::new(&db);
-    if let Err(e) = require_feature_enabled(&school_id, "assignments.enabled", &feature_service).await {
+    if let Err(e) =
+        require_feature_enabled(&school_id, "assignments.enabled", &feature_service).await
+    {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": e
         }));
     }
-    
+
     // Check permission: assignment.create
     let role_service = RoleService::new(&db);
-    if let Err(e) = require_permission(&user, &school_id, "assignment.create", &role_service).await {
+    if let Err(e) = require_permission(&user, &school_id, "assignment.create", &role_service).await
+    {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": e
         }));
@@ -169,7 +173,7 @@ async fn update_assignment(
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
     let db = get_database(&req, &state);
-    
+
     // Check permission: assignment.update
     let school_id = match get_school_id_from_request(&req) {
         Some(id) => id,
@@ -179,14 +183,15 @@ async fn update_assignment(
             }));
         }
     };
-    
+
     let role_service = RoleService::new(&db);
-    if let Err(e) = require_permission(&user, &school_id, "assignment.update", &role_service).await {
+    if let Err(e) = require_permission(&user, &school_id, "assignment.update", &role_service).await
+    {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": e
         }));
     }
-    
+
     let service = AssignmentService::new(&db);
 
     // Verify user is the assignment creator or admin
@@ -197,7 +202,8 @@ async fn update_assignment(
                     (assignment.teacher_id, parse_object_id_value(&user.id))
                 {
                     let teacher_collection = db.collection::<mongodb::bson::Document>("teachers");
-                    match teacher_collection.find_one(doc! { "_id": teacher_id, "user_id": user_oid })
+                    match teacher_collection
+                        .find_one(doc! { "_id": teacher_id, "user_id": user_oid })
                         .await
                     {
                         Ok(None) | Err(_) => {
@@ -245,7 +251,7 @@ async fn delete_assignment(
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
     let db = get_database(&req, &state);
-    
+
     // Check permission: assignment.delete
     let school_id = match get_school_id_from_request(&req) {
         Some(id) => id,
@@ -255,14 +261,15 @@ async fn delete_assignment(
             }));
         }
     };
-    
+
     let role_service = RoleService::new(&db);
-    if let Err(e) = require_permission(&user, &school_id, "assignment.delete", &role_service).await {
+    if let Err(e) = require_permission(&user, &school_id, "assignment.delete", &role_service).await
+    {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": e
         }));
     }
-    
+
     let service = AssignmentService::new(&db);
 
     // Only admin or assignment creator can delete
@@ -273,7 +280,8 @@ async fn delete_assignment(
                     (assignment.teacher_id, parse_object_id_value(&user.id))
                 {
                     let teacher_collection = db.collection::<mongodb::bson::Document>("teachers");
-                    match teacher_collection.find_one(doc! { "_id": teacher_id, "user_id": user_oid })
+                    match teacher_collection
+                        .find_one(doc! { "_id": teacher_id, "user_id": user_oid })
                         .await
                     {
                         Ok(None) | Err(_) => {
@@ -388,9 +396,10 @@ async fn submit_assignment(
                             .find_one_assignment(Some(&assignment_id), None)
                             .await
                         {
-                            if let (Some(assignment_class_id), Some(student_class_id)) =
-                                (assignment.class_id, student_doc.get_object_id("class_id").ok())
-                            {
+                            if let (Some(assignment_class_id), Some(student_class_id)) = (
+                                assignment.class_id,
+                                student_doc.get_object_id("class_id").ok(),
+                            ) {
                                 if assignment_class_id != student_class_id {
                                     return HttpResponse::Forbidden().json(serde_json::json!({
                                         "message": "You are not enrolled in this class"
@@ -524,7 +533,8 @@ async fn grade_submission(
                     (assignment.teacher_id, parse_object_id_value(&user.id))
                 {
                     let teacher_collection = db.collection::<mongodb::bson::Document>("teachers");
-                    match teacher_collection.find_one(doc! { "_id": teacher_id, "user_id": user_oid })
+                    match teacher_collection
+                        .find_one(doc! { "_id": teacher_id, "user_id": user_oid })
                         .await
                     {
                         Ok(None) | Err(_) => {
@@ -635,7 +645,8 @@ async fn get_submission_by_id(
             (submission.student_id, parse_object_id_value(&user.id))
         {
             let student_collection = db.collection::<mongodb::bson::Document>("students");
-            match student_collection.find_one(doc! { "_id": student_id, "user_id": user_oid })
+            match student_collection
+                .find_one(doc! { "_id": student_id, "user_id": user_oid })
                 .await
             {
                 Ok(None) | Err(_) => {
@@ -647,14 +658,16 @@ async fn get_submission_by_id(
             }
         }
     }
-    
+
     // Parents can view their children's submissions
     if matches!(user.role, Some(UserRole::PARENT)) {
         if let Some(student_id) = submission.student_id {
             let parent_service = ParentService::new(&db);
             let student_id_str = student_id.to_hex();
-            
-            if let Err(e) = require_parent_child_access(&user, &student_id_str, &parent_service).await {
+
+            if let Err(e) =
+                require_parent_child_access(&user, &student_id_str, &parent_service).await
+            {
                 return HttpResponse::Forbidden().json(serde_json::json!({
                     "message": e
                 }));
@@ -703,8 +716,10 @@ async fn update_submission(
         match service.find_one_submission(Some(&id), None).await {
             Ok(submission) => {
                 // Check if already graded
-                if matches!(submission.status, crate::domain::assignment::SubmissionStatus::Graded)
-                {
+                if matches!(
+                    submission.status,
+                    crate::domain::assignment::SubmissionStatus::Graded
+                ) {
                     return HttpResponse::Forbidden().json(serde_json::json!({
                         "message": "Cannot update a graded submission"
                     }));
@@ -715,7 +730,8 @@ async fn update_submission(
                     (submission.student_id, parse_object_id_value(&user.id))
                 {
                     let student_collection = db.collection::<mongodb::bson::Document>("students");
-                    match student_collection.find_one(doc! { "_id": student_id, "user_id": user_oid })
+                    match student_collection
+                        .find_one(doc! { "_id": student_id, "user_id": user_oid })
                         .await
                     {
                         Ok(None) | Err(_) => {
@@ -775,10 +791,3 @@ fn blueprint(cfg: &mut web::ServiceConfig) {
 pub fn init(cfg: &mut web::ServiceConfig) {
     crate::utils::route_utils::mount_dual_routes(cfg, "assignments", blueprint);
 }
-
-
-
-
-
-
-

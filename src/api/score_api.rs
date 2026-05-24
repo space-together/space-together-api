@@ -9,7 +9,9 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{event_service::EventService, score_service::ScoreService},
-    utils::{api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value},
+    utils::{
+        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    },
 };
 
 #[get("")]
@@ -58,7 +60,7 @@ async fn get_student_exam_scores(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let (student_id_str, exam_id_str) = path.into_inner();
-    
+
     let student_id = match parse_object_id_value(&student_id_str) {
         Ok(id) => id,
         Err(err) => return HttpResponse::BadRequest().json(err),
@@ -189,7 +191,10 @@ async fn update_score(
     let update_data = data.into_inner();
     let change_reason = update_data.remarks.clone().flatten();
 
-    match service.update(&id, &update_data, &user_id, change_reason).await {
+    match service
+        .update(&id, &update_data, &user_id, change_reason)
+        .await
+    {
         Ok(score) => {
             let score_clone = score.clone();
             let state_clone = state.clone();

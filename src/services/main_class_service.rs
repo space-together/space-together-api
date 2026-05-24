@@ -1,5 +1,5 @@
 use mongodb::{
-    bson::{self, doc,  Document},
+    bson::{self, doc, Document},
     Collection, Database,
 };
 

@@ -295,16 +295,37 @@ impl CloudinaryService {
             .map_err(|e| format!("Failed to read Cloudinary response: {}", e))?;
 
         if !status.is_success() {
-            return Err(format!("Cloudinary upload failed (status {}): {}", status, result));
+            return Err(format!(
+                "Cloudinary upload failed (status {}): {}",
+                status, result
+            ));
         }
 
         // Parse available fields (secure_url might be missing for raw, use url)
-        let v: serde_json::Value = serde_json::from_str(&result).map_err(|e| format!("Failed to parse Cloudinary response: {}", e))?;
-        let url = v.get("secure_url").and_then(|s| s.as_str()).or_else(|| v.get("url").and_then(|u| u.as_str())).unwrap_or_default().to_string();
-        let public = v.get("public_id").and_then(|p| p.as_str()).unwrap_or_default().to_string();
-        let format = v.get("format").and_then(|f| f.as_str()).map(|s| s.to_string());
+        let v: serde_json::Value = serde_json::from_str(&result)
+            .map_err(|e| format!("Failed to parse Cloudinary response: {}", e))?;
+        let url = v
+            .get("secure_url")
+            .and_then(|s| s.as_str())
+            .or_else(|| v.get("url").and_then(|u| u.as_str()))
+            .unwrap_or_default()
+            .to_string();
+        let public = v
+            .get("public_id")
+            .and_then(|p| p.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let format = v
+            .get("format")
+            .and_then(|f| f.as_str())
+            .map(|s| s.to_string());
 
-        Ok(CloudinaryUploadResult { url, public_id: public, format, bytes: file_bytes.len() })
+        Ok(CloudinaryUploadResult {
+            url,
+            public_id: public,
+            format,
+            bytes: file_bytes.len(),
+        })
     }
 
     /// Helper: decode base64 input into (public_id, buffer)
@@ -416,7 +437,10 @@ impl CloudinaryService {
             .map_err(|e| format!("Failed to read delete response from Cloudinary: {}", e))?;
 
         if !status.is_success() {
-            return Err(format!("Cloudinary delete failed (status {}): {}", status, result));
+            return Err(format!(
+                "Cloudinary delete failed (status {}): {}",
+                status, result
+            ));
         }
 
         Ok(())

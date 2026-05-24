@@ -6,7 +6,9 @@ use crate::{
     guards::role_guard::check_admin,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::backup_service::BackupService,
-    utils::{api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value},
+    utils::{
+        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    },
 };
 
 #[get("")]

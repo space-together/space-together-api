@@ -1,8 +1,5 @@
 use crate::{
-    domain::{
-        class::Class,
-        common_details::{RelatedUser, },
-    },
+    domain::{class::Class, common_details::RelatedUser},
     helpers::object_id_helpers,
     make_partial,
     schema::common_schema::ActorRef,

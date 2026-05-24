@@ -19,7 +19,7 @@ use crate::{
     utils::db_utils::get_database,
 };
 
-#[derive(Debug, Deserialize,Clone )]
+#[derive(Debug, Deserialize, Clone)]
 struct CreateConversationRequest {
     participants: Vec<ActorRef>,
     is_group: bool,

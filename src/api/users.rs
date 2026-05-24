@@ -197,8 +197,14 @@ async fn delete_user(
                 let state_clone = state.clone();
                 actix_rt::spawn(async move {
                     if let Some(id) = user.id {
-                        EventService::broadcast_deleted(&state_clone, "user", &id.to_hex(),None, &user)
-                            .await;
+                        EventService::broadcast_deleted(
+                            &state_clone,
+                            "user",
+                            &id.to_hex(),
+                            None,
+                            &user,
+                        )
+                        .await;
                     }
                 });
             }

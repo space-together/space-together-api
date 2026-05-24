@@ -9,10 +9,7 @@ use crate::{
         common_details::Paginated,
     },
     errors::AppError,
-    models::{
-        id_model::IdType,
-        mongo_model::IndexDef,
-    },
+    models::{id_model::IdType, mongo_model::IndexDef},
     repositories::base_repo::BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
@@ -55,9 +52,10 @@ impl AssessmentCategoryService {
         .await?;
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let mut doc = extract_valid_fields(mongodb::bson::to_document(&category).map_err(|e| AppError {
-            message: format!("Failed to serialize category: {}", e),
-        })?);
+        let mut doc =
+            extract_valid_fields(mongodb::bson::to_document(&category).map_err(|e| AppError {
+                message: format!("Failed to serialize category: {}", e),
+            })?);
         doc.insert("is_deleted", false);
 
         repo.create::<AssessmentCategory>(doc, None).await
@@ -130,9 +128,10 @@ impl AssessmentCategoryService {
         }
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let update_doc = extract_valid_fields(mongodb::bson::to_document(update).map_err(|e| AppError {
-            message: format!("Failed to serialize update: {}", e),
-        })?);
+        let update_doc =
+            extract_valid_fields(mongodb::bson::to_document(update).map_err(|e| AppError {
+                message: format!("Failed to serialize update: {}", e),
+            })?);
 
         repo.update_one_and_fetch::<AssessmentCategory>(id, update_doc)
             .await

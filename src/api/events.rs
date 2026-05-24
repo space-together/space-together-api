@@ -1,4 +1,4 @@
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, get, web};
+use actix_web::{get, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use bytes::Bytes;
 use futures::StreamExt;
 
@@ -9,10 +9,7 @@ use crate::services::event_bus::{Event, EVENT_CONNECTED};
 
 /// SSE endpoint FOR SCHOOL CONTEXT: /school/events/stream
 #[get("/stream")]
-pub async fn school_events_stream(
-    req: HttpRequest,
-    state: web::Data<AppState>,
-) -> impl Responder {
+pub async fn school_events_stream(req: HttpRequest, state: web::Data<AppState>) -> impl Responder {
     // Extract school token from request extensions
     let school_token = match req.extensions().get::<SchoolToken>() {
         Some(token) => token.clone(),
@@ -27,10 +24,11 @@ pub async fn school_events_stream(
     };
 
     let school_id = Some(school_token.id.clone());
-let user_id = school_token.member
-    .as_ref()
-    .and_then(|m| m.get_id())
-    .unwrap_or_else(|| "unknown".to_string());
+    let user_id = school_token
+        .member
+        .as_ref()
+        .and_then(|m| m.get_id())
+        .unwrap_or_else(|| "unknown".to_string());
 
     let (client_id, mut rx) = state
         .event_bus
@@ -72,7 +70,10 @@ let user_id = school_token.member
         // CRITICAL: Fix CORS for credentials
         .insert_header(("Access-Control-Allow-Origin", "http://localhost:4747")) // Your frontend origin
         .insert_header(("Access-Control-Allow-Credentials", "true"))
-        .insert_header(("Access-Control-Allow-Headers", "Content-Type, Authorization"))
+        .insert_header((
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization",
+        ))
         .streaming(stream)
 }
 
@@ -86,10 +87,7 @@ pub async fn global_events_stream(
     let logged_user = user.into_inner();
     let user_id = logged_user.id.clone();
 
-    let (client_id, mut rx) = state
-        .event_bus
-        .register_client(user_id.clone(), None)
-        .await;
+    let (client_id, mut rx) = state.event_bus.register_client(user_id.clone(), None).await;
 
     let connected_event = Event::new(
         EVENT_CONNECTED,
@@ -124,16 +122,16 @@ pub async fn global_events_stream(
         .insert_header(("X-Accel-Buffering", "no"))
         .insert_header(("Access-Control-Allow-Origin", "http://localhost:4747"))
         .insert_header(("Access-Control-Allow-Credentials", "true"))
-        .insert_header(("Access-Control-Allow-Headers", "Content-Type, Authorization"))
+        .insert_header((
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization",
+        ))
         .streaming(stream)
 }
 
 /// Get connected clients count - school version
 #[get("/clients/count")]
-pub async fn school_clients_count(
-    req: HttpRequest,
-    state: web::Data<AppState>,
-) -> impl Responder {
+pub async fn school_clients_count(req: HttpRequest, state: web::Data<AppState>) -> impl Responder {
     let school_token = match req.extensions().get::<SchoolToken>() {
         Some(token) => token.clone(),
         None => {

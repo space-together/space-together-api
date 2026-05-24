@@ -7,9 +7,7 @@ pub fn generate_code() -> String {
     let mut rng = thread_rng();
     let chars: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".chars().collect();
 
-    (0..5)
-        .map(|_| *chars.choose(&mut rng).unwrap())
-        .collect()
+    (0..5).map(|_| *chars.choose(&mut rng).unwrap()).collect()
 }
 
 pub fn generate_school_registration_number(school: &School) -> Option<String> {

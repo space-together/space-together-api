@@ -9,10 +9,7 @@ use crate::{
         score::{Score, ScoreAuditLog, ScorePartial},
     },
     errors::AppError,
-    models::{
-        id_model::IdType,
-        mongo_model::IndexDef,
-    },
+    models::{id_model::IdType, mongo_model::IndexDef},
     repositories::base_repo::BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
@@ -75,9 +72,10 @@ impl ScoreService {
         }
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let mut doc = extract_valid_fields(mongodb::bson::to_document(&score).map_err(|e| AppError {
-            message: format!("Failed to serialize score: {}", e),
-        })?);
+        let mut doc =
+            extract_valid_fields(mongodb::bson::to_document(&score).map_err(|e| AppError {
+                message: format!("Failed to serialize score: {}", e),
+            })?);
         doc.insert("is_deleted", false);
 
         repo.create::<Score>(doc, None).await.map_err(|e| {
@@ -113,11 +111,9 @@ impl ScoreService {
         };
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        repo.find_one::<Score>(filter, None)
-            .await?
-            .ok_or(AppError {
-                message: "Score not found".into(),
-            })
+        repo.find_one::<Score>(filter, None).await?.ok_or(AppError {
+            message: "Score not found".into(),
+        })
     }
 
     pub async fn get_all(
@@ -244,7 +240,10 @@ impl ScoreService {
         Ok(scores)
     }
 
-    pub async fn get_audit_logs(&self, score_id: &ObjectId) -> Result<Vec<ScoreAuditLog>, AppError> {
+    pub async fn get_audit_logs(
+        &self,
+        score_id: &ObjectId,
+    ) -> Result<Vec<ScoreAuditLog>, AppError> {
         let filter = doc! { "score_id": score_id };
         let mut cursor = self
             .audit_collection

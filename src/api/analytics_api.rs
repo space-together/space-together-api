@@ -40,10 +40,7 @@ async fn get_enrollment_trends(
     let db = get_database(&req, &state);
     let service = AnalyticsService::new(&db);
 
-    match service
-        .get_enrollment_trends(&school_id, query.year)
-        .await
-    {
+    match service.get_enrollment_trends(&school_id, query.year).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }

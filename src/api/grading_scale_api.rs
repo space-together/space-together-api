@@ -9,7 +9,9 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{event_service::EventService, grading_scale_service::GradingScaleService},
-    utils::{api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value},
+    utils::{
+        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    },
 };
 
 #[get("")]

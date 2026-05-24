@@ -33,7 +33,7 @@ impl UserRepo {
             IndexDef::single_with_partial(
                 "username",
                 true,
-                doc! { "username": { "$exists": true, "$ne": null } },
+                doc! { "username": { "$type": "string" } },
                 Some("username_unique_idx"),
             ),
             // School relationship indexes
@@ -122,11 +122,9 @@ impl UserRepo {
         }
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        repo.find_one::<User>(filter, None)
-            .await?
-            .ok_or(AppError {
-                message: "User not found".into(),
-            })
+        repo.find_one::<User>(filter, None).await?.ok_or(AppError {
+            message: "User not found".into(),
+        })
     }
 
     // =========================================================
@@ -255,11 +253,7 @@ impl UserRepo {
             .await
     }
 
-    pub async fn update(
-        &self,
-        id: &IdType,
-        update_dto: &UpdateUserDto,
-    ) -> Result<User, AppError> {
+    pub async fn update(&self, id: &IdType, update_dto: &UpdateUserDto) -> Result<User, AppError> {
         let update_doc_full = bson::to_document(update_dto).map_err(|e| AppError {
             message: format!("Failed to serialize update dto: {}", e),
         })?;

@@ -6,7 +6,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
         // MATCH
         // ======================================================
         doc! { "$match": match_stage },
-
         // ======================================================
         // NORMALIZE IDS
         // ======================================================
@@ -35,7 +34,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 }
             }
         },
-
         // ======================================================
         // NORMALIZE MENTIONS
         // ======================================================
@@ -59,7 +57,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 }
             }
         },
-
         // ======================================================
         // PUBLISHED USER (ROLE-AWARE)
         // ======================================================
@@ -123,7 +120,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 "as": "published_staff"
             }
         },
-
         // ======================================================
         // MERGE PUBLISHED USER
         // ======================================================
@@ -140,7 +136,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 }
             }
         },
-
         // ======================================================
         // MENTIONED USERS
         // ======================================================
@@ -182,7 +177,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 }
             }
         },
-
         // ======================================================
         // CLASSES LOOKUP (ARRAY)
         // ======================================================
@@ -194,7 +188,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 "as": "classes"
             }
         },
-
         // ======================================================
         // CLEANUP
         // ======================================================
@@ -208,7 +201,6 @@ pub fn announcement_pipeline(match_stage: Document) -> Vec<Document> {
                 "mentioned_staff": 0
             }
         },
-
         // ======================================================
         // SORT
         // ======================================================

@@ -72,7 +72,10 @@ impl RecycleBinService {
 
             // Add date range filters
             if let Some(start) = start_date {
-                filter.insert("deleted_at", doc! { "$gte": mongodb::bson::to_bson(&start).unwrap() });
+                filter.insert(
+                    "deleted_at",
+                    doc! { "$gte": mongodb::bson::to_bson(&start).unwrap() },
+                );
             }
             if let Some(end) = end_date {
                 let mut deleted_at_filter = filter
@@ -83,12 +86,9 @@ impl RecycleBinService {
                 filter.insert("deleted_at", deleted_at_filter);
             }
 
-            let mut cursor = collection
-                .find(filter)
-                .await
-                .map_err(|e| AppError {
-                    message: format!("Failed to query {}: {}", collection_name, e),
-                })?;
+            let mut cursor = collection.find(filter).await.map_err(|e| AppError {
+                message: format!("Failed to query {}: {}", collection_name, e),
+            })?;
 
             use futures::stream::StreamExt;
 

@@ -293,12 +293,16 @@ impl StudentService {
     // =========================
     // DELETE (SOFT DELETE)
     // =========================
-    pub async fn delete(&self, id: &IdType, user_id: mongodb::bson::oid::ObjectId) -> Result<Student, AppError> {
+    pub async fn delete(
+        &self,
+        id: &IdType,
+        user_id: mongodb::bson::oid::ObjectId,
+    ) -> Result<Student, AppError> {
         let student = self.find_one(Some(id), None).await?;
 
         // Soft delete: set deleted_at and deleted_by
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        
+
         let update_doc = doc! {
             "$set": {
                 "deleted_at": mongodb::bson::to_bson(&Utc::now()).unwrap(),
@@ -316,7 +320,7 @@ impl StudentService {
     // =========================
     pub async fn restore(&self, id: &IdType) -> Result<Student, AppError> {
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        
+
         let update_doc = doc! {
             "$unset": {
                 "deleted_at": "",

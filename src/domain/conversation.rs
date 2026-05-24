@@ -2,7 +2,10 @@ use chrono::{DateTime, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{domain::common_details::RelatedUser, helpers::object_id_helpers, make_partial, schema::common_schema::ActorRef};
+use crate::{
+    domain::common_details::RelatedUser, helpers::object_id_helpers, make_partial,
+    schema::common_schema::ActorRef,
+};
 
 make_partial! {
     #[derive(Debug, Serialize, Deserialize, Clone)]

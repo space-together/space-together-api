@@ -31,23 +31,13 @@ impl AnnouncementService {
 
     pub async fn ensure_indexes(&self) -> Result<(), AppError> {
         let indexes = vec![
-            IndexDef::compound(
-                vec![("classes_ids", 1), ("created_at", -1)],
-                false,
-            ),
-            IndexDef::compound(
-                vec![("published.role", 1), ("created_at", -1)],
-                false,
-            ),
-            IndexDef::compound(
-                vec![("published.id", 1), ("created_at", -1)],
-                false,
-            ),
+            IndexDef::compound(vec![("classes_ids", 1), ("created_at", -1)], false),
+            IndexDef::compound(vec![("published.role", 1), ("created_at", -1)], false),
+            IndexDef::compound(vec![("published.id", 1), ("created_at", -1)], false),
             IndexDef::single("mention.id", false),
             IndexDef::single("created_at", false),
             IndexDef::single("type", false),
         ];
-
 
         let repo = BaseRepository::new(
             self.collection
@@ -64,7 +54,6 @@ impl AnnouncementService {
     // =========================
     pub async fn create(&self, dto: Announcement) -> Result<Announcement, AppError> {
         self.ensure_indexes().await?;
-
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
         repo.create::<Announcement>(dto.to_document()?, None).await
@@ -215,7 +204,7 @@ impl AnnouncementService {
             "published.role",
             "mention.id",
             "mention.role",
-            "classes_ids"
+            "classes_ids",
         ];
 
         let total = base_repo.count(filter, &searchable, extra_match).await?;

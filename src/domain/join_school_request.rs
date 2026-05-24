@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::{
-    domain::{class::Class, parent::Parent, school::School, school_staff::SchoolStaff, student::Student, teacher::Teacher, user::User},
+    domain::{
+        class::Class, parent::Parent, school::School, school_staff::SchoolStaff, student::Student,
+        teacher::Teacher, user::User,
+    },
     helpers::object_id_helpers,
 };
 
@@ -157,7 +160,7 @@ pub struct JoinSchoolRequestResponseToken {
     pub school_token: String,
 }
 
-// send request 
+// send request
 
 pub enum SendRequestUserType {
     Parent(Parent),

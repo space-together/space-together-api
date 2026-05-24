@@ -214,10 +214,7 @@ fn blueprint(cfg: &mut web::ServiceConfig) {
         .service(get_audit_log_by_other_match)
         .service(get_audit_log_by_id_with_relations)
         .service(get_audit_log_by_id)
-        .service(
-            web::scope("")
-                .wrap(crate::middleware::jwt_middleware::JwtMiddleware),
-        );
+        .service(web::scope("").wrap(crate::middleware::jwt_middleware::JwtMiddleware));
 }
 
 pub fn init(cfg: &mut web::ServiceConfig) {

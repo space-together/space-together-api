@@ -263,7 +263,13 @@ async fn search_school_members(
     };
 
     match school_service
-        .search_members(&db, query.filter.clone(), query.limit, query.skip, extra_match)
+        .search_members(
+            &db,
+            query.filter.clone(),
+            query.limit,
+            query.skip,
+            extra_match,
+        )
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),

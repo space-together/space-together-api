@@ -376,6 +376,17 @@ impl SchoolService {
         Ok(token)
     }
 
+    pub async fn create_school_token_from_member(
+        &self,
+        id: &IdType,
+        school_member: Option<RelatedUser>,
+    ) -> Result<String, AppError> {
+        let school = self.find_one(Some(id), None).await?;
+        let school_token = to_school_school_token(&school, school_member)?;
+
+        Ok(create_school_token(school_token))
+    }
+
     pub async fn setup_school_academics(
         &self,
         school_id: &IdType,
@@ -681,8 +692,6 @@ impl SchoolService {
             current_page,
         })
     }
-
-    
 }
 
 impl SchoolService {
@@ -701,30 +710,23 @@ impl SchoolService {
             return match role {
                 UserRole::STUDENT => {
                     let student_service = StudentService::new(school_db);
-                    let student = student_service
-                        .find_one(id, extra_match.clone())
-                        .await?;
+                    let student = student_service.find_one(id, extra_match.clone()).await?;
                     Ok(RelatedUser::STUDENT(student))
                 }
                 UserRole::TEACHER => {
                     let teacher_service = TeacherService::new(school_db);
-                    let teacher = teacher_service
-                              .find_one(id, extra_match.clone())
-                        .await?;
+                    let teacher = teacher_service.find_one(id, extra_match.clone()).await?;
                     Ok(RelatedUser::TEACHER(teacher))
                 }
                 UserRole::SCHOOLSTAFF => {
                     let staff_service = SchoolStaffService::new(school_db);
-                    let staff = staff_service
-                               .find_one(id, extra_match.clone())
-                        .await?;
+                    let staff = staff_service.find_one(id, extra_match.clone()).await?;
                     Ok(RelatedUser::SCHOOLSTAFF(staff))
                 }
                 UserRole::PARENT => {
-                    let parent_service = crate::services::parent_service::ParentService::new(school_db);
-                    let parent = parent_service
-                               .find_one(id, extra_match)
-                        .await?;
+                    let parent_service =
+                        crate::services::parent_service::ParentService::new(school_db);
+                    let parent = parent_service.find_one(id, extra_match).await?;
                     Ok(RelatedUser::PARENT(parent))
                 }
                 _ => Err(AppError {
@@ -736,42 +738,32 @@ impl SchoolService {
         // Search across all member types if no specific type provided
         // Try students first
         let student_service = StudentService::new(school_db);
-        if let Ok(student) = student_service
-                   .find_one(id, extra_match.clone())
-            .await
-        {
+        if let Ok(student) = student_service.find_one(id, extra_match.clone()).await {
             return Ok(RelatedUser::STUDENT(student));
         }
 
         // Try teachers
         let teacher_service = TeacherService::new(school_db);
-        if let Ok(teacher) = teacher_service
-                   .find_one(id, extra_match.clone())
-            .await
-        {
+        if let Ok(teacher) = teacher_service.find_one(id, extra_match.clone()).await {
             return Ok(RelatedUser::TEACHER(teacher));
         }
 
         // Try school staff
         let staff_service = SchoolStaffService::new(school_db);
-        if let Ok(staff) = staff_service
-                   .find_one(id, extra_match.clone())
-            .await
-        {
+        if let Ok(staff) = staff_service.find_one(id, extra_match.clone()).await {
             return Ok(RelatedUser::SCHOOLSTAFF(staff));
         }
 
         // Try parents
         let parent_service = crate::services::parent_service::ParentService::new(school_db);
-        if let Ok(parent) = parent_service
-                   .find_one(id, extra_match)
-            .await
-        {
+        if let Ok(parent) = parent_service.find_one(id, extra_match).await {
             return Ok(RelatedUser::PARENT(parent));
         }
 
         // Member not found in any category
-        let id_str = id.map(|i| i.as_string()).unwrap_or_else(|| "unknown".to_string());
+        let id_str = id
+            .map(|i| i.as_string())
+            .unwrap_or_else(|| "unknown".to_string());
         Err(AppError {
             message: format!("School member not found with id: {}", id_str),
         })

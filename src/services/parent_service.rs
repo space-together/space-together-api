@@ -1,8 +1,8 @@
+use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, Document},
     Collection, Database,
 };
-use futures::TryStreamExt;
 
 use crate::{
     config::state::AppState,
@@ -25,9 +25,7 @@ use crate::{
         student_results_pipeline,
     },
     repositories::base_repo::BaseRepository,
-    services::{
-        announcement_service::AnnouncementService, cloudinary_service::CloudinaryService,
-    },
+    services::{announcement_service::AnnouncementService, cloudinary_service::CloudinaryService},
     utils::{
         email::is_valid_email,
         mongo_utils::{build_search_filter, extract_valid_fields},
@@ -111,21 +109,21 @@ impl ParentService {
         let parent = repo
             .create::<Parent>(extract_valid_fields(partial.to_document()?), None)
             .await?;
-            // Send join school request
-            if let Some(school_id) = parent.school_id.clone() {
-                // TODO: Update with correct arguments based on JoinSchoolRequestService signature
-                // JoinSchoolRequestService::send_join_request(
-                //     join_school_request_service_instance,
-                //     send_request_user_type,
-                //     parent.id,
-                //     &parent.id,
-                //     join_role,
-                //     description,
-                //     app_state,
-                // )
-                // .await
-                // .ok();
-            }
+        // Send join school request
+        if let Some(school_id) = parent.school_id.clone() {
+            // TODO: Update with correct arguments based on JoinSchoolRequestService signature
+            // JoinSchoolRequestService::send_join_request(
+            //     join_school_request_service_instance,
+            //     send_request_user_type,
+            //     parent.id,
+            //     &parent.id,
+            //     join_role,
+            //     description,
+            //     app_state,
+            // )
+            // .await
+            // .ok();
+        }
         Ok(parent)
     }
 
@@ -416,8 +414,8 @@ impl ParentService {
         let db = state.db.get_db(&state.db.school_db_name_from_id(school_id));
         let students_collection = db.collection::<crate::domain::student::Student>("students");
 
-        let student_oid = mongodb::bson::oid::ObjectId::parse_str(student_id)
-            .map_err(|_| AppError {
+        let student_oid =
+            mongodb::bson::oid::ObjectId::parse_str(student_id).map_err(|_| AppError {
                 message: "Invalid student ID".into(),
             })?;
 
@@ -640,8 +638,7 @@ impl ParentService {
         // Get class IDs of parent's children
         let mut class_ids = Vec::new();
         if let Some(student_ids) = parent.student_ids {
-            let students_collection =
-                db.collection::<crate::domain::student::Student>("students");
+            let students_collection = db.collection::<crate::domain::student::Student>("students");
 
             for student_id in student_ids {
                 if let Ok(Some(student)) = students_collection

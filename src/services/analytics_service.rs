@@ -77,9 +77,7 @@ impl AnalyticsService {
         let pipeline = attendance_rate_pipeline(school_oid, from, to);
 
         let repo = BaseRepository::new(self.attendance_collection.clone());
-        let result = repo
-            .aggregate_one::<AttendanceRate>(pipeline, None)
-            .await?;
+        let result = repo.aggregate_one::<AttendanceRate>(pipeline, None).await?;
 
         // Return default if no attendance records found
         Ok(result.unwrap_or(AttendanceRate {

@@ -76,11 +76,7 @@ pub struct Permission {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserRoleAssignment {
-    #[serde(
-        rename = "_id",
-        skip_serializing_if = "Option::is_none",
-        default
-    )]
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none", default)]
     pub id: Option<ObjectId>,
 
     pub user_id: ObjectId,

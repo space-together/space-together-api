@@ -91,7 +91,7 @@ macro_rules! make_partial {
                             .map_err(|e| $crate::errors::AppError {
                                 message: format!("Serialization error for {}: {}", stringify!($field_name), e)
                             })?;
-                        
+
                         if let mongodb::bson::Bson::Document(doc) = Self::_fix_bson_recursive(bson_val) {
                             for (k, v) in doc { final_doc.insert(k, v); }
                         }

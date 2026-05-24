@@ -200,11 +200,7 @@ impl BaseRepository {
     }
 
     /// Update a document with raw update document (no automatic updated_at)
-    pub async fn update_one_raw(
-        &self,
-        id: &IdType,
-        update_doc: Document,
-    ) -> Result<(), AppError> {
+    pub async fn update_one_raw(&self, id: &IdType, update_doc: Document) -> Result<(), AppError> {
         let obj_id = IdType::to_object_id(id)?;
 
         if update_doc.is_empty() {

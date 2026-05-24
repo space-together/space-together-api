@@ -4,10 +4,7 @@ use crate::{
         conversation::{Conversation, ConversationKey, ConversationWithRelations},
     },
     errors::AppError,
-    models::{
-        id_model::IdType,
-        mongo_model::IndexDef,
-    },
+    models::{id_model::IdType, mongo_model::IndexDef},
     pipeline::conversation_pipeline::conversation_pipeline,
     repositories::base_repo::BaseRepository,
     utils::mongo_utils::extract_valid_fields,
@@ -37,18 +34,16 @@ impl ConversationService {
             IndexDef::single("created_at", false),
         ];
 
-        let repo = BaseRepository::new(
-            self.collection.clone().clone_with_type::<Document>(),
-        );
+        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
         repo.ensure_indexes(&indexes).await?;
 
-        let key_indexes = vec![
-            IndexDef::compound(vec![("conversation_id", 1), ("user_id", 1)], true),
-        ];
+        let key_indexes = vec![IndexDef::compound(
+            vec![("conversation_id", 1), ("user_id", 1)],
+            true,
+        )];
 
-        let key_repo = BaseRepository::new(
-            self.keys_collection.clone().clone_with_type::<Document>(),
-        );
+        let key_repo =
+            BaseRepository::new(self.keys_collection.clone().clone_with_type::<Document>());
         key_repo.ensure_indexes(&key_indexes).await?;
 
         Ok(())
@@ -105,12 +100,7 @@ impl ConversationService {
     ) -> Result<Paginated<Conversation>, AppError> {
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
 
-        let searchable = [
-            "name",
-            "_id",
-            "school_id",
-            "participants.id",
-        ];
+        let searchable = ["name", "_id", "school_id", "participants.id"];
 
         let (data, total, total_pages, current_page) = repo
             .get_all::<Conversation>(filter, &searchable, limit, skip, extra_match)
@@ -127,20 +117,18 @@ impl ConversationService {
     // =========================
     // CONVERSATION KEYS
     // =========================
-    pub async fn store_conversation_key(&self, key: ConversationKey) -> Result<ConversationKey, AppError> {
-        let repo = BaseRepository::new(
-            self.keys_collection.clone().clone_with_type::<Document>(),
-        );
+    pub async fn store_conversation_key(
+        &self,
+        key: ConversationKey,
+    ) -> Result<ConversationKey, AppError> {
+        let repo = BaseRepository::new(self.keys_collection.clone().clone_with_type::<Document>());
 
         let doc = mongodb::bson::to_document(&key).map_err(|e| AppError {
             message: format!("Failed to serialize conversation key: {}", e),
         })?;
 
-        repo.create::<ConversationKey>(
-            extract_valid_fields(doc),
-            None,
-        )
-        .await
+        repo.create::<ConversationKey>(extract_valid_fields(doc), None)
+            .await
     }
 
     pub async fn get_conversation_key(
@@ -148,9 +136,7 @@ impl ConversationService {
         conversation_id: ObjectId,
         user_id: ObjectId,
     ) -> Result<ConversationKey, AppError> {
-        let repo = BaseRepository::new(
-            self.keys_collection.clone().clone_with_type::<Document>(),
-        );
+        let repo = BaseRepository::new(self.keys_collection.clone().clone_with_type::<Document>());
 
         repo.find_one::<ConversationKey>(
             doc! { "conversation_id": conversation_id, "user_id": user_id },

@@ -77,10 +77,10 @@ impl Event {
         match (&self.school_id, &client.school_id) {
             // Event has school_id and client has school_id - must match
             (Some(event_school), Some(client_school)) => event_school == client_school,
-            
+
             // Event has no school_id and client has no school_id - send it (global events)
             (None, None) => true,
-            
+
             // Mismatch: event is for school but client is not in a school, or vice versa
             _ => false,
         }
@@ -144,7 +144,11 @@ impl EventBus {
 
         for (client_id, client_session) in sessions.iter() {
             if event.should_send_to_client(client_session) {
-                if client_session.sender.unbounded_send(message.clone()).is_err() {
+                if client_session
+                    .sender
+                    .unbounded_send(message.clone())
+                    .is_err()
+                {
                     disconnected_clients.push(*client_id);
                 } else {
                     sent_count += 1;
@@ -180,10 +184,7 @@ impl EventBus {
                 .filter(|s| s.school_id.as_deref() == Some(school))
                 .count()
         } else {
-            sessions
-                .values()
-                .filter(|s| s.school_id.is_none())
-                .count()
+            sessions.values().filter(|s| s.school_id.is_none()).count()
         }
     }
 

@@ -508,7 +508,6 @@ pub fn check_admin_or_teacher_creator(user: &AuthUserDto, teacher_id: &str) -> R
 //     Err("Access denied: insufficient permissions for teacher management".to_string())
 // }
 
-
 // =========================
 // NEW PERMISSION-BASED GUARDS
 // =========================
@@ -626,7 +625,10 @@ pub async fn require_feature_enabled(
         .await
     {
         Ok(true) => Ok(()),
-        Ok(false) => Err(format!("Feature '{}' is disabled for this school", feature_name)),
+        Ok(false) => Err(format!(
+            "Feature '{}' is disabled for this school",
+            feature_name
+        )),
         Err(_) => Err("Error checking feature status".to_string()),
     }
 }

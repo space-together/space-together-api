@@ -16,7 +16,6 @@ where
     cfg.service(web::scope(&format!("/{}", path)).configure(register_handlers));
 }
 
-
 /// Mount routes for messaging/conversations that automatically detect school context from headers
 /// Uses OptionalSchoolTokenMiddleware to check for school token without requiring it
 /// - If school token exists in header → routes to school database

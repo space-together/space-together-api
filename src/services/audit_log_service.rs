@@ -105,7 +105,10 @@ impl AuditLogService {
             id: None,
             school_id,
             user_id,
-            user_role: user.role.clone().unwrap_or(crate::domain::common_details::UserRole::STUDENT),
+            user_role: user
+                .role
+                .clone()
+                .unwrap_or(crate::domain::common_details::UserRole::STUDENT),
             action: action.to_string(),
             entity_type: entity_type.to_string(),
             entity_id,

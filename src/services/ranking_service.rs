@@ -4,8 +4,7 @@ use mongodb::{
 };
 
 use crate::{
-    domain::student_term_result::StudentTermResult,
-    errors::AppError,
+    domain::student_term_result::StudentTermResult, errors::AppError,
     repositories::base_repo::BaseRepository,
 };
 
@@ -47,11 +46,8 @@ impl RankingService {
         let mut current_rank = 1;
         let mut previous_gpa: Option<f64> = None;
 
-        let repo = BaseRepository::new(
-            self.result_collection
-                .clone()
-                .clone_with_type::<Document>(),
-        );
+        let repo =
+            BaseRepository::new(self.result_collection.clone().clone_with_type::<Document>());
 
         for (index, result) in results.iter_mut().enumerate() {
             if let Some(prev_gpa) = previous_gpa {

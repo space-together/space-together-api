@@ -9,10 +9,7 @@ use crate::{
         grading_scale::{GradingScale, GradingScalePartial},
     },
     errors::AppError,
-    models::{
-        id_model::IdType,
-        mongo_model::IndexDef,
-    },
+    models::{id_model::IdType, mongo_model::IndexDef},
     repositories::base_repo::BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
@@ -46,9 +43,10 @@ impl GradingScaleService {
         self.ensure_indexes().await?;
 
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let mut doc = extract_valid_fields(mongodb::bson::to_document(&scale).map_err(|e| AppError {
-            message: format!("Failed to serialize grading scale: {}", e),
-        })?);
+        let mut doc =
+            extract_valid_fields(mongodb::bson::to_document(&scale).map_err(|e| AppError {
+                message: format!("Failed to serialize grading scale: {}", e),
+            })?);
         doc.insert("is_deleted", false);
 
         repo.create::<GradingScale>(doc, None).await
@@ -106,9 +104,10 @@ impl GradingScaleService {
         update: &GradingScalePartial,
     ) -> Result<GradingScale, AppError> {
         let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let update_doc = extract_valid_fields(mongodb::bson::to_document(update).map_err(|e| AppError {
-            message: format!("Failed to serialize update: {}", e),
-        })?);
+        let update_doc =
+            extract_valid_fields(mongodb::bson::to_document(update).map_err(|e| AppError {
+                message: format!("Failed to serialize update: {}", e),
+            })?);
 
         repo.update_one_and_fetch::<GradingScale>(id, update_doc)
             .await
@@ -159,7 +158,7 @@ impl GradingScaleService {
         };
 
         let mut cursor = self.collection.find(filter).await?;
-        
+
         if cursor.advance().await? {
             Ok(Some(cursor.deserialize_current()?))
         } else {

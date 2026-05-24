@@ -132,22 +132,25 @@ impl BackupService {
 
             match result {
                 Ok(size) => {
-                    update_doc.insert("status", mongodb::bson::to_bson(&BackupStatus::Completed).unwrap());
+                    update_doc.insert(
+                        "status",
+                        mongodb::bson::to_bson(&BackupStatus::Completed).unwrap(),
+                    );
                     update_doc.insert("size_bytes", size);
                     update_doc.insert("completed_at", mongodb::bson::to_bson(&Utc::now()).unwrap());
                 }
                 Err(e) => {
-                    update_doc.insert("status", mongodb::bson::to_bson(&BackupStatus::Failed).unwrap());
+                    update_doc.insert(
+                        "status",
+                        mongodb::bson::to_bson(&BackupStatus::Failed).unwrap(),
+                    );
                     update_doc.insert("error_message", e.message);
                     update_doc.insert("completed_at", mongodb::bson::to_bson(&Utc::now()).unwrap());
                 }
             }
 
             collection_clone
-                .update_one(
-                    doc! { "_id": backup_id_clone },
-                    doc! { "$set": update_doc },
-                )
+                .update_one(doc! { "_id": backup_id_clone }, doc! { "$set": update_doc })
                 .await
                 .ok();
         });
@@ -166,7 +169,8 @@ impl BackupService {
         })?;
 
         // Get MongoDB connection string from environment
-        let mongo_uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+        let mongo_uri = std::env::var("MONGODB_URI")
+            .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
 
         // Execute mongodump command
         let output = Command::new("mongodump")
@@ -184,10 +188,7 @@ impl BackupService {
 
         if !output.status.success() {
             return Err(AppError {
-                message: format!(
-                    "Backup failed: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
+                message: format!("Backup failed: {}", String::from_utf8_lossy(&output.stderr)),
             });
         }
 
@@ -303,11 +304,17 @@ impl BackupService {
 
             match result {
                 Ok(_) => {
-                    update_doc.insert("status", mongodb::bson::to_bson(&BackupStatus::Completed).unwrap());
+                    update_doc.insert(
+                        "status",
+                        mongodb::bson::to_bson(&BackupStatus::Completed).unwrap(),
+                    );
                     update_doc.insert("completed_at", mongodb::bson::to_bson(&Utc::now()).unwrap());
                 }
                 Err(e) => {
-                    update_doc.insert("status", mongodb::bson::to_bson(&BackupStatus::Failed).unwrap());
+                    update_doc.insert(
+                        "status",
+                        mongodb::bson::to_bson(&BackupStatus::Failed).unwrap(),
+                    );
                     update_doc.insert("error_message", e.message);
                     update_doc.insert("completed_at", mongodb::bson::to_bson(&Utc::now()).unwrap());
                 }
@@ -326,7 +333,8 @@ impl BackupService {
     // PERFORM RESTORE (Internal)
     // =========================
     async fn perform_restore(db_name: &str, file_path: &str) -> Result<(), AppError> {
-        let mongo_uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+        let mongo_uri = std::env::var("MONGODB_URI")
+            .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
 
         // Execute mongorestore command
         let output = Command::new("mongorestore")

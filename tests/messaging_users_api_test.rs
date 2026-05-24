@@ -9,18 +9,18 @@ const AUTH_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjp7ImlkI
 #[tokio::main]
 async fn main() {
     println!("=== Testing Messaging Users API ===\n");
-    
+
     let client = reqwest::Client::new();
-    
+
     // Test 1: Upload Public Key
     println!("Test 1: Upload Public Key");
     println!("POST {}/users/public-key", BASE_URL);
-    
+
     let upload_body = json!({
         "public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
         "key_algorithm": "RSA-2048"
     });
-    
+
     match client
         .post(format!("{}/users/public-key", BASE_URL))
         .header("School-Token", SCHOOL_TOKEN)
@@ -33,7 +33,7 @@ async fn main() {
         Ok(response) => {
             let status = response.status();
             println!("Status: {}", status);
-            
+
             match response.text().await {
                 Ok(body) => {
                     println!("Response: {}", body);
@@ -48,12 +48,12 @@ async fn main() {
         }
         Err(e) => println!("✗ Request failed: {}\n", e),
     }
-    
+
     // Test 2: Get Public Keys (single user)
     println!("Test 2: Get Public Keys (single user)");
     let user_id = "691026ce3d03a7c4eb6e60ff";
     println!("GET {}/users/public-keys?user_ids={}", BASE_URL, user_id);
-    
+
     match client
         .get(format!("{}/users/public-keys", BASE_URL))
         .header("School-Token", SCHOOL_TOKEN)
@@ -65,7 +65,7 @@ async fn main() {
         Ok(response) => {
             let status = response.status();
             println!("Status: {}", status);
-            
+
             match response.text().await {
                 Ok(body) => {
                     println!("Response: {}", body);
@@ -80,12 +80,12 @@ async fn main() {
         }
         Err(e) => println!("✗ Request failed: {}\n", e),
     }
-    
+
     // Test 3: Get Public Keys (multiple users)
     println!("Test 3: Get Public Keys (multiple users)");
     let user_ids = "691026ce3d03a7c4eb6e60ff,68ee51b7308ac28878390850";
     println!("GET {}/users/public-keys?user_ids={}", BASE_URL, user_ids);
-    
+
     match client
         .get(format!("{}/users/public-keys", BASE_URL))
         .header("School-Token", SCHOOL_TOKEN)
@@ -97,7 +97,7 @@ async fn main() {
         Ok(response) => {
             let status = response.status();
             println!("Status: {}", status);
-            
+
             match response.text().await {
                 Ok(body) => {
                     println!("Response: {}", body);
@@ -112,11 +112,11 @@ async fn main() {
         }
         Err(e) => println!("✗ Request failed: {}\n", e),
     }
-    
+
     // Test 4: Get Public Keys without user_ids parameter (should fail)
     println!("Test 4: Get Public Keys without user_ids (should fail with 400)");
     println!("GET {}/users/public-keys", BASE_URL);
-    
+
     match client
         .get(format!("{}/users/public-keys", BASE_URL))
         .header("School-Token", SCHOOL_TOKEN)
@@ -127,7 +127,7 @@ async fn main() {
         Ok(response) => {
             let status = response.status();
             println!("Status: {}", status);
-            
+
             match response.text().await {
                 Ok(body) => {
                     println!("Response: {}", body);
@@ -142,12 +142,15 @@ async fn main() {
         }
         Err(e) => println!("✗ Request failed: {}\n", e),
     }
-    
+
     // Test 5: Get Public Keys with invalid user IDs
     println!("Test 5: Get Public Keys with invalid user IDs");
     let invalid_ids = "invalid_id_1,invalid_id_2";
-    println!("GET {}/users/public-keys?user_ids={}", BASE_URL, invalid_ids);
-    
+    println!(
+        "GET {}/users/public-keys?user_ids={}",
+        BASE_URL, invalid_ids
+    );
+
     match client
         .get(format!("{}/users/public-keys", BASE_URL))
         .header("School-Token", SCHOOL_TOKEN)
@@ -159,7 +162,7 @@ async fn main() {
         Ok(response) => {
             let status = response.status();
             println!("Status: {}", status);
-            
+
             match response.text().await {
                 Ok(body) => {
                     println!("Response: {}", body);
@@ -174,6 +177,6 @@ async fn main() {
         }
         Err(e) => println!("✗ Request failed: {}\n", e),
     }
-    
+
     println!("=== All tests completed ===");
 }

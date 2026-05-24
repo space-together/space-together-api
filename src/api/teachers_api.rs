@@ -38,7 +38,6 @@ async fn get_all_teachers(
     }
 }
 
-
 #[get("/others")]
 async fn get_all_teachers_with_relations(
     req: HttpRequest,
@@ -61,7 +60,6 @@ async fn get_all_teachers_with_relations(
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
-
 
 #[get("/{id}/others")]
 async fn get_teacher_by_id_with_relations(
@@ -114,7 +112,6 @@ async fn get_teacher_by_match(
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
-
 
 #[get("/others/match")]
 async fn get_teacher_by_other_match(
