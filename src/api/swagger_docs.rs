@@ -1,26 +1,67 @@
-use actix_web::{get, http::header, web, HttpResponse, Responder};
+use actix_web::{get, http::header, web, HttpRequest, HttpResponse, Responder};
+use serde_json::{json, Value};
+use std::env;
 
 const OPENAPI_JSON: &str = include_str!("../../docs/openapi.json");
 
+fn server_url(req: &HttpRequest) -> String {
+    if let Ok(public_api_url) = env::var("PUBLIC_API_URL") {
+        let public_api_url = public_api_url.trim().trim_end_matches('/');
+
+        if !public_api_url.is_empty() {
+            return public_api_url.to_string();
+        }
+    }
+
+    let connection_info = req.connection_info();
+    format!("{}://{}", connection_info.scheme(), connection_info.host())
+        .trim_end_matches('/')
+        .to_string()
+}
+
+fn openapi_body(req: &HttpRequest) -> String {
+    let mut spec: Value = match serde_json::from_str(OPENAPI_JSON) {
+        Ok(spec) => spec,
+        Err(_) => return OPENAPI_JSON.to_string(),
+    };
+
+    spec["servers"] = json!([
+        {
+            "url": server_url(req),
+            "description": "Current API server"
+        },
+        {
+            "url": "/",
+            "description": "Current host"
+        },
+        {
+            "url": "http://localhost:4646",
+            "description": "Local development server"
+        }
+    ]);
+
+    serde_json::to_string(&spec).unwrap_or_else(|_| OPENAPI_JSON.to_string())
+}
+
 #[get("/docs/openapi.json")]
-async fn openapi_json() -> impl Responder {
+async fn openapi_json(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
         .insert_header((header::CONTENT_TYPE, "application/json; charset=utf-8"))
-        .body(OPENAPI_JSON)
+        .body(openapi_body(&req))
 }
 
 #[get("/swagger.json")]
-async fn swagger_json() -> impl Responder {
+async fn swagger_json(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
         .insert_header((header::CONTENT_TYPE, "application/json; charset=utf-8"))
-        .body(OPENAPI_JSON)
+        .body(openapi_body(&req))
 }
 
 #[get("/api-docs/openapi.json")]
-async fn api_docs_openapi_json() -> impl Responder {
+async fn api_docs_openapi_json(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok()
         .insert_header((header::CONTENT_TYPE, "application/json; charset=utf-8"))
-        .body(OPENAPI_JSON)
+        .body(openapi_body(&req))
 }
 
 #[get("/docs")]
