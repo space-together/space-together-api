@@ -35,6 +35,7 @@ mod school_staff_api;
 mod score_api;
 mod sector_api;
 mod students_api;
+mod swagger_docs;
 mod teachers_api;
 mod template_subject_api;
 mod trade_api;
@@ -42,6 +43,7 @@ mod users;
 mod welcome;
 
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
+    swagger_docs::init(cfg);
     welcome::init(cfg);
 
     database_status::init(cfg);
