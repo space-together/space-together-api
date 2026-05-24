@@ -1,4 +1,7 @@
-use crate::{helpers::object_id_helpers, make_partial};
+use crate::{
+    helpers::{date_time_helpers, object_id_helpers},
+    make_partial,
+};
 use chrono::{DateTime, Utc};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -25,10 +28,18 @@ pub struct Sector {
     pub r#type: String, // global, international, local
     pub disable: Option<bool>,
 
-    #[serde(default)]
+    #[serde(
+        default,
+        serialize_with = "date_time_helpers::optional_chrono_datetime::serialize",
+        deserialize_with = "date_time_helpers::optional_chrono_datetime::deserialize"
+    )]
     pub created_at: Option<DateTime<Utc>>,
 
-    #[serde(default)]
+    #[serde(
+        default,
+        serialize_with = "date_time_helpers::optional_chrono_datetime::serialize",
+        deserialize_with = "date_time_helpers::optional_chrono_datetime::deserialize"
+    )]
     pub updated_at: Option<DateTime<Utc>>,
 } => SectorPartial
 }
