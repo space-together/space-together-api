@@ -42,6 +42,7 @@ async fn main() -> std::io::Result<()> {
             .max_age(3600);
 
         App::new()
+            .wrap(crate::middleware::logging::RequestLoggingMiddleware)
             .wrap(cors)
             .wrap(crate::middleware::tenant_middleware::TenantMiddleware::new(
                 mongo_manager.clone(),
