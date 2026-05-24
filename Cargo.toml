@@ -5,6 +5,7 @@ edition = "2021"
 repository = "https://github.com/space-together/space-together-api"
 description = "space-together-api which implements all request from space-together applications."
 authors = ["Rwanda Bruno Happyheart <brunorwanda4@gmail.com>"]
+default-run = "space-together-api"
 
 [dependencies]
 actix-web = "4.12.1"
