@@ -82,3 +82,54 @@ fn replacement_schema_removes_document_storage_columns() {
     assert!(!migration.contains("CREATE TABLE legacy_records"));
     assert!(!migration.contains("raw_document JSONB"));
 }
+
+#[test]
+fn user_response_shape_keeps_frontend_contract_fields() {
+    let mongo_response = json!({
+        "_id": "664f2b78a68dff8b9cf934d1",
+        "name": "Student One",
+        "email": "student@example.com",
+        "username": "student-one",
+        "image": null,
+        "role": "STUDENT",
+        "bio": null,
+        "current_school_id": "664f2b78a68dff8b9cf934d2",
+        "schools": ["664f2b78a68dff8b9cf934d2"],
+        "accessible_classes": ["664f2b78a68dff8b9cf934d3"]
+    });
+
+    let postgres_response = json!({
+        "_id": "664f2b78a68dff8b9cf934d1",
+        "name": "Student One",
+        "email": "student@example.com",
+        "username": "student-one",
+        "image": null,
+        "role": "STUDENT",
+        "bio": null,
+        "current_school_id": "664f2b78a68dff8b9cf934d2",
+        "schools": ["664f2b78a68dff8b9cf934d2"],
+        "accessible_classes": ["664f2b78a68dff8b9cf934d3"]
+    });
+
+    assert_compatible_json_shape(&mongo_response, &postgres_response);
+}
+
+#[test]
+fn user_and_auth_modules_do_not_use_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/repositories/user_repo.rs"),
+        include_str!("../src/services/auth_service.rs"),
+        include_str!("../src/services/user_service.rs"),
+        include_str!("../src/api/users.rs"),
+        include_str!("../src/api/auth_api.rs"),
+        include_str!("../src/domain/user.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+    }
+}

@@ -16,7 +16,7 @@ async fn get_all_users(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     match service
@@ -30,7 +30,7 @@ async fn get_all_users(
 
 #[get("/stats")]
 async fn get_user_stats(state: web::Data<AppState>) -> impl Responder {
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     match service.get_user_stats().await {
@@ -41,7 +41,7 @@ async fn get_user_stats(state: web::Data<AppState>) -> impl Responder {
 
 #[get("/{id}")]
 async fn get_user_by_id(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     let user_id = IdType::from_string(path.into_inner());
@@ -57,7 +57,7 @@ async fn get_user_by_username(
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     let username = path.into_inner();
@@ -82,7 +82,7 @@ async fn create_user(
         }));
     }
 
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     match service.create_user(data.into_inner()).await {
@@ -136,7 +136,7 @@ async fn update_user(
     }
 
     let target_user_id = IdType::from_string(target_user_id_str);
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     match service
@@ -184,7 +184,7 @@ async fn delete_user(
     }
 
     let target_user_id = IdType::from_string(target_user_id_str);
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     // Get user before deletion for broadcasting
@@ -236,7 +236,7 @@ async fn add_school_to_user(
         }));
     }
 
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     match service.add_school_to_user(&user_id, &school_id).await {
@@ -282,7 +282,7 @@ async fn remove_school_from_user(
         }));
     }
 
-    let repo = UserRepo::new(&state.db.main_db());
+    let repo = UserRepo::new(&state.pg.pool);
     let service = UserService::new(&repo);
 
     match service.remove_school_from_user(&user_id, &school_id).await {

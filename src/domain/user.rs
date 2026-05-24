@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -14,6 +13,7 @@ use crate::{
         guardian::GuardianInfo,
     },
     helpers::object_id_helpers,
+    utils::object_id::ObjectId,
 };
 
 use super::common_details::Address;

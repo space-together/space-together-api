@@ -103,7 +103,7 @@ impl JoinSchoolRequestService {
             });
         }
 
-        let user_repo = UserRepo::new(&state.db.main_db());
+        let user_repo = UserRepo::new(&state.pg.pool);
         let user_service = UserService::new(&user_repo);
 
         let mut invited_user_id = None;
@@ -229,7 +229,7 @@ impl JoinSchoolRequestService {
             });
         }
 
-        let user_repo = UserRepo::new(&state.db.main_db());
+        let user_repo = UserRepo::new(&state.pg.pool);
         let user_service = UserService::new(&user_repo);
 
         let user = user_service
@@ -632,7 +632,7 @@ impl JoinSchoolRequestService {
         auth_user: &AuthUserDto,
         state: web::Data<AppState>,
     ) -> Result<JoinSchoolRequestResponseToken, AppError> {
-        let user_repo = UserRepo::new(&state.db.main_db());
+        let user_repo = UserRepo::new(&state.pg.pool);
         let user_service = UserService::new(&user_repo);
         let user = user_service
             .get_user_by_email(&auth_user.email)

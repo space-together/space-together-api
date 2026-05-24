@@ -19,7 +19,6 @@ use crate::{
     },
 };
 use chrono::Utc;
-use mongodb::bson::doc;
 
 pub struct AuthService<'a> {
     repo: &'a UserRepo,
@@ -36,25 +35,14 @@ impl<'a> AuthService<'a> {
         password: Option<&String>,
         state: &AppState,
     ) -> Result<LoginResponse, AppError> {
-        let db = state.db.main_db();
-
         // Optimized: Use single database query to check both email and username
-        let user = {
-            let filter = if is_valid_email(user_email).is_ok() {
-                // If it's a valid email, prioritize email lookup
-                doc! { "email": user_email }
-            } else {
-                // Otherwise, try username lookup
-                doc! { "username": user_email }
-            };
-
-            self.repo
-                .find_one_by_filter(filter)
-                .await?
-                .ok_or_else(|| AppError {
-                    message: "User not found".to_string(),
-                })?
-        };
+        let user = self
+            .repo
+            .find_by_login(user_email)
+            .await?
+            .ok_or_else(|| AppError {
+                message: "User not found".to_string(),
+            })?;
 
         // Verify password if provided (this is the slowest operation due to Argon2)
         if let Some(user_password) = password {
@@ -70,8 +58,9 @@ impl<'a> AuthService<'a> {
 
             if password_needs_rehash(hash) {
                 if let Some(user_id) = user.id.clone() {
-                    let collection = self.repo.collection.clone();
+                    let repo = UserRepo::new(&self.repo.pool);
                     let password = user_password.clone();
+                    let user_id = user_id.to_hex();
 
                     tokio::spawn(async move {
                         let Ok(new_hash) =
@@ -80,55 +69,37 @@ impl<'a> AuthService<'a> {
                             return;
                         };
 
-                        let _ = collection
-                            .update_one(
-                                doc! { "_id": user_id },
-                                doc! { "$set": { "password_hash": new_hash } },
-                            )
-                            .await;
+                        let _ = repo.update_password_hash(&user_id, &new_hash).await;
                     });
                 }
             }
         }
 
-        let school_service = SchoolService::new(&db);
+        let school_service = SchoolService::new(&state.db.main_db());
         let mut current_school_user_id = None;
         let mut school_access_token = None;
 
         // Handle school-specific data if user has a current school
         if let Some(ref school_id) = user.current_school_id {
-            let school_db_name = format!("school_{}", school_id.to_string());
-            let school_db = state.db.get_db(&school_db_name);
-
-            // Get user ObjectId
             let user_id = user
                 .id
                 .as_ref()
                 .ok_or_else(|| AppError {
                     message: "User does not have an ID".to_string(),
                 })?
-                .clone();
+                .to_hex();
+            let school_id_string = school_id.to_hex();
 
-            let member_type = user.role.clone();
-
-            // Search for school member
-            let school_member = school_service
-                .search_single_member(
-                    &school_db,
-                    None,
-                    Some(doc! {"user_id": user_id}),
-                    member_type,
-                )
+            current_school_user_id = self
+                .repo
+                .find_school_user_id(&user_id, &school_id_string)
                 .await?;
 
-            current_school_user_id = school_member.get_id();
-
-            // Generate school access token using the member we already loaded.
             school_access_token = Some(
                 school_service
                     .create_school_token_from_member(
                         &IdType::from_object_id(school_id.clone()),
-                        Some(school_member),
+                        None,
                     )
                     .await?,
             );

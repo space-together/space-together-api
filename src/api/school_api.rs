@@ -108,7 +108,7 @@ async fn create_school(
                 }
             };
 
-            let user_repo = UserRepo::new(&state.db.main_db());
+            let user_repo = UserRepo::new(&state.pg.pool);
             let user_service = UserService::new(&user_repo);
 
             let user_id = IdType::from_string(&logged_user.id);

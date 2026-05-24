@@ -348,7 +348,7 @@ impl SchoolService {
                     Ok(school_staff) => Some(RelatedUser::SCHOOLSTAFF(school_staff)),
                     Err(_) => {
                         if school.creator_id == Some(member_id) {
-                            let user_repo = UserRepo::new(&state.db.main_db());
+                            let user_repo = UserRepo::new(&state.pg.pool);
                             let user = user_repo
                                 .find_by_id(&IdType::from_object_id(member_id))
                                 .await?;
