@@ -14,7 +14,7 @@ use crate::{
         mongo_model::{CountDoc, IndexDef},
     },
     pipeline::like_pipeline::like_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
 

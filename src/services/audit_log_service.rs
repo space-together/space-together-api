@@ -16,7 +16,7 @@ use crate::{
         mongo_model::{CountDoc, IndexDef},
     },
     pipeline::audit_log_pipeline::audit_log_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     utils::{mongo_utils::build_search_filter, object_id::parse_object_id_value},
 };
 

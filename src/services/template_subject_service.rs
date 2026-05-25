@@ -11,7 +11,7 @@ use crate::{
     errors::AppError,
     models::{id_model::IdType, mongo_model::CountDoc},
     pipeline::template_subject_pipeline::template_subject_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
 

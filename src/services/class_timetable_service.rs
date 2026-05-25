@@ -14,7 +14,7 @@ use crate::{
     errors::AppError,
     handler::class_timetable_handler::auto_generate_schedule,
     models::{id_model::IdType, school_token_model::SchoolToken},
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{
         class_subject_service::ClassSubjectService, education_year_service::EducationYearService,
     },

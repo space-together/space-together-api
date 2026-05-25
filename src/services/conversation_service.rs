@@ -6,7 +6,7 @@ use crate::{
     errors::AppError,
     models::{id_model::IdType, mongo_model::IndexDef},
     pipeline::conversation_pipeline::conversation_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
 use mongodb::{

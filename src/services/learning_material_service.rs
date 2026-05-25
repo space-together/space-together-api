@@ -20,7 +20,7 @@ use crate::{
         mongo_model::{CountDoc, IndexDef},
     },
     pipeline::learning_material_pipeline::learning_material_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{audit_log_service::AuditLogService, cloudinary_service::CloudinaryService},
     utils::mongo_utils::{build_search_filter, extract_valid_fields},
 };

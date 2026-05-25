@@ -24,7 +24,7 @@ use crate::{
         attendance_summary_pipeline, finance_summary_pipeline, parent_pipeline,
         student_results_pipeline,
     },
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{announcement_service::AnnouncementService, cloudinary_service::CloudinaryService},
     utils::{
         email::is_valid_email,

@@ -20,7 +20,7 @@ use crate::{
     pipeline::assignment_pipeline::{
         assignment_with_teacher_pipeline, submission_with_relations_pipeline,
     },
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::cloudinary_service::CloudinaryService,
     utils::mongo_utils::{build_search_filter, extract_valid_fields},
 };

@@ -17,7 +17,7 @@ use crate::{
         mongo_model::{CountDoc, IndexDef},
     },
     pipeline::teacher_pipeline::teacher_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{
         cloudinary_service::CloudinaryService,
         join_school_request_service::JoinSchoolRequestService,

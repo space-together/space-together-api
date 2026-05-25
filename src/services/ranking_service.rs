@@ -5,7 +5,7 @@ use mongodb::{
 
 use crate::{
     domain::student_term_result::StudentTermResult, errors::AppError,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
 };
 
 pub struct RankingService {

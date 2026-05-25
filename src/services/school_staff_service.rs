@@ -15,7 +15,7 @@ use crate::{
         id_model::IdType,
         mongo_model::{CountDoc, IndexDef},
     },
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{
         cloudinary_service::CloudinaryService,
         join_school_request_service::JoinSchoolRequestService,

@@ -11,7 +11,7 @@ use crate::{
         attendance_rate_pipeline, enrollment_trends_pipeline, fee_collection_summary_pipeline,
         pass_fail_distribution_pipeline, teacher_workload_pipeline,
     },
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
 };
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;

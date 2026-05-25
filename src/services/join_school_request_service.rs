@@ -29,7 +29,9 @@ use crate::{
         mongo_model::{CountDoc, IndexDef},
     },
     pipeline::join_school_request_pipeline::join_school_request_pipeline,
-    repositories::{base_repo::BaseRepository, user_repo::UserRepo},
+    repositories::{
+        legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository, user_repo::UserRepo,
+    },
     services::{
         class_service::ClassService, school_service::SchoolService,
         school_staff_service::SchoolStaffService, student_service::StudentService,

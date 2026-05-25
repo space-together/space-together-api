@@ -133,3 +133,26 @@ fn user_and_auth_modules_do_not_use_mongo_storage_apis() {
         assert!(!file.contains("doc!"));
     }
 }
+
+#[test]
+fn base_repository_is_postgres_query_layer() {
+    let base_repo = include_str!("../src/repositories/base_repo.rs");
+
+    assert!(base_repo.contains("PgPool"));
+    assert!(base_repo.contains("QueryBuilder"));
+    assert!(base_repo.contains("ORDER BY updated_at DESC"));
+    assert!(!base_repo.contains("mongodb::"));
+    assert!(!base_repo.contains("bson::"));
+    assert!(!base_repo.contains("Collection<"));
+    assert!(!base_repo.contains("Database"));
+    assert!(!base_repo.contains("doc!"));
+    assert!(!base_repo.contains(".aggregate("));
+}
+
+#[test]
+fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
+    let service_with_legacy_import = include_str!("../src/services/assessment_category_service.rs");
+
+    assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
+    assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
+}

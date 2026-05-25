@@ -3,7 +3,7 @@ use crate::{
     errors::AppError,
     models::{id_model::IdType, mongo_model::IndexDef},
     pipeline::message_pipeline::message_pipeline,
-    repositories::base_repo::BaseRepository,
+    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     utils::mongo_utils::extract_valid_fields,
 };
 use chrono::Utc;
