@@ -151,7 +151,7 @@ fn base_repository_is_postgres_query_layer() {
 
 #[test]
 fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
-    let service_with_legacy_import = include_str!("../src/services/assignment_service.rs");
+    let service_with_legacy_import = include_str!("../src/services/score_service.rs");
 
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
@@ -453,5 +453,39 @@ fn grading_scale_schema_uses_boundary_table_not_embedded_storage() {
     assert!(migration.contains("grading_scale_id TEXT NOT NULL REFERENCES grading_scales(id)"));
     assert!(migration.contains("grading_scales_school_year_idx"));
     assert!(migration.contains("grading_scale_boundaries_scale_idx"));
+    assert!(!migration.contains("JSONB"));
+}
+
+#[test]
+fn assignment_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/assignment_service.rs"),
+        include_str!("../src/api/assignment_api.rs"),
+        include_str!("../src/domain/assignment.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn assignment_schema_uses_connected_assignment_and_submission_columns() {
+    let migration =
+        include_str!("../migrations/20260524001500_assignments_submissions_connected_columns.sql");
+
+    assert!(migration.contains("teacher_id TEXT REFERENCES teachers(id)"));
+    assert!(migration.contains("subject_id TEXT REFERENCES class_subjects(id)"));
+    assert!(migration.contains("graded_by TEXT REFERENCES teachers(id)"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_feature_flags"));
+    assert!(migration.contains("submissions_assignment_student_idx"));
     assert!(!migration.contains("JSONB"));
 }
