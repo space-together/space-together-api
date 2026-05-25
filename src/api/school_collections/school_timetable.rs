@@ -9,7 +9,8 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType, school_token_model::SchoolToken},
     services::{
-        education_year_service::EducationYearService, event_service::EventService,
+        education_year_service::{EducationYearQuery, EducationYearService},
+        event_service::EventService,
         school_timetable_service::SchoolTimetableService,
     },
     utils::api_utils::build_extra_match,
@@ -163,14 +164,21 @@ async fn get_current_timetable(state: web::Data<AppState>, req: HttpRequest) -> 
 
     let db = state.db.get_db(&claims.database_name);
     let service = SchoolTimetableService::new(&db);
-    let education_year_service = EducationYearService::new(&state.db.main_db());
+    let education_year_service = EducationYearService::new(&state.pg.pool);
 
     // FIX 2: No `?` with HttpResponse
-    let (education_year, _term_info) =
-        match education_year_service.get_current_year_and_term(None).await {
-            Ok(v) => v,
-            Err(e) => return HttpResponse::BadRequest().json(e),
-        };
+    let (education_year, _term_info) = match education_year_service
+        .get_current_year_and_term(
+            None,
+            Some(EducationYearQuery::from_school_context(Some(
+                claims.id.clone(),
+            ))),
+        )
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => return HttpResponse::BadRequest().json(e),
+    };
 
     // FIX 1: Convert IdType -> ObjectId
     let school_id = match ObjectId::from_str(&claims.id) {
@@ -347,13 +355,20 @@ async fn generate_timetable(
 
     let school_db = state.db.get_db(&school_claims.database_name);
     let service = SchoolTimetableService::new(&school_db);
-    let education_year_service = EducationYearService::new(&state.db.main_db());
+    let education_year_service = EducationYearService::new(&state.pg.pool);
 
-    let (education_year, _term_info) =
-        match education_year_service.get_current_year_and_term(None).await {
-            Ok(v) => v,
-            Err(e) => return Ok(HttpResponse::BadRequest().json(e)),
-        };
+    let (education_year, _term_info) = match education_year_service
+        .get_current_year_and_term(
+            None,
+            Some(EducationYearQuery::from_school_context(Some(
+                school_claims.id.clone(),
+            ))),
+        )
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => return Ok(HttpResponse::BadRequest().json(e)),
+    };
 
     let education_year_id = IdType::from_object_id(education_year.id.unwrap());
     let school_id = IdType::from_string(school_claims.id);

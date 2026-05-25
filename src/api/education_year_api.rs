@@ -9,31 +9,28 @@ use crate::{
     guards::role_guard::check_admin,
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{education_year_service::EducationYearService, event_service::EventService},
-    utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    services::{
+        education_year_service::{EducationYearQuery, EducationYearService},
+        event_service::EventService,
     },
+    utils::request_context::{postgres_pool, request_context},
 };
 
-/// ------------------------------------------------------
-/// GET /education-years
-/// ------------------------------------------------------
 #[get("")]
 async fn get_all_education_years(
     req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let year_query = match EducationYearQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, year_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -41,42 +38,41 @@ async fn get_all_education_years(
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/current
-/// ------------------------------------------------------
 #[get("/current")]
 async fn get_current_education_years(
     req: HttpRequest,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.get_current_year_and_term(None).await {
+    match service
+        .get_current_year_and_term(
+            None,
+            Some(EducationYearQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/others
-/// ------------------------------------------------------
 #[get("/others")]
 async fn get_all_education_years_with_relations(
     req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let year_query = match EducationYearQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, year_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -84,9 +80,6 @@ async fn get_all_education_years_with_relations(
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/{id}
-/// ------------------------------------------------------
 #[get("/{id}")]
 async fn get_education_year_by_id(
     req: HttpRequest,
@@ -94,18 +87,21 @@ async fn get_education_year_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.find_one(Some(&id), None).await {
+    match service
+        .find_one(
+            Some(&id),
+            Some(EducationYearQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/{id}/others
-/// ------------------------------------------------------
 #[get("/{id}/others")]
 async fn get_education_year_by_id_with_relations(
     req: HttpRequest,
@@ -113,94 +109,81 @@ async fn get_education_year_by_id_with_relations(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service
+        .find_one_with_relations(
+            Some(&id),
+            Some(EducationYearQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/match
-/// ------------------------------------------------------
 #[get("/match")]
 async fn get_education_year_by_match(
     req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let year_query = match EducationYearQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one(None, extra_match).await {
+    match service.find_one(None, year_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/others/match
-/// ------------------------------------------------------
 #[get("/others/match")]
 async fn get_education_year_by_other_match(
     req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let year_query = match EducationYearQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    // Use find_one_with_relations with extra_match
-    match service.find_one_with_relations(None, extra_match).await {
+    match service.find_one_with_relations(None, year_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /education-years/count
-/// ------------------------------------------------------
 #[get("/count")]
 async fn count_education_years(
     req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let year_query = match EducationYearQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    // Use get_all with limit 0 to get count
     match service
-        .get_all(query.filter.clone(), Some(0), Some(0), extra_match)
+        .count_education_years(query.filter.clone(), year_query)
         .await
     {
-        Ok(paginated) => HttpResponse::Ok().json(serde_json::json!({
-            "count": paginated.total
-        })),
+        Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// POST /education-years
-/// ------------------------------------------------------
 #[post("")]
 async fn create_education_year(
     req: HttpRequest,
@@ -208,24 +191,30 @@ async fn create_education_year(
     data: web::Json<EducationYear>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // only admin
     if let Err(err) = check_admin(&user) {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": err.to_string()
         }));
     }
 
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
+    let service = EducationYearService::new(postgres_pool(&state));
+    let context = request_context(&req);
     let mut education_year = data.into_inner();
 
     if education_year.created_by.is_none() {
-        let user_id = match parse_object_id_value(&user.id) {
+        let user_id = match IdType::from_string(&user.id).to_object_id() {
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
         education_year.created_by = Some(user_id);
+    }
+    if education_year.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            education_year.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(education_year).await {
@@ -252,9 +241,6 @@ async fn create_education_year(
     }
 }
 
-/// ------------------------------------------------------
-/// PUT /education-years/{id}
-/// ------------------------------------------------------
 #[put("/{id}")]
 async fn update_education_year(
     req: HttpRequest,
@@ -263,7 +249,6 @@ async fn update_education_year(
     data: web::Json<EducationYearPartial>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // only admin
     if let Err(err) = check_admin(&user) {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": err.to_string()
@@ -271,8 +256,7 @@ async fn update_education_year(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
+    let service = EducationYearService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(item) => {
@@ -298,9 +282,6 @@ async fn update_education_year(
     }
 }
 
-/// ------------------------------------------------------
-/// DELETE /education-years/{id}
-/// ------------------------------------------------------
 #[delete("/{id}")]
 async fn delete_education_year(
     req: HttpRequest,
@@ -308,7 +289,6 @@ async fn delete_education_year(
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // only admin
     if let Err(err) = check_admin(&user) {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": err.to_string()
@@ -316,10 +296,8 @@ async fn delete_education_year(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
-
-    let user_id = match parse_object_id_value(&user.id) {
+    let service = EducationYearService::new(postgres_pool(&state));
+    let user_id = match IdType::from_string(&user.id).to_object_id() {
         Ok(id) => id,
         Err(err) => return HttpResponse::BadRequest().json(err),
     };
@@ -348,17 +326,13 @@ async fn delete_education_year(
     }
 }
 
-/// ------------------------------------------------------
-/// POST /education-years/{id}/restore
-/// ------------------------------------------------------
 #[post("/{id}/restore")]
 async fn restore_education_year(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // only admin
     if let Err(err) = check_admin(&user) {
         return HttpResponse::Forbidden().json(serde_json::json!({
             "message": err.to_string()
@@ -366,8 +340,7 @@ async fn restore_education_year(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = EducationYearService::new(&db);
+    let service = EducationYearService::new(postgres_pool(&state));
 
     match service.restore(&id).await {
         Ok(item) => HttpResponse::Ok().json(item),

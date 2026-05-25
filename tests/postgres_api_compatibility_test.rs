@@ -326,3 +326,36 @@ fn class_subject_schema_uses_relational_tables() {
     assert!(migration.contains("teacher_id TEXT REFERENCES teachers(id)"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn education_year_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/education_year_service.rs"),
+        include_str!("../src/api/education_year_api.rs"),
+        include_str!("../src/domain/education_year.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn education_year_schema_uses_terms_table_not_embedded_terms() {
+    let core = include_str!("../migrations/20260524000400_relational_connected_schema.sql");
+    let migration =
+        include_str!("../migrations/20260524001100_education_year_terms_connected_columns.sql");
+
+    assert!(core.contains("CREATE TABLE IF NOT EXISTS education_years"));
+    assert!(core.contains("CREATE TABLE IF NOT EXISTS terms"));
+    assert!(migration.contains("term_order INTEGER"));
+    assert!(migration.contains("education_years_school_curriculum_name_unique"));
+    assert!(!migration.contains("JSONB"));
+}

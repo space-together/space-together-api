@@ -17,7 +17,7 @@ use crate::{
     repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{
         class_subject_service::{ClassSubjectQuery, ClassSubjectService},
-        education_year_service::EducationYearService,
+        education_year_service::{EducationYearQuery, EducationYearService},
     },
     utils::mongo_utils::extract_valid_fields,
 };
@@ -197,12 +197,17 @@ impl ClassTimetableService {
         state: &web::Data<AppState>,
         school_claims: &Option<SchoolToken>,
     ) -> Result<ClassTimetable, AppError> {
-        let main_db = state.db.main_db();
-
-        let education_service = EducationYearService::new(&main_db);
+        let education_service = EducationYearService::new(&state.pg.pool);
         let subject_service = ClassSubjectService::new(&state.pg.pool);
 
-        let (education_year, term_info) = education_service.get_current_year_and_term(None).await?;
+        let (education_year, term_info) = education_service
+            .get_current_year_and_term(
+                None,
+                Some(EducationYearQuery::from_school_context(
+                    school_claims.as_ref().map(|claims| claims.id.clone()),
+                )),
+            )
+            .await?;
         let education_year_id = education_year.id;
 
         let mut term_order = 1;
