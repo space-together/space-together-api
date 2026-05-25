@@ -448,25 +448,25 @@ impl JoinSchoolRequestService {
             .find_one(Some(&IdType::ObjectId(school_id)), None)
             .await?;
 
-        let school_db_name = school.database_name.as_ref().ok_or_else(|| AppError {
-            message: "School database not configured".into(),
-        })?;
-
-        let school_db = state.db.get_db(school_db_name);
-
         match request.role {
             JoinRole::Student => {
                 let student_service = StudentService::new(&state.pg.pool);
-                let class_service = ClassService::new(&school_db);
+                let class_service = ClassService::new(&state.pg.pool);
 
                 if let Some(class_id) = request.class_id {
                     if class_service
-                        .find_one(Some(&IdType::ObjectId(class_id)), None)
+                        .find_one(
+                            Some(&IdType::ObjectId(class_id)),
+                            Some(crate::services::class_service::ClassQuery {
+                                school_id: Some(school_id.to_hex()),
+                                ..crate::services::class_service::ClassQuery::default()
+                            }),
+                        )
                         .await
                         .is_err()
                     {
                         return Err(AppError {
-                            message: "Class not found in school database".into(),
+                            message: "Class not found in school".into(),
                         });
                     }
                 }

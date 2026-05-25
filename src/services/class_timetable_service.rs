@@ -16,7 +16,8 @@ use crate::{
     models::{id_model::IdType, school_token_model::SchoolToken},
     repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
     services::{
-        class_subject_service::ClassSubjectService, education_year_service::EducationYearService,
+        class_subject_service::{ClassSubjectQuery, ClassSubjectService},
+        education_year_service::EducationYearService,
     },
     utils::mongo_utils::extract_valid_fields,
 };
@@ -197,14 +198,9 @@ impl ClassTimetableService {
         school_claims: &Option<SchoolToken>,
     ) -> Result<ClassTimetable, AppError> {
         let main_db = state.db.main_db();
-        let mut school_db = state.db.main_db();
-
-        if let Some(claims) = school_claims {
-            school_db = state.db.get_db(&claims.database_name);
-        }
 
         let education_service = EducationYearService::new(&main_db);
-        let subject_service = ClassSubjectService::new(&school_db);
+        let subject_service = ClassSubjectService::new(&state.pg.pool);
 
         let (education_year, term_info) = education_service.get_current_year_and_term(None).await?;
         let education_year_id = education_year.id;
@@ -219,7 +215,11 @@ impl ClassTimetableService {
                 None,
                 None,
                 None,
-                Some(doc! {"class_id" : IdType::to_object_id(class_id)?}),
+                Some(ClassSubjectQuery {
+                    school_id: school_claims.as_ref().map(|claims| claims.id.clone()),
+                    class_id: Some(IdType::to_object_id(class_id)?.to_hex()),
+                    ..ClassSubjectQuery::default()
+                }),
             )
             .await?;
 

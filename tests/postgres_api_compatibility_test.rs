@@ -289,3 +289,40 @@ fn staff_role_schema_uses_join_tables_and_permissions() {
     assert!(migration.contains("user_role_assignments_user_role_school_unique"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn class_and_subject_services_use_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/class_service.rs"),
+        include_str!("../src/api/class_api.rs"),
+        include_str!("../src/domain/class.rs"),
+        include_str!("../src/services/class_subject_service.rs"),
+        include_str!("../src/api/class_subject.rs"),
+        include_str!("../src/domain/class_subject.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn class_subject_schema_uses_relational_tables() {
+    let migration =
+        include_str!("../migrations/20260524001000_classes_subjects_connected_columns.sql");
+
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS class_tags"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS class_background_images"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS class_settings"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS class_subject_topics"));
+    assert!(migration.contains("class_teacher_id TEXT REFERENCES teachers(id)"));
+    assert!(migration.contains("teacher_id TEXT REFERENCES teachers(id)"));
+    assert!(!migration.contains("JSONB"));
+}

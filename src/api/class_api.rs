@@ -1,7 +1,4 @@
-use std::str::FromStr;
-
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
-use mongodb::bson::oid::ObjectId;
 
 use crate::{
     config::state::AppState,
@@ -10,12 +7,14 @@ use crate::{
         class::{Class, UpdateClass},
     },
     errors::AppError,
+    guards::role_guard::check_admin_or_staff,
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{class_service::ClassService, event_service::EventService},
-    utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    services::{
+        class_service::{ClassQuery, ClassService},
+        event_service::EventService,
     },
+    utils::request_context::{postgres_pool, request_context},
 };
 
 #[get("")]
@@ -24,16 +23,15 @@ async fn get_all_classes(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let class_query = match ClassQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, class_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -47,16 +45,15 @@ async fn get_all_classes_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let class_query = match ClassQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, class_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -71,10 +68,16 @@ async fn get_class_by_id_with_relations(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service
+        .find_one_with_relations(
+            Some(&id),
+            Some(ClassQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -87,10 +90,16 @@ async fn get_class_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.find_one(Some(&id), None).await {
+    match service
+        .find_one(
+            Some(&id),
+            Some(ClassQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(class) => HttpResponse::Ok().json(class),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -102,15 +111,14 @@ async fn get_class_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let class_query = match ClassQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one(None, extra_match).await {
+    match service.find_one(None, class_query).await {
         Ok(class) => HttpResponse::Ok().json(class),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -122,15 +130,14 @@ async fn get_class_by_other_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let class_query = match ClassQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one_with_relations(None, extra_match).await {
+    match service.find_one_with_relations(None, class_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -143,17 +150,28 @@ async fn create_class(
     data: web::Json<Class>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
+    if let Err(err) = check_admin_or_staff(&user) {
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err }));
+    }
 
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
     let mut class = data.clone();
 
     if class.creator_id.is_none() {
-        let user_id = match parse_object_id_value(&user.id) {
+        let user_id = match IdType::from_string(&user.id).to_object_id() {
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
         class.creator_id = Some(user_id);
+    }
+    if class.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            class.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(class).await {
@@ -182,14 +200,17 @@ async fn create_class(
 #[put("/{id}")]
 async fn update_class(
     req: HttpRequest,
-    _user: web::ReqData<AuthUserDto>,
+    user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     data: web::Json<UpdateClass>,
     state: web::Data<AppState>,
 ) -> impl Responder {
+    if let Err(err) = check_admin_or_staff(&user) {
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err }));
+    }
+
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
+    let service = ClassService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(class) => {
@@ -218,13 +239,16 @@ async fn update_class(
 #[delete("/{id}")]
 async fn delete_class(
     req: HttpRequest,
-    _user: web::ReqData<AuthUserDto>,
+    user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
+    if let Err(err) = check_admin_or_staff(&user) {
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err }));
+    }
+
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
+    let service = ClassService::new(postgres_pool(&state));
 
     match service.delete(&id).await {
         Ok(class) => {
@@ -255,16 +279,15 @@ async fn count_classes(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let class_query = match ClassQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .count_classes(query.filter.clone(), extra_match)
+        .count_classes(query.filter.clone(), class_query)
         .await
     {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
@@ -275,29 +298,24 @@ async fn count_classes(
 #[post("/{main_class_id}/subclasses/count/{count}")]
 async fn create_many_subclasses_by_class_id(
     user: web::ReqData<AuthUserDto>,
-    req: actix_web::HttpRequest,
+    req: HttpRequest,
     path: web::Path<(String, String)>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassService::new(&db);
-
-    let logged_user = user.into_inner();
-
-    if let Err(err) = crate::guards::role_guard::check_admin_or_staff(&logged_user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err.to_string()
-        }));
+    if let Err(err) = check_admin_or_staff(&user) {
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err }));
     }
 
+    let service = ClassService::new(postgres_pool(&state));
+    let logged_user = user.into_inner();
     let (main_class_id_str, count) = path.into_inner();
     let main_class_id = IdType::String(main_class_id_str);
 
-    let user_id = match ObjectId::from_str(&logged_user.id) {
+    let user_id = match IdType::from_string(&logged_user.id).to_object_id() {
         Ok(i) => i,
         Err(e) => {
             return HttpResponse::BadRequest().json(AppError {
-                message: format!("field to change user id into object id: {}", e),
+                message: format!("field to change user id into object id: {}", e.message),
             })
         }
     };
@@ -318,8 +336,6 @@ async fn create_many_subclasses_by_class_id(
         Ok(subclasses) => {
             let state_clone = state.clone();
             let subclasses_for_spawn = subclasses.clone();
-
-            // 📡 Broadcast events async
             actix_rt::spawn(async move {
                 for subclass in &subclasses_for_spawn {
                     if let Some(id) = subclass.id {
