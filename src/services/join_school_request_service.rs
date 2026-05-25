@@ -453,7 +453,7 @@ impl JoinSchoolRequestService {
 
         match request.role {
             JoinRole::Student => {
-                let student_service = StudentService::new(&school_db);
+                let student_service = StudentService::new(&state.pg.pool);
                 let class_service = ClassService::new(&school_db);
 
                 if let Some(class_id) = request.class_id {
@@ -469,7 +469,7 @@ impl JoinSchoolRequestService {
                 }
 
                 if let Ok(student) = student_service
-                    .find_one(None, Some(doc! {"email": user.email.clone()}))
+                    .find_by_email_in_school(&user.email, &school_id.to_hex())
                     .await
                 {
                     let update_student = StudentPartial {

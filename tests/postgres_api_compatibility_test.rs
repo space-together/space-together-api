@@ -184,3 +184,37 @@ fn school_profile_schema_uses_relational_tables() {
     assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_social_media"));
     assert!(!migration.contains("raw_document"));
 }
+
+#[test]
+fn student_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/student_service.rs"),
+        include_str!("../src/api/students_api.rs"),
+        include_str!("../src/domain/student.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn student_connected_schema_uses_profiles_enrollments_and_tag_table() {
+    let core = include_str!("../migrations/20260524000100_core_connected_identity.sql");
+    let compat = include_str!("../migrations/20260524000700_student_connected_api_columns.sql");
+
+    assert!(core.contains("CREATE TABLE student_profiles"));
+    assert!(core.contains("CREATE TABLE student_school_enrollments"));
+    assert!(core.contains("CREATE TABLE student_record_permissions"));
+    assert!(compat.contains("DROP COLUMN IF EXISTS date_of_birth"));
+    assert!(compat.contains("CREATE TABLE IF NOT EXISTS student_enrollment_tags"));
+    assert!(compat.contains("REFERENCES student_school_enrollments(id)"));
+    assert!(!compat.contains("JSONB"));
+}
