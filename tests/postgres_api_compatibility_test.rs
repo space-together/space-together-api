@@ -151,7 +151,7 @@ fn base_repository_is_postgres_query_layer() {
 
 #[test]
 fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
-    let service_with_legacy_import = include_str!("../src/services/assessment_category_service.rs");
+    let service_with_legacy_import = include_str!("../src/services/assignment_service.rs");
 
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
@@ -388,5 +388,37 @@ fn exam_schema_connects_to_school_year_term_class_and_creator() {
     assert!(migration.contains("term_id TEXT REFERENCES terms(id)"));
     assert!(migration.contains("created_by TEXT REFERENCES users(id)"));
     assert!(migration.contains("exams_school_year_status_idx"));
+    assert!(!migration.contains("JSONB"));
+}
+
+#[test]
+fn assessment_category_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/assessment_category_service.rs"),
+        include_str!("../src/api/assessment_category_api.rs"),
+        include_str!("../src/domain/assessment_category.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn assessment_category_schema_connects_subjects_years_and_creators() {
+    let migration =
+        include_str!("../migrations/20260524001300_assessment_categories_connected_columns.sql");
+
+    assert!(migration.contains("education_year_id TEXT REFERENCES education_years(id)"));
+    assert!(migration.contains("created_by TEXT REFERENCES users(id)"));
+    assert!(migration.contains("assessment_categories_subject_year_idx"));
+    assert!(migration.contains("assessment_categories_school_subject_year_code_unique"));
     assert!(!migration.contains("JSONB"));
 }
