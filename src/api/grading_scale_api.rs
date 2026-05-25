@@ -8,9 +8,13 @@ use crate::{
     },
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{event_service::EventService, grading_scale_service::GradingScaleService},
+    services::{
+        event_service::EventService,
+        grading_scale_service::{GradingScaleQuery, GradingScaleService},
+    },
     utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+        object_id::parse_object_id_value,
+        request_context::{postgres_pool, request_context},
     },
 };
 
@@ -20,16 +24,15 @@ async fn get_all_grading_scales(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = GradingScaleService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = GradingScaleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let scale_query = match GradingScaleQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, scale_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -44,10 +47,16 @@ async fn get_grading_scale_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = GradingScaleService::new(&db);
+    let service = GradingScaleService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.find_one(&id).await {
+    match service
+        .find_one(
+            &id,
+            Some(GradingScaleQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(scale) => HttpResponse::Ok().json(scale),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -60,8 +69,8 @@ async fn create_grading_scale(
     data: web::Json<GradingScale>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = GradingScaleService::new(&db);
+    let service = GradingScaleService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
     let mut scale = data.clone();
 
@@ -71,6 +80,14 @@ async fn create_grading_scale(
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
         scale.created_by = Some(user_id);
+    }
+    if scale.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            scale.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(scale).await {
@@ -105,8 +122,7 @@ async fn update_grading_scale(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = GradingScaleService::new(&db);
+    let service = GradingScaleService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(scale) => {
@@ -139,8 +155,7 @@ async fn activate_grading_scale(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = GradingScaleService::new(&db);
+    let service = GradingScaleService::new(postgres_pool(&state));
 
     match service.activate(&id).await {
         Ok(scale) => {

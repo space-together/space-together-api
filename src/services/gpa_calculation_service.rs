@@ -7,13 +7,13 @@ use crate::{
     domain::{
         assessment_category::AssessmentCategory,
         class_subject::ClassSubject,
+        grading_scale::GradingScale,
         score::Score,
         student_term_result::{CategoryScore, StudentTermResult, SubjectResult},
     },
     errors::AppError,
     models::{id_model::IdType, mongo_model::IndexDef},
     repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
-    services::grading_scale_service::GradingScaleService,
 };
 
 pub struct GpaCalculationService {
@@ -22,7 +22,7 @@ pub struct GpaCalculationService {
     pub subject_collection: Collection<ClassSubject>,
     pub category_collection: Collection<AssessmentCategory>,
     pub student_collection: Collection<crate::domain::student::Student>,
-    pub grading_service: GradingScaleService,
+    pub grading_scale_collection: Collection<GradingScale>,
 }
 
 impl GpaCalculationService {
@@ -33,7 +33,7 @@ impl GpaCalculationService {
             subject_collection: db.collection::<ClassSubject>("class_subjects"),
             category_collection: db.collection::<AssessmentCategory>("assessment_categories"),
             student_collection: db.collection::<crate::domain::student::Student>("students"),
-            grading_service: GradingScaleService::new(db),
+            grading_scale_collection: db.collection::<GradingScale>("grading_scales"),
         }
     }
 
@@ -130,15 +130,12 @@ impl GpaCalculationService {
         // Calculate GPA (simple average for now, can be credit-based)
         let gpa = average_percentage / 25.0; // Convert to 4.0 scale (100/25 = 4.0)
 
-        // Get grading scale and determine grade
         let grading_scale = self
-            .grading_service
-            .get_active_scale(school_id, education_year_id)
+            .get_active_mongo_grading_scale(school_id, education_year_id)
             .await?;
 
         let grade = if let Some(scale) = grading_scale {
-            self.grading_service
-                .calculate_grade(&scale, average_percentage)
+            self.calculate_grade_from_scale(&scale, average_percentage)
         } else {
             "N/A".to_string()
         };
@@ -254,6 +251,30 @@ impl GpaCalculationService {
         } else {
             "F".to_string()
         }
+    }
+
+    async fn get_active_mongo_grading_scale(
+        &self,
+        school_id: &ObjectId,
+        education_year_id: &ObjectId,
+    ) -> Result<Option<GradingScale>, AppError> {
+        let filter = doc! {
+            "school_id": school_id,
+            "education_year_id": education_year_id,
+            "is_active": true,
+            "is_deleted": false
+        };
+
+        Ok(self.grading_scale_collection.find_one(filter).await?)
+    }
+
+    fn calculate_grade_from_scale(&self, scale: &GradingScale, percentage: f64) -> String {
+        for boundary in &scale.grade_boundaries {
+            if percentage >= boundary.min_score && percentage <= boundary.max_score {
+                return boundary.grade.clone();
+            }
+        }
+        "N/A".to_string()
     }
 
     async fn save_result(&self, result: &StudentTermResult) -> Result<StudentTermResult, AppError> {

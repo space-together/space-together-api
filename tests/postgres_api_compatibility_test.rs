@@ -422,3 +422,36 @@ fn assessment_category_schema_connects_subjects_years_and_creators() {
     assert!(migration.contains("assessment_categories_school_subject_year_code_unique"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn grading_scale_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/grading_scale_service.rs"),
+        include_str!("../src/api/grading_scale_api.rs"),
+        include_str!("../src/domain/grading_scale.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn grading_scale_schema_uses_boundary_table_not_embedded_storage() {
+    let migration =
+        include_str!("../migrations/20260524001400_grading_scales_connected_tables.sql");
+
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS grading_scales"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS grading_scale_boundaries"));
+    assert!(migration.contains("grading_scale_id TEXT NOT NULL REFERENCES grading_scales(id)"));
+    assert!(migration.contains("grading_scales_school_year_idx"));
+    assert!(migration.contains("grading_scale_boundaries_scale_idx"));
+    assert!(!migration.contains("JSONB"));
+}
