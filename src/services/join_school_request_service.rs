@@ -33,9 +33,12 @@ use crate::{
         legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository, user_repo::UserRepo,
     },
     services::{
-        class_service::ClassService, school_service::SchoolService,
-        school_staff_service::SchoolStaffService, student_service::StudentService,
-        teacher_service::TeacherService, user_service::UserService,
+        class_service::ClassService,
+        school_service::SchoolService,
+        school_staff_service::{SchoolStaffQuery, SchoolStaffService},
+        student_service::StudentService,
+        teacher_service::TeacherService,
+        user_service::UserService,
     },
     utils::{
         code::generate_school_registration_number, email::is_valid_email,
@@ -543,7 +546,7 @@ impl JoinSchoolRequestService {
             }
 
             JoinRole::Teacher => {
-                let teacher_service = TeacherService::new(&school_db);
+                let teacher_service = TeacherService::new(&state.pg.pool);
                 let teacher_type = parse_teacher_type(&request.r#type);
 
                 let new_teacher = Teacher {
@@ -570,14 +573,24 @@ impl JoinSchoolRequestService {
             }
 
             JoinRole::Staff => {
-                let staff_service = SchoolStaffService::new(&school_db);
+                let staff_service = SchoolStaffService::new(&state.pg.pool);
 
                 let staff_type = parse_staff_type(&request.r#type);
 
                 match staff_type {
                     SchoolStaffType::Director => {
                         let count = staff_service
-                            .count_staff(None, Some(doc! {"type": "Director"}))
+                            .count_staff(
+                                None,
+                                Some(SchoolStaffQuery {
+                                    school_id: Some(school_id.to_hex()),
+                                    field_values: vec![(
+                                        "type".to_string(),
+                                        "Director".to_string(),
+                                    )],
+                                    ..SchoolStaffQuery::default()
+                                }),
+                            )
                             .await?;
 
                         if count.count >= 1 {
@@ -588,7 +601,17 @@ impl JoinSchoolRequestService {
                     }
                     SchoolStaffType::HeadOfStudies => {
                         let count = staff_service
-                            .count_staff(None, Some(doc! {"type": "HeadOfStudies"}))
+                            .count_staff(
+                                None,
+                                Some(SchoolStaffQuery {
+                                    school_id: Some(school_id.to_hex()),
+                                    field_values: vec![(
+                                        "type".to_string(),
+                                        "HeadOfStudies".to_string(),
+                                    )],
+                                    ..SchoolStaffQuery::default()
+                                }),
+                            )
                             .await?;
 
                         if count.count >= 5 {

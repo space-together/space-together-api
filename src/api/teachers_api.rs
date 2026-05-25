@@ -9,10 +9,11 @@ use crate::{
     guards::role_guard::check_admin_or_staff,
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{event_service::EventService, teacher_service::TeacherService},
-    utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    services::{
+        event_service::EventService,
+        teacher_service::{TeacherQuery, TeacherService},
     },
+    utils::request_context::{postgres_pool, request_context},
 };
 
 #[get("")]
@@ -21,16 +22,15 @@ async fn get_all_teachers(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = match TeacherQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, teacher_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -44,16 +44,15 @@ async fn get_all_teachers_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = match TeacherQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, teacher_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -68,10 +67,14 @@ async fn get_teacher_by_id_with_relations(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = Some(TeacherQuery::from_school_context(context.school_id));
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service
+        .find_one_with_relations(Some(&id), teacher_query)
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -84,10 +87,11 @@ async fn get_teacher_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = Some(TeacherQuery::from_school_context(context.school_id));
 
-    match service.find_one(Some(&id), None).await {
+    match service.find_one(Some(&id), teacher_query).await {
         Ok(teacher) => HttpResponse::Ok().json(teacher),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -99,15 +103,14 @@ async fn get_teacher_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = match TeacherQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one(None, extra_match).await {
+    match service.find_one(None, teacher_query).await {
         Ok(teacher) => HttpResponse::Ok().json(teacher),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -119,14 +122,14 @@ async fn get_teacher_by_other_match(
     state: web::Data<AppState>,
     query: web::Query<RequestQuery>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = match TeacherQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one_with_relations(None, extra_match).await {
+    match service.find_one_with_relations(None, teacher_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -146,17 +149,25 @@ async fn create_teacher(
         }));
     }
 
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
     let mut teacher = data.clone();
 
     if teacher.creator_id.is_none() {
-        let user_id = match parse_object_id_value(&user.id) {
+        let user_id = match IdType::from_string(&user.id).to_object_id() {
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
         teacher.creator_id = Some(user_id);
+    }
+    if teacher.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            teacher.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(teacher, Some(&state)).await {
@@ -199,8 +210,7 @@ async fn update_teacher(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
+    let service = TeacherService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(teacher) => {
@@ -241,8 +251,7 @@ async fn delete_teacher(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
+    let service = TeacherService::new(postgres_pool(&state));
 
     match service.delete(&id).await {
         Ok(teacher) => {
@@ -274,16 +283,15 @@ async fn count_teachers(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = TeacherService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = TeacherService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let teacher_query = match TeacherQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .count_teachers(query.filter.clone(), extra_match)
+        .count_teachers(query.filter.clone(), teacher_query)
         .await
     {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),

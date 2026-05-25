@@ -250,3 +250,42 @@ fn parent_schema_uses_parent_student_links_for_child_permissions() {
     assert!(compat.contains("parent_student_links_parent_student_idx"));
     assert!(!compat.contains("JSONB"));
 }
+
+#[test]
+fn staff_and_roles_use_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/teacher_service.rs"),
+        include_str!("../src/api/teachers_api.rs"),
+        include_str!("../src/domain/teacher.rs"),
+        include_str!("../src/services/school_staff_service.rs"),
+        include_str!("../src/api/school_staff_api.rs"),
+        include_str!("../src/domain/school_staff.rs"),
+        include_str!("../src/services/role_service.rs"),
+        include_str!("../src/api/roles_api.rs"),
+        include_str!("../src/domain/role.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn staff_role_schema_uses_join_tables_and_permissions() {
+    let migration = include_str!("../migrations/20260524000900_staff_roles_connected_columns.sql");
+
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS teacher_classes"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS teacher_subjects"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS teacher_tags"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_staff_tags"));
+    assert!(migration.contains("role_id TEXT REFERENCES roles(id)"));
+    assert!(migration.contains("user_role_assignments_user_role_school_unique"));
+    assert!(!migration.contains("JSONB"));
+}

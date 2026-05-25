@@ -102,7 +102,7 @@ async fn create_assignment(
     }
 
     // Check permission: assignment.create
-    let role_service = RoleService::new(&db);
+    let role_service = RoleService::new(&state.pg.pool);
     if let Err(e) = require_permission(&user, &school_id, "assignment.create", &role_service).await
     {
         return HttpResponse::Forbidden().json(serde_json::json!({
@@ -184,7 +184,7 @@ async fn update_assignment(
         }
     };
 
-    let role_service = RoleService::new(&db);
+    let role_service = RoleService::new(&state.pg.pool);
     if let Err(e) = require_permission(&user, &school_id, "assignment.update", &role_service).await
     {
         return HttpResponse::Forbidden().json(serde_json::json!({
@@ -262,7 +262,7 @@ async fn delete_assignment(
         }
     };
 
-    let role_service = RoleService::new(&db);
+    let role_service = RoleService::new(&state.pg.pool);
     if let Err(e) = require_permission(&user, &school_id, "assignment.delete", &role_service).await
     {
         return HttpResponse::Forbidden().json(serde_json::json!({
