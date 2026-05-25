@@ -156,3 +156,31 @@ fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
 }
+
+#[test]
+fn school_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/school_service.rs"),
+        include_str!("../src/api/school_api.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(file.contains("PgPool") || file.contains("state.pg.pool"));
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+    }
+}
+
+#[test]
+fn school_profile_schema_uses_relational_tables() {
+    let migration = include_str!("../migrations/20260524000600_school_profile_relations.sql");
+
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_curricula"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_education_levels"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_social_media"));
+    assert!(!migration.contains("raw_document"));
+}

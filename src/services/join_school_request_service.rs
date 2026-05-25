@@ -251,7 +251,7 @@ impl JoinSchoolRequestService {
         )
         .await?;
 
-        let school_service = SchoolService::new(&state.db.main_db());
+        let school_service = SchoolService::new(&state.pg.pool);
 
         let school_token = school_service
             .create_school_token(&IdType::ObjectId(request.school_id), logged_user, &state)
@@ -440,7 +440,7 @@ impl JoinSchoolRequestService {
     ) -> Result<(), AppError> {
         let user_id = user.id.unwrap();
         let school_id = request.school_id;
-        let school_service = SchoolService::new(&state.db.main_db());
+        let school_service = SchoolService::new(&state.pg.pool);
         let school = school_service
             .find_one(Some(&IdType::ObjectId(school_id)), None)
             .await?;
@@ -643,10 +643,8 @@ impl JoinSchoolRequestService {
                 message: format!("Failed to find user: {}", e),
             })?;
 
-        let school_service = SchoolService::new(&state.db.main_db());
-        let school = school_service
-            .find_one(None, Some(doc! {"code": &request.code}))
-            .await?;
+        let school_service = SchoolService::new(&state.pg.pool);
+        let school = school_service.find_by_code(&request.code).await?;
 
         let school_id = school.id.clone().ok_or_else(|| AppError {
             message: "School ID not found".into(),
@@ -669,7 +667,7 @@ impl JoinSchoolRequestService {
             .await
             .map_err(|e| AppError { message: e })?;
 
-        let school_service = SchoolService::new(&state.db.main_db());
+        let school_service = SchoolService::new(&state.pg.pool);
 
         let school_token = school_service
             .create_school_token(&IdType::ObjectId(school_id), auth_user, &state)

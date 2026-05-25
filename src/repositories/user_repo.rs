@@ -325,6 +325,10 @@ impl UserRepo {
         })
     }
 
+    pub(crate) async fn user_from_sql_row(&self, row: PgRow) -> Result<User, AppError> {
+        self.user_from_row(row).await
+    }
+
     async fn find_one_sql(&self, sql: &str, value: &str) -> Result<Option<User>, AppError> {
         let row = sqlx::query(sql)
             .bind(value)

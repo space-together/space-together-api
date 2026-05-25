@@ -75,7 +75,7 @@ impl<'a> AuthService<'a> {
             }
         }
 
-        let school_service = SchoolService::new(&state.db.main_db());
+        let school_service = SchoolService::new(&state.pg.pool);
         let mut current_school_user_id = None;
         let mut school_access_token = None;
 
