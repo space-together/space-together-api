@@ -359,3 +359,34 @@ fn education_year_schema_uses_terms_table_not_embedded_terms() {
     assert!(migration.contains("education_years_school_curriculum_name_unique"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn exam_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/exam_service.rs"),
+        include_str!("../src/api/exam_api.rs"),
+        include_str!("../src/domain/exam.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn exam_schema_connects_to_school_year_term_class_and_creator() {
+    let migration = include_str!("../migrations/20260524001200_exams_connected_columns.sql");
+
+    assert!(migration.contains("education_year_id TEXT REFERENCES education_years(id)"));
+    assert!(migration.contains("term_id TEXT REFERENCES terms(id)"));
+    assert!(migration.contains("created_by TEXT REFERENCES users(id)"));
+    assert!(migration.contains("exams_school_year_status_idx"));
+    assert!(!migration.contains("JSONB"));
+}
