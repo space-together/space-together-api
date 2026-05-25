@@ -10,7 +10,7 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::id_model::IdType,
     services::analytics_service::AnalyticsService,
-    utils::db_utils::get_database,
+    utils::request_context::postgres_pool,
 };
 
 // ========== ENROLLMENT TRENDS ==========
@@ -37,8 +37,7 @@ async fn get_enrollment_trends(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = AnalyticsService::new(&db);
+    let service = AnalyticsService::new(postgres_pool(&state));
 
     match service.get_enrollment_trends(&school_id, query.year).await {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -70,8 +69,7 @@ async fn get_attendance_rate(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = AnalyticsService::new(&db);
+    let service = AnalyticsService::new(postgres_pool(&state));
 
     match service
         .get_attendance_rate(&school_id, query.from, query.to)
@@ -105,8 +103,7 @@ async fn get_pass_fail_distribution(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = AnalyticsService::new(&db);
+    let service = AnalyticsService::new(postgres_pool(&state));
 
     match service.get_pass_fail_distribution(&school_id, None).await {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -137,8 +134,7 @@ async fn get_fee_summary(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = AnalyticsService::new(&db);
+    let service = AnalyticsService::new(postgres_pool(&state));
 
     match service.get_fee_summary(&school_id).await {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -169,8 +165,7 @@ async fn get_teacher_workload(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = AnalyticsService::new(&db);
+    let service = AnalyticsService::new(postgres_pool(&state));
 
     match service.get_teacher_workload(&school_id).await {
         Ok(data) => HttpResponse::Ok().json(data),

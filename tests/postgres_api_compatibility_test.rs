@@ -151,7 +151,7 @@ fn base_repository_is_postgres_query_layer() {
 
 #[test]
 fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
-    let service_with_legacy_import = include_str!("../src/services/analytics_service.rs");
+    let service_with_legacy_import = include_str!("../src/services/announcement_service.rs");
 
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
@@ -589,4 +589,31 @@ fn student_term_result_schema_uses_relational_breakdown_tables() {
     assert!(migration.contains("student_term_results_student_exam_unique"));
     assert!(migration.contains("student_term_results_school_student_term_year_unique"));
     assert!(!migration.contains("JSONB"));
+}
+
+#[test]
+fn analytics_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/analytics_service.rs"),
+        include_str!("../src/api/analytics_api.rs"),
+        include_str!("../src/domain/analytics.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+
+    let service = include_str!("../src/services/analytics_service.rs");
+    assert!(service.contains("FROM student_school_enrollments"));
+    assert!(service.contains("FROM attendance"));
+    assert!(service.contains("FROM scores"));
+    assert!(service.contains("FROM finance_records"));
+    assert!(service.contains("LEFT JOIN class_subjects"));
 }
