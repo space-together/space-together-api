@@ -410,14 +410,8 @@ pub async fn check_parent_access(
         return Err("Access denied: Parent role required".to_string());
     }
 
-    // Find parent by user_id
-    let user_oid = match crate::utils::object_id::parse_object_id_value(&user.id) {
-        Ok(id) => id,
-        Err(_) => return Err("Invalid user ID".to_string()),
-    };
-
     let parent = match parent_service
-        .find_one(None, Some(mongodb::bson::doc! { "user_id": user_oid }))
+        .find_by_user_id(&user.id, user.current_school_id.as_deref())
         .await
     {
         Ok(p) => p,
@@ -582,13 +576,8 @@ pub async fn require_parent_child_access(
         return Err("Access denied: Parent role required".to_string());
     }
 
-    let user_oid = match crate::utils::object_id::parse_object_id_value(&user.id) {
-        Ok(id) => id,
-        Err(_) => return Err("Invalid user ID".to_string()),
-    };
-
     let parent = match parent_service
-        .find_one(None, Some(mongodb::bson::doc! { "user_id": user_oid }))
+        .find_by_user_id(&user.id, user.current_school_id.as_deref())
         .await
     {
         Ok(p) => p,

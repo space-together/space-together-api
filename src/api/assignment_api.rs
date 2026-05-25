@@ -662,7 +662,7 @@ async fn get_submission_by_id(
     // Parents can view their children's submissions
     if matches!(user.role, Some(UserRole::PARENT)) {
         if let Some(student_id) = submission.student_id {
-            let parent_service = ParentService::new(&db);
+            let parent_service = ParentService::new(&state.pg.pool);
             let student_id_str = student_id.to_hex();
 
             if let Err(e) =

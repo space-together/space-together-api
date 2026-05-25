@@ -218,3 +218,35 @@ fn student_connected_schema_uses_profiles_enrollments_and_tag_table() {
     assert!(compat.contains("REFERENCES student_school_enrollments(id)"));
     assert!(!compat.contains("JSONB"));
 }
+
+#[test]
+fn parent_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/parent_service.rs"),
+        include_str!("../src/api/parent_api.rs"),
+        include_str!("../src/domain/parent.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+    }
+}
+
+#[test]
+fn parent_schema_uses_parent_student_links_for_child_permissions() {
+    let core = include_str!("../migrations/20260524000400_relational_connected_schema.sql");
+    let compat = include_str!("../migrations/20260524000800_parent_connected_api_columns.sql");
+
+    assert!(core.contains("CREATE TABLE IF NOT EXISTS parent_student_links"));
+    assert!(core.contains("can_view_academics BOOLEAN"));
+    assert!(compat.contains("parents_school_email_idx"));
+    assert!(compat.contains("parent_student_links_parent_student_idx"));
+    assert!(!compat.contains("JSONB"));
+}
