@@ -1,8 +1,7 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::object_id_helpers;
+use crate::{helpers::object_id_helpers, utils::object_id::ObjectId};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CategoryScore {

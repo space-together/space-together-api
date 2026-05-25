@@ -521,3 +521,35 @@ fn score_schema_connects_scores_and_audit_logs() {
     assert!(migration.contains("score_audit_logs_changed_at_idx"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn ranking_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/ranking_service.rs"),
+        include_str!("../src/api/ranking_api.rs"),
+        include_str!("../src/domain/student_term_result.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn ranking_schema_uses_student_term_result_columns() {
+    let migration =
+        include_str!("../migrations/20260524001700_student_term_results_ranking_columns.sql");
+
+    assert!(migration.contains("exam_id TEXT REFERENCES exams(id)"));
+    assert!(migration.contains("rank_in_class INTEGER"));
+    assert!(migration.contains("student_term_results_class_exam_rank_idx"));
+    assert!(migration.contains("student_term_results_class_exam_gpa_idx"));
+    assert!(!migration.contains("JSONB"));
+}
