@@ -151,7 +151,7 @@ fn base_repository_is_postgres_query_layer() {
 
 #[test]
 fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
-    let service_with_legacy_import = include_str!("../src/services/score_service.rs");
+    let service_with_legacy_import = include_str!("../src/services/gpa_calculation_service.rs");
 
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
@@ -487,5 +487,37 @@ fn assignment_schema_uses_connected_assignment_and_submission_columns() {
     assert!(migration.contains("graded_by TEXT REFERENCES teachers(id)"));
     assert!(migration.contains("CREATE TABLE IF NOT EXISTS school_feature_flags"));
     assert!(migration.contains("submissions_assignment_student_idx"));
+    assert!(!migration.contains("JSONB"));
+}
+
+#[test]
+fn score_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/score_service.rs"),
+        include_str!("../src/api/score_api.rs"),
+        include_str!("../src/domain/score.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn score_schema_connects_scores_and_audit_logs() {
+    let migration = include_str!("../migrations/20260524001600_scores_connected_columns.sql");
+
+    assert!(migration.contains("education_year_id TEXT REFERENCES education_years(id)"));
+    assert!(migration.contains("entered_by TEXT REFERENCES users(id)"));
+    assert!(migration.contains("scores_student_subject_exam_category_unique"));
+    assert!(migration.contains("score_audit_logs_changed_at_idx"));
     assert!(!migration.contains("JSONB"));
 }

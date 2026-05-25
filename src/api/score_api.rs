@@ -8,9 +8,13 @@ use crate::{
     },
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{event_service::EventService, score_service::ScoreService},
+    services::{
+        event_service::EventService,
+        score_service::{ScoreQuery, ScoreService},
+    },
     utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+        object_id::parse_object_id_value,
+        request_context::{postgres_pool, request_context},
     },
 };
 
@@ -20,16 +24,15 @@ async fn get_all_scores(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ScoreService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let score_query = match ScoreQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, score_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -39,13 +42,12 @@ async fn get_all_scores(
 
 #[get("/{id}")]
 async fn get_score_by_id(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
 
     match service.find_one(&id).await {
         Ok(score) => HttpResponse::Ok().json(score),
@@ -55,7 +57,7 @@ async fn get_score_by_id(
 
 #[get("/student/{student_id}/exam/{exam_id}")]
 async fn get_student_exam_scores(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<(String, String)>,
     state: web::Data<AppState>,
 ) -> impl Responder {
@@ -71,8 +73,7 @@ async fn get_student_exam_scores(
         Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
 
     match service.get_student_exam_scores(&student_id, &exam_id).await {
         Ok(scores) => HttpResponse::Ok().json(scores),
@@ -82,7 +83,7 @@ async fn get_student_exam_scores(
 
 #[get("/{id}/audit-logs")]
 async fn get_score_audit_logs(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
@@ -91,8 +92,7 @@ async fn get_score_audit_logs(
         Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
 
     match service.get_audit_logs(&score_id).await {
         Ok(logs) => HttpResponse::Ok().json(logs),
@@ -107,8 +107,8 @@ async fn create_score(
     data: web::Json<Score>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
     let mut score = data.clone();
 
@@ -118,6 +118,14 @@ async fn create_score(
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
         score.entered_by = Some(user_id);
+    }
+    if score.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            score.school_id = match parse_object_id_value(&school_id) {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(score).await {
@@ -150,8 +158,8 @@ async fn create_bulk_scores(
     data: web::Json<Vec<Score>>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
     let user_id = match parse_object_id_value(&user.id) {
         Ok(id) => id,
@@ -162,6 +170,18 @@ async fn create_bulk_scores(
     for score in &mut scores {
         if score.entered_by.is_none() {
             score.entered_by = Some(user_id);
+        }
+        if score.school_id.is_none() {
+            if let Some(school_id) = context
+                .school_id
+                .clone()
+                .or_else(|| user.current_school_id.clone())
+            {
+                score.school_id = match parse_object_id_value(&school_id) {
+                    Ok(id) => Some(id),
+                    Err(err) => return HttpResponse::BadRequest().json(err),
+                };
+            }
         }
     }
 
@@ -180,8 +200,7 @@ async fn update_score(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
 
     let user_id = match parse_object_id_value(&user.id) {
         Ok(id) => id,
@@ -225,8 +244,7 @@ async fn delete_score(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ScoreService::new(&db);
+    let service = ScoreService::new(postgres_pool(&state));
 
     match service.delete(&id).await {
         Ok(score) => {
