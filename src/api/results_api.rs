@@ -5,7 +5,10 @@ use crate::{
     domain::auth_user::AuthUserDto,
     models::api_request_model::RequestQuery,
     services::gpa_calculation_service::GpaCalculationService,
-    utils::{db_utils::get_database, object_id::parse_object_id_value},
+    utils::{
+        object_id::parse_object_id_value,
+        request_context::{postgres_pool, request_context},
+    },
 };
 
 #[post("/calculate/{exam_id}")]
@@ -45,7 +48,9 @@ async fn calculate_exam_results(
         }
     };
 
-    let school_id = match query.school_id.as_ref() {
+    let context = request_context(&req);
+    let school_id_raw = query.school_id.clone().or(context.school_id);
+    let school_id = match school_id_raw.as_ref() {
         Some(id) => match parse_object_id_value(id) {
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
@@ -57,8 +62,7 @@ async fn calculate_exam_results(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = GpaCalculationService::new(&db);
+    let service = GpaCalculationService::new(postgres_pool(&state));
 
     match service
         .calculate_class_results(
@@ -81,7 +85,7 @@ async fn calculate_exam_results(
 
 #[get("/student/{student_id}/term/{term_id}")]
 async fn get_student_term_results(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<(String, String)>,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
@@ -105,8 +109,7 @@ async fn get_student_term_results(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = GpaCalculationService::new(&db);
+    let service = GpaCalculationService::new(postgres_pool(&state));
 
     match service.get_student_result(&student_id, &exam_id).await {
         Ok(Some(result)) => HttpResponse::Ok().json(result),
@@ -148,7 +151,9 @@ async fn get_class_exam_results(
         }
     };
 
-    let school_id = match query.school_id.as_ref() {
+    let context = request_context(&req);
+    let school_id_raw = query.school_id.clone().or(context.school_id);
+    let school_id = match school_id_raw.as_ref() {
         Some(id) => match parse_object_id_value(id) {
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
@@ -160,8 +165,7 @@ async fn get_class_exam_results(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = GpaCalculationService::new(&db);
+    let service = GpaCalculationService::new(postgres_pool(&state));
 
     match service
         .calculate_class_results(

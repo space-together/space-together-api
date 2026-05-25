@@ -151,7 +151,7 @@ fn base_repository_is_postgres_query_layer() {
 
 #[test]
 fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
-    let service_with_legacy_import = include_str!("../src/services/gpa_calculation_service.rs");
+    let service_with_legacy_import = include_str!("../src/services/analytics_service.rs");
 
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
@@ -551,5 +551,42 @@ fn ranking_schema_uses_student_term_result_columns() {
     assert!(migration.contains("rank_in_class INTEGER"));
     assert!(migration.contains("student_term_results_class_exam_rank_idx"));
     assert!(migration.contains("student_term_results_class_exam_gpa_idx"));
+    assert!(!migration.contains("JSONB"));
+}
+
+#[test]
+fn results_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/gpa_calculation_service.rs"),
+        include_str!("../src/api/results_api.rs"),
+        include_str!("../src/domain/student_term_result.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn student_term_result_schema_uses_relational_breakdown_tables() {
+    let migration = include_str!("../migrations/20260524001800_student_term_result_breakdowns.sql");
+
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS student_term_subject_results"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS student_term_category_scores"));
+    assert!(migration.contains("result_id TEXT NOT NULL REFERENCES student_term_results(id)"));
+    assert!(migration
+        .contains("subject_result_id TEXT NOT NULL REFERENCES student_term_subject_results(id)"));
+    assert!(migration.contains("class_subject_id TEXT REFERENCES class_subjects(id)"));
+    assert!(migration.contains("assessment_category_id TEXT REFERENCES assessment_categories(id)"));
+    assert!(migration.contains("DROP CONSTRAINT IF EXISTS"));
+    assert!(migration.contains("student_term_results_student_exam_unique"));
+    assert!(migration.contains("student_term_results_school_student_term_year_unique"));
     assert!(!migration.contains("JSONB"));
 }
