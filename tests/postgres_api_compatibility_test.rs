@@ -740,3 +740,40 @@ fn announcement_schema_uses_mention_and_class_join_tables() {
     assert!(migration.contains("announcement_mentions_actor_idx"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn learning_materials_use_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/learning_material_service.rs"),
+        include_str!("../src/api/learning_materials_api.rs"),
+        include_str!("../src/domain/learning_material.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn learning_material_schema_uses_file_video_and_publish_columns() {
+    let migration =
+        include_str!("../migrations/20260524002200_learning_materials_connected_columns.sql");
+
+    assert!(migration.contains("subject_id TEXT REFERENCES class_subjects(id)"));
+    assert!(migration.contains("file_url TEXT"));
+    assert!(migration.contains("file_public_id TEXT"));
+    assert!(migration.contains("video_url TEXT"));
+    assert!(migration.contains("is_published BOOLEAN"));
+    assert!(migration.contains("learning_materials_class_subject_school_idx"));
+    assert!(migration.contains("learning_materials_uploaded_by_idx"));
+    assert!(migration.contains("learning_materials_published_idx"));
+    assert!(!migration.contains("JSONB"));
+}

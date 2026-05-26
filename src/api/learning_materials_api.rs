@@ -1,7 +1,6 @@
 use actix_multipart::Multipart;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
 use futures::StreamExt;
-use mongodb::bson;
 
 use crate::{
     config::state::AppState,
@@ -15,9 +14,21 @@ use crate::{
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{event_service::EventService, learning_material_service::LearningMaterialService},
     utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+        object_id::parse_object_id_value,
+        request_context::{postgres_pool, request_context},
     },
 };
+
+fn scoped_school_id(req: &HttpRequest, query: &RequestQuery) -> Option<String> {
+    query
+        .school_id
+        .clone()
+        .or_else(|| request_context(req).school_id)
+}
+
+fn only_published_for(user: &AuthUserDto) -> bool {
+    matches!(user.role, Some(UserRole::STUDENT) | Some(UserRole::PARENT))
+}
 
 #[get("")]
 async fn get_all_materials(
@@ -26,21 +37,18 @@ async fn get_all_materials(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
-
-    let mut extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    }
-    .unwrap_or_default();
-
-    if matches!(user.role, Some(UserRole::STUDENT) | Some(UserRole::PARENT)) {
-        extra_match.insert("is_published", bson::to_bson(&true).unwrap());
-    }
+    let service = LearningMaterialService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(
+            query.filter.clone(),
+            query.limit,
+            query.skip,
+            Some(&query),
+            school_id.as_deref(),
+            only_published_for(&user),
+        )
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -55,22 +63,18 @@ async fn get_all_materials_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
-
-    use mongodb::bson;
-    let mut extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    }
-    .unwrap_or_default();
-
-    if matches!(user.role, Some(UserRole::STUDENT) | Some(UserRole::PARENT)) {
-        extra_match.insert("is_published", bson::to_bson(&true).unwrap());
-    }
+    let service = LearningMaterialService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(
+            query.filter.clone(),
+            query.limit,
+            query.skip,
+            Some(&query),
+            school_id.as_deref(),
+            only_published_for(&user),
+        )
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -80,20 +84,17 @@ async fn get_all_materials_with_relations(
 
 #[get("/{id}")]
 async fn get_material_by_id(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
+    let service = LearningMaterialService::new(postgres_pool(&state));
 
-    match service.find_one(Some(&id), None).await {
+    match service.find_one(Some(&id), None, None, false).await {
         Ok(material) => {
-            if !material.is_published
-                && matches!(user.role, Some(UserRole::STUDENT) | Some(UserRole::PARENT))
-            {
+            if !material.is_published && only_published_for(&user) {
                 return HttpResponse::Forbidden()
                     .json(serde_json::json!({"message": "Access denied"}));
             }
@@ -105,20 +106,20 @@ async fn get_material_by_id(
 
 #[get("/{id}/others")]
 async fn get_material_by_id_with_relations(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
+    let service = LearningMaterialService::new(postgres_pool(&state));
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service
+        .find_one_with_relations(Some(&id), None, None, false)
+        .await
+    {
         Ok(data) => {
-            if !data.learning_material.is_published
-                && matches!(user.role, Some(UserRole::STUDENT) | Some(UserRole::PARENT))
-            {
+            if !data.learning_material.is_published && only_published_for(&user) {
                 return HttpResponse::Forbidden()
                     .json(serde_json::json!({"message": "Access denied"}));
             }
@@ -139,9 +140,7 @@ async fn create_material(
         return HttpResponse::Forbidden().json(serde_json::json!({"message": err}));
     }
 
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
-
+    let service = LearningMaterialService::new(postgres_pool(&state));
     let mut material_data: Option<LearningMaterial> = None;
     let mut file_bytes: Option<Vec<u8>> = None;
     let mut file_name: Option<String> = None;
@@ -256,9 +255,7 @@ async fn update_material(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
-
+    let service = LearningMaterialService::new(postgres_pool(&state));
     let mut update_data: Option<LearningMaterialPartial> = None;
     let mut file_bytes: Option<Vec<u8>> = None;
     let mut file_name: Option<String> = None;
@@ -366,8 +363,7 @@ async fn delete_material(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
+    let service = LearningMaterialService::new(postgres_pool(&state));
 
     match service.delete(&id, &user, &state).await {
         Ok(material) => {
@@ -394,23 +390,23 @@ async fn delete_material(
 #[get("/count")]
 async fn count_materials(
     req: HttpRequest,
+    user: web::ReqData<AuthUserDto>,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LearningMaterialService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    }
-    .unwrap_or_default();
+    let service = LearningMaterialService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
     match service
-        .count_materials(query.filter.clone(), extra_match)
+        .count_materials(
+            query.filter.clone(),
+            Some(&query),
+            school_id.as_deref(),
+            only_published_for(&user),
+        )
         .await
     {
-        Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
+        Ok(count) => HttpResponse::Ok().json(serde_json::json!({ "count": count })),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
