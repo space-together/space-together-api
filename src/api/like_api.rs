@@ -9,8 +9,15 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{event_service::EventService, like_service::LikeService},
-    utils::{api_utils::build_extra_match, db_utils::get_database},
+    utils::request_context::{postgres_pool, request_context},
 };
+
+fn scoped_school_id(req: &HttpRequest, query: &RequestQuery) -> Option<String> {
+    query
+        .school_id
+        .clone()
+        .or_else(|| request_context(req).school_id)
+}
 
 #[get("")]
 async fn get_all_likes(
@@ -18,16 +25,17 @@ async fn get_all_likes(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
+    let service = LikeService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(
+            query.filter.clone(),
+            query.limit,
+            query.skip,
+            Some(&query),
+            school_id.as_deref(),
+        )
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -41,16 +49,11 @@ async fn get_all_likes_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
+    let service = LikeService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
     match service
-        .get_all_with_relations(query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.limit, query.skip, Some(&query), school_id.as_deref())
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -60,15 +63,14 @@ async fn get_all_likes_with_relations(
 
 #[get("/{id}")]
 async fn get_like_by_id(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
 
-    match service.find_one(Some(&id), None).await {
+    match service.find_one(Some(&id), None, None).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -80,15 +82,13 @@ async fn get_like_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.find_one(None, extra_match).await {
+    match service
+        .find_one(None, Some(&query), school_id.as_deref())
+        .await
+    {
         Ok(like) => HttpResponse::Ok().json(like),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -100,14 +100,13 @@ async fn get_like_by_other_match(
     state: web::Data<AppState>,
     query: web::Query<RequestQuery>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
+    let service = LikeService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
-    match service.find_one_with_relations(None, extra_match).await {
+    match service
+        .find_one_with_relations(None, Some(&query), school_id.as_deref())
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -115,15 +114,14 @@ async fn get_like_by_other_match(
 
 #[get("/{id}/others")]
 async fn get_like_by_id_with_relations(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service.find_one_with_relations(Some(&id), None, None).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -137,10 +135,10 @@ async fn create_like(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let _logged_user = user.into_inner();
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
+    let school_id = request_context(&req).school_id;
 
-    match service.create(data.into_inner()).await {
+    match service.create(data.into_inner(), school_id).await {
         Ok(item) => {
             let cloned = item.clone();
             let state_clone = state.clone();
@@ -174,8 +172,7 @@ async fn update_like(
 ) -> impl Responder {
     let _logged_user = user.into_inner();
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(item) => {
@@ -210,8 +207,7 @@ async fn delete_like(
 ) -> impl Responder {
     let _logged_user = user.into_inner();
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
 
     match service.delete(&id).await {
         Ok(like) => {
@@ -243,16 +239,14 @@ async fn count_likes(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = LikeService::new(&db);
+    let service = LikeService::new(postgres_pool(&state));
+    let school_id = scoped_school_id(&req, &query);
 
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.count_likes(query.filter.clone(), extra_match).await {
-        Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
+    match service
+        .count_likes(query.filter.clone(), Some(&query), school_id.as_deref())
+        .await
+    {
+        Ok(count) => HttpResponse::Ok().json(serde_json::json!({ "count": count })),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }

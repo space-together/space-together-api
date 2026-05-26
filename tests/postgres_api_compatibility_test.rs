@@ -658,3 +658,47 @@ fn messaging_schema_uses_participant_and_receipt_tables() {
     assert!(migration.contains("conversation_keys_conversation_actor_unique"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn comments_and_likes_use_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/comment_service.rs"),
+        include_str!("../src/services/like_service.rs"),
+        include_str!("../src/api/comment_api.rs"),
+        include_str!("../src/api/like_api.rs"),
+        include_str!("../src/domain/comment.rs"),
+        include_str!("../src/domain/like.rs"),
+        include_str!("../src/handler/delete_target_handler.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn comments_likes_schema_uses_actor_and_target_columns() {
+    let migration =
+        include_str!("../migrations/20260524002000_comments_likes_connected_columns.sql");
+
+    assert!(migration.contains("author_actor_id TEXT"));
+    assert!(migration.contains("author_role TEXT"));
+    assert!(migration.contains("target_post_id TEXT"));
+    assert!(migration.contains("actor_id TEXT"));
+    assert!(migration.contains("actor_role TEXT"));
+    assert!(migration.contains("like_value TEXT"));
+    assert!(migration.contains("deleted_at TIMESTAMPTZ"));
+    assert!(migration.contains("comments_author_actor_idx"));
+    assert!(migration.contains("comments_target_post_idx"));
+    assert!(migration.contains("likes_target_actor_unique"));
+    assert!(migration.contains("deleted_at IS NULL"));
+    assert!(!migration.contains("JSONB"));
+}

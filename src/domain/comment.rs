@@ -1,9 +1,8 @@
 use crate::{
     domain::common_details::RelatedUser, helpers::object_id_helpers, make_partial,
-    schema::common_schema::ActorRef,
+    schema::common_schema::ActorRef, utils::object_id::ObjectId,
 };
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 make_partial! {

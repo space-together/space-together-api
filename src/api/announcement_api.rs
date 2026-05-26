@@ -11,7 +11,7 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{announcement_service::AnnouncementService, event_service::EventService},
-    utils::{api_utils::build_extra_match, db_utils::get_database},
+    utils::{api_utils::build_extra_match, db_utils::get_database, request_context::postgres_pool},
 };
 
 #[get("")]
@@ -229,7 +229,7 @@ async fn delete_announcement(
     match service.delete(&id).await {
         Ok(announcement) => {
             if let Some(target_id) = announcement.id {
-                match delete_target_handler(&db, &target_id).await {
+                match delete_target_handler(postgres_pool(&state), &target_id).await {
                     Ok(_) => {}
                     Err(err) => return HttpResponse::BadRequest().json(err),
                 }
