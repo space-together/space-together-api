@@ -617,3 +617,44 @@ fn analytics_service_uses_postgres_without_mongo_storage_apis() {
     assert!(service.contains("FROM finance_records"));
     assert!(service.contains("LEFT JOIN class_subjects"));
 }
+
+#[test]
+fn messaging_services_use_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/conversation_service.rs"),
+        include_str!("../src/services/message_service.rs"),
+        include_str!("../src/api/conversations_api.rs"),
+        include_str!("../src/api/messages_api.rs"),
+        include_str!("../src/api/messaging_socket.rs"),
+        include_str!("../src/domain/conversation.rs"),
+        include_str!("../src/domain/message.rs"),
+        include_str!("../src/schema/common_schema.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn messaging_schema_uses_participant_and_receipt_tables() {
+    let migration = include_str!("../migrations/20260524001900_messaging_connected_columns.sql");
+
+    assert!(migration.contains("ALTER TABLE conversations"));
+    assert!(migration.contains("actor_id TEXT"));
+    assert!(migration.contains("actor_role TEXT"));
+    assert!(migration.contains("ALTER COLUMN user_id DROP NOT NULL"));
+    assert!(migration.contains("encrypted_key_for_user TEXT"));
+    assert!(migration.contains("sender_actor_id TEXT"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS message_read_receipts"));
+    assert!(migration.contains("conversation_participants_conversation_actor_unique"));
+    assert!(migration.contains("conversation_keys_conversation_actor_unique"));
+    assert!(!migration.contains("JSONB"));
+}

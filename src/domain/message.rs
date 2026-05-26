@@ -1,10 +1,9 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     domain::common_details::RelatedUser, helpers::object_id_helpers,
-    schema::common_schema::ActorRef,
+    schema::common_schema::ActorRef, utils::object_id::ObjectId,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -80,12 +79,4 @@ pub struct MessageWithRelations {
     #[serde(flatten)]
     pub message: Message,
     pub sender_user: Option<RelatedUser>,
-}
-
-impl Message {
-    pub fn to_document(&self) -> Result<mongodb::bson::Document, crate::errors::AppError> {
-        mongodb::bson::to_document(self).map_err(|e| crate::errors::AppError {
-            message: format!("Failed to convert Message to document: {}", e),
-        })
-    }
 }
