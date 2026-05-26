@@ -215,7 +215,7 @@ impl RecycleBinService {
             .ok()
             .unwrap_or_else(|| ObjectId::new());
 
-        let audit_service = AuditLogService::new(&state.db.main_db());
+        let audit_service = AuditLogService::new(&state.pg.pool);
         audit_service
             .log_event(
                 school_id,
@@ -223,9 +223,7 @@ impl RecycleBinService {
                 &format!("{}.restore", entity_type),
                 entity_type,
                 oid,
-                Some(doc! {
-                    "restored_at": mongodb::bson::to_bson(&Utc::now()).unwrap(),
-                }),
+                None,
                 None,
                 None,
             )
@@ -280,7 +278,7 @@ impl RecycleBinService {
             .ok()
             .unwrap_or_else(|| ObjectId::new());
 
-        let audit_service = AuditLogService::new(&state.db.main_db());
+        let audit_service = AuditLogService::new(&state.pg.pool);
         audit_service
             .log_event(
                 school_id,
@@ -288,9 +286,7 @@ impl RecycleBinService {
                 &format!("{}.permanent_delete", entity_type),
                 entity_type,
                 oid,
-                Some(doc! {
-                    "permanently_deleted_at": mongodb::bson::to_bson(&Utc::now()).unwrap(),
-                }),
+                None,
                 None,
                 None,
             )

@@ -101,7 +101,7 @@ impl BackupService {
         })?;
 
         // Log audit event
-        let audit_service = AuditLogService::new(&state.db.main_db());
+        let audit_service = AuditLogService::new(&state.pg.pool);
         audit_service
             .log_event(
                 school_id,
@@ -109,10 +109,7 @@ impl BackupService {
                 "backup.manual.create",
                 "backup",
                 backup_id,
-                Some(doc! {
-                    "backup_name": &backup_name,
-                    "file_path": &file_path,
-                }),
+                None,
                 None,
                 None,
             )
@@ -271,7 +268,7 @@ impl BackupService {
             .await?;
 
         // Log audit event
-        let audit_service = AuditLogService::new(&state.db.main_db());
+        let audit_service = AuditLogService::new(&state.pg.pool);
         audit_service
             .log_event(
                 school_id,
@@ -279,10 +276,7 @@ impl BackupService {
                 "backup.restore",
                 "backup",
                 backup_id.to_object_id()?,
-                Some(doc! {
-                    "backup_name": &backup.backup_name,
-                    "file_path": &backup.file_path,
-                }),
+                None,
                 None,
                 None,
             )

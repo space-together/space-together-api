@@ -777,3 +777,38 @@ fn learning_material_schema_uses_file_video_and_publish_columns() {
     assert!(migration.contains("learning_materials_published_idx"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn audit_logs_use_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/audit_log_service.rs"),
+        include_str!("../src/api/audit_logs_api.rs"),
+        include_str!("../src/domain/audit_log.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn audit_log_schema_uses_actor_severity_columns() {
+    let migration = include_str!("../migrations/20260524002300_audit_logs_connected_columns.sql");
+
+    assert!(migration.contains("actor_role TEXT"));
+    assert!(migration.contains("severity TEXT"));
+    assert!(migration.contains("ip_address TEXT"));
+    assert!(migration.contains("user_agent TEXT"));
+    assert!(migration.contains("audit_logs_actor_role_created_idx"));
+    assert!(migration.contains("audit_logs_action_created_idx"));
+    assert!(migration.contains("audit_logs_severity_created_idx"));
+    assert!(!migration.contains("JSONB"));
+}
