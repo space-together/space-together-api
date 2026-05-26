@@ -151,7 +151,7 @@ fn base_repository_is_postgres_query_layer() {
 
 #[test]
 fn remaining_mongo_base_layer_is_explicitly_legacy_named() {
-    let service_with_legacy_import = include_str!("../src/services/announcement_service.rs");
+    let service_with_legacy_import = include_str!("../src/services/template_subject_service.rs");
 
     assert!(service_with_legacy_import.contains("legacy_mongo_base_repo"));
     assert!(!service_with_legacy_import.contains("repositories::base_repo::BaseRepository"));
@@ -700,5 +700,43 @@ fn comments_likes_schema_uses_actor_and_target_columns() {
     assert!(migration.contains("comments_target_post_idx"));
     assert!(migration.contains("likes_target_actor_unique"));
     assert!(migration.contains("deleted_at IS NULL"));
+    assert!(!migration.contains("JSONB"));
+}
+
+#[test]
+fn announcement_service_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/announcement_service.rs"),
+        include_str!("../src/api/announcement_api.rs"),
+        include_str!("../src/domain/announcement.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+    }
+}
+
+#[test]
+fn announcement_schema_uses_mention_and_class_join_tables() {
+    let migration =
+        include_str!("../migrations/20260524002100_announcements_connected_relations.sql");
+
+    assert!(migration.contains("published_actor_id TEXT"));
+    assert!(migration.contains("published_role TEXT"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS announcement_classes"));
+    assert!(migration.contains("announcement_id TEXT NOT NULL REFERENCES announcements(id)"));
+    assert!(migration.contains("class_id TEXT NOT NULL REFERENCES classes(id)"));
+    assert!(migration.contains("CREATE TABLE IF NOT EXISTS announcement_mentions"));
+    assert!(migration.contains("actor_id TEXT NOT NULL"));
+    assert!(migration.contains("actor_role TEXT NOT NULL"));
+    assert!(migration.contains("announcement_mentions_actor_idx"));
     assert!(!migration.contains("JSONB"));
 }
