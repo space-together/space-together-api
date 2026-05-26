@@ -91,20 +91,20 @@ async function createEncryptedConversation(
 ) {
   // Get public keys - automatically generated if missing
   const publicKeys = await getUserPublicKeysAction(participantIds);
-  
+
   // Encrypt conversation key for each participant
   const encryptedKeys = publicKeys.map(keyData => ({
     user_id: keyData.user_id,
     encrypted_key: encryptWithPublicKey(conversationKey, keyData.public_key)
   }));
-  
+
   // Create conversation with encrypted keys
   const conversation = await createConversation({
     participant_ids: participantIds,
     encrypted_keys: encryptedKeys,
     // ... other fields
   });
-  
+
   return conversation;
 }
 ```
@@ -133,7 +133,7 @@ Users can upload their own public keys to replace server-generated ones:
 ```typescript
 async function uploadPublicKey(publicKeyPem: string) {
   const auth = await authContext();
-  
+
   const response = await fetch(`${API_BASE}/m-users/public-key`, {
     method: "POST",
     headers: {
@@ -145,11 +145,11 @@ async function uploadPublicKey(publicKeyPem: string) {
       key_algorithm: "RSA-2048"
     }),
   });
-  
+
   if (!response.ok) {
     throw new Error("Failed to upload public key");
   }
-  
+
   return await response.json();
 }
 ```
