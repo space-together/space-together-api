@@ -812,3 +812,31 @@ fn audit_log_schema_uses_actor_severity_columns() {
     assert!(migration.contains("audit_logs_severity_created_idx"));
     assert!(!migration.contains("JSONB"));
 }
+
+#[test]
+fn database_status_uses_postgres_without_mongo_storage_apis() {
+    let migrated_files = [
+        include_str!("../src/services/database_status_service.rs"),
+        include_str!("../src/api/database_status.rs"),
+        include_str!("../src/domain/database_status.rs"),
+    ];
+
+    for file in migrated_files {
+        assert!(!file.contains("mongodb::"));
+        assert!(!file.contains("bson::"));
+        assert!(!file.contains("Collection<"));
+        assert!(!file.contains("Database"));
+        assert!(!file.contains("doc!"));
+        assert!(!file.contains(".aggregate("));
+        assert!(!file.contains("get_database"));
+        assert!(!file.contains("build_extra_match"));
+        assert!(!file.contains("legacy_mongo_base_repo"));
+        assert!(!file.contains("MONGO_URI"));
+        assert!(!file.contains("MAIN_DB_NAME"));
+    }
+
+    let service = include_str!("../src/services/database_status_service.rs");
+    assert!(service.contains("information_schema.tables"));
+    assert!(service.contains("pg_total_relation_size"));
+    assert!(service.contains("school_id"));
+}
