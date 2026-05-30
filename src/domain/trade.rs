@@ -1,6 +1,5 @@
-use crate::{domain::sector::Sector, helpers::object_id_helpers, make_partial};
+use crate::{domain::sector::Sector, helpers::object_id_helpers, make_partial, utils::object_id::ObjectId};
 use chrono::{DateTime, Utc};
-use mongodb::bson::{self, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -109,14 +108,14 @@ fn deserialize_parent_trade<'de, D>(
 where
     D: serde::Deserializer<'de>,
 {
-    let val = bson::Document::deserialize(deserializer)?;
-    if val.is_empty() {
-        Ok(None)
-    } else {
-        bson::from_document(val)
+    let val = serde_json::Value::deserialize(deserializer)?;
+    match val {
+        serde_json::Value::Null => Ok(None),
+        serde_json::Value::Object(ref m) if m.is_empty() => Ok(None),
+        other => serde_json::from_value::<TradeWithParent>(other)
             .map(Box::new)
             .map(Some)
-            .map_err(serde::de::Error::custom)
+            .map_err(serde::de::Error::custom),
     }
 }
 

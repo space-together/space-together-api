@@ -1,6 +1,5 @@
-use crate::{helpers::object_id_helpers, make_partial, utils::time_utils::is_valid_hhmm};
+use crate::{helpers::object_id_helpers, make_partial, utils::{object_id::ObjectId, time_utils::is_valid_hhmm}};
 use chrono::{DateTime, Utc, Weekday};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

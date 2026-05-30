@@ -1,9 +1,9 @@
 use crate::{
     helpers::{date_time_helpers, object_id_helpers},
     make_partial,
+    utils::object_id::ObjectId,
 };
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 make_partial! {

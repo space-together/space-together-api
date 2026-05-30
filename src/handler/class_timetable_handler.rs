@@ -1,7 +1,6 @@
-use crate::domain::class_timetable::{DayStructureConfig, PeriodType};
+use crate::{domain::class_timetable::{DayStructureConfig, PeriodType}, utils::object_id::ObjectId};
 
 use chrono::Weekday;
-use mongodb::bson::oid::ObjectId;
 use rand::{seq::SliceRandom, thread_rng};
 
 // Import your structs

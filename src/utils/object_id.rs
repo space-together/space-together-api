@@ -1,8 +1,8 @@
-use mongodb::bson::oid::ObjectId as MongoObjectId;
+use bson::oid::ObjectId as BsonObjectId;
 
 use crate::errors::AppError;
 
-pub type ObjectId = MongoObjectId;
+pub type ObjectId = BsonObjectId;
 
 pub fn parse_object_id_value(value: &str) -> Result<ObjectId, AppError> {
     ObjectId::parse_str(value).map_err(|e| AppError {
