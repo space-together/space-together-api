@@ -1,123 +1,122 @@
 use chrono::Weekday;
-use mongodb::{
-    bson::{self, doc, oid::ObjectId, Document},
-    Collection, Database,
-};
+use sqlx::{postgres::PgRow, PgPool, Postgres, QueryBuilder, Row};
 
 use crate::{
-    domain::school_timetable::{
-        DailySchoolSchedule, SchoolTimetable, SchoolTimetablePartial, TimeBlock,
+    domain::{
+        common_details::Paginated,
+        school_timetable::{
+            DailySchoolSchedule, DaySpecialType, SchoolTimetable, SchoolTimetablePartial, TimeBlock,
+        },
     },
     errors::AppError,
-    models::{id_model::IdType, mongo_model::IndexDef},
-    repositories::legacy_mongo_base_repo::LegacyMongoRepository as BaseRepository,
-    utils::mongo_utils::extract_valid_fields,
+    models::id_model::IdType,
+    utils::object_id::ObjectId,
 };
 
 pub struct SchoolTimetableService {
-    pub collection: Collection<SchoolTimetable>,
+    pub pool: PgPool,
 }
 
 impl SchoolTimetableService {
-    pub fn new(db: &Database) -> Self {
-        Self {
-            collection: db.collection::<SchoolTimetable>("school_timetables"),
-        }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
-    pub async fn ensure_indexes(&self) -> Result<(), AppError> {
-        let indexes = vec![
-            // Core timetable identifiers
-            IndexDef::compound(
-                vec![("school_id", 1), ("academic_year_id", 1)],
-                true, // unique: one timetable per school per year
-            ),
-            IndexDef::single("school_id", false),
-            IndexDef::single("academic_year_id", false),
-            // Overrides
-            IndexDef::single("overrides.r#type", false),
-            IndexDef::single("overrides.applies_to", false), // multikey
-            IndexDef::compound(
-                vec![("overrides.r#type", 1), ("overrides.applies_to", 1)],
-                false,
-            ),
-            // Events
-            IndexDef::single("events.event_id", true), // unique
-            IndexDef::compound(
-                vec![("events.start_date", 1), ("events.end_date", 1)],
-                false,
-            ),
-        ];
-
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let _ = repo.ensure_indexes(&indexes).await?;
-
-        Ok(())
+    fn db_error(err: sqlx::Error) -> AppError {
+        AppError { message: format!("PostgreSQL Error: {}", err) }
     }
 
-    // -------------------------------------------------------------------------
-    // 1. CREATE
-    // -------------------------------------------------------------------------
+    fn new_id() -> String {
+        ObjectId::new().to_hex()
+    }
+
+    fn id_to_string(id: &IdType) -> Result<String, AppError> {
+        Ok(IdType::to_object_id(id)?.to_hex())
+    }
+
+    fn parse_oid(raw: &str, field: &str) -> Result<ObjectId, AppError> {
+        ObjectId::parse_str(raw).map_err(|e| AppError {
+            message: format!("Invalid {} ObjectId-compatible ID: {}", field, e),
+        })
+    }
+
+    fn row_to_timetable(row: PgRow) -> Result<SchoolTimetable, AppError> {
+        let id: String = row.try_get("id").map_err(Self::db_error)?;
+        let school_id_str: String = row.try_get("school_id").map_err(Self::db_error)?;
+        let academic_year_id_str: Option<String> = row.try_get("academic_year_id").ok().flatten();
+
+        let weekly_json: serde_json::Value = row.try_get("default_weekly_schedule").unwrap_or(serde_json::Value::Array(vec![]));
+        let overrides_json: serde_json::Value = row.try_get("overrides").unwrap_or(serde_json::Value::Array(vec![]));
+        let events_json: serde_json::Value = row.try_get("events").unwrap_or(serde_json::Value::Array(vec![]));
+
+        Ok(SchoolTimetable {
+            id: Some(Self::parse_oid(&id, "id")?),
+            school_id: Self::parse_oid(&school_id_str, "school_id")?,
+            academic_year_id: academic_year_id_str.as_deref().map(|s| Self::parse_oid(s, "academic_year_id")).transpose()?,
+            default_weekly_schedule: serde_json::from_value(weekly_json).unwrap_or_default(),
+            overrides: serde_json::from_value(overrides_json).ok(),
+            events: serde_json::from_value(events_json).ok(),
+            created_at: row.try_get("created_at").ok(),
+            updated_at: row.try_get("updated_at").ok(),
+        })
+    }
+
+    fn select_sql() -> &'static str {
+        "SELECT id, school_id, academic_year_id, default_weekly_schedule, overrides, events, \
+         created_at, updated_at FROM school_timetables WHERE 1=1"
+    }
+
     pub async fn create(&self, dto: SchoolTimetable) -> Result<SchoolTimetable, AppError> {
-        self.ensure_indexes().await?;
-
-        // Check uniqueness for (school_id + academic_year_id)
-        if let Ok(_) = self
-            .find_by_school_and_academic_year(&dto.school_id, &dto.academic_year_id)
-            .await
-        {
-            return Err(AppError {
-                message: format!("School timetable for academic year  already exists"),
-            });
+        if self.find_by_school_and_academic_year(&dto.school_id, &dto.academic_year_id).await.is_ok() {
+            return Err(AppError { message: "School timetable for academic year already exists".to_string() });
         }
 
-        // Validate
         if let Err(e) = dto.validate() {
-            return Err(AppError {
-                message: format!("Validation error: {}", e),
-            });
+            return Err(AppError { message: format!("Validation error: {}", e) });
         }
 
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
+        let id = Self::new_id();
+        let school_id_str = dto.school_id.to_hex();
+        let academic_year_id_str = dto.academic_year_id.as_ref().map(|o| o.to_hex());
+        let weekly_json = serde_json::to_value(&dto.default_weekly_schedule).unwrap_or(serde_json::Value::Array(vec![]));
+        let overrides_json = serde_json::to_value(&dto.overrides).unwrap_or(serde_json::Value::Array(vec![]));
+        let events_json = serde_json::to_value(&dto.events).unwrap_or(serde_json::Value::Array(vec![]));
 
-        let partial = dto.to_partial();
-        let doc = bson::to_document(&partial).map_err(|e| AppError {
-            message: format!("Serialization error: {}", e),
-        })?;
+        sqlx::query(
+            r#"INSERT INTO school_timetables (id, school_id, academic_year_id, default_weekly_schedule, overrides, events, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,now(),now())"#,
+        )
+        .bind(&id)
+        .bind(&school_id_str)
+        .bind(&academic_year_id_str)
+        .bind(&weekly_json)
+        .bind(&overrides_json)
+        .bind(&events_json)
+        .execute(&self.pool)
+        .await
+        .map_err(Self::db_error)?;
 
-        repo.create::<SchoolTimetable>(doc, None).await
+        self.find_one(Some(&IdType::from_string(id)), None).await
     }
 
-    // -------------------------------------------------------------------------
-    // 2. READ
-    // -------------------------------------------------------------------------
     pub async fn find_one(
         &self,
         id: Option<&IdType>,
-        extra_filter: Option<Document>,
+        extra_school_id: Option<&str>,
     ) -> Result<SchoolTimetable, AppError> {
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-
-        let mut filter = Document::new();
-
-        if let Some(id_value) = id {
-            let obj = IdType::to_object_id(id_value)?;
-            filter.insert("_id", obj);
+        let mut sql = QueryBuilder::<Postgres>::new(Self::select_sql());
+        if let Some(id) = id {
+            sql.push(" AND id = ").push_bind(Self::id_to_string(id)?);
         }
-
-        if let Some(extra) = extra_filter {
-            for (k, v) in extra.into_iter() {
-                filter.insert(k, v);
-            }
+        if let Some(sid) = extra_school_id {
+            sql.push(" AND school_id = ").push_bind(sid);
         }
+        sql.push(" LIMIT 1");
 
-        let item = repo.find_one::<SchoolTimetable>(filter, None).await?;
-
-        match item {
-            Some(t) => Ok(t),
-            None => Err(AppError {
-                message: "School timetable not found".to_string(),
-            }),
+        let row = sql.build().fetch_optional(&self.pool).await.map_err(Self::db_error)?;
+        match row {
+            Some(r) => Self::row_to_timetable(r),
+            None => Err(AppError { message: "School timetable not found".to_string() }),
         }
     }
 
@@ -126,20 +125,18 @@ impl SchoolTimetableService {
         school_id: &ObjectId,
         academic_year_id: &Option<ObjectId>,
     ) -> Result<SchoolTimetable, AppError> {
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
+        let mut sql = QueryBuilder::<Postgres>::new(Self::select_sql());
+        sql.push(" AND school_id = ").push_bind(school_id.to_hex());
+        match academic_year_id {
+            Some(id) => { sql.push(" AND academic_year_id = ").push_bind(id.to_hex()); }
+            None => { sql.push(" AND academic_year_id IS NULL"); }
+        }
+        sql.push(" LIMIT 1");
 
-        let filter = doc! {
-            "school_id": school_id,
-            "academic_year_id": academic_year_id
-        };
-
-        let item = repo.find_one::<SchoolTimetable>(filter, None).await?;
-
-        match item {
-            Some(t) => Ok(t),
-            None => Err(AppError {
-                message: "School timetable not found for this academic year".into(),
-            }),
+        let row = sql.build().fetch_optional(&self.pool).await.map_err(Self::db_error)?;
+        match row {
+            Some(r) => Self::row_to_timetable(r),
+            None => Err(AppError { message: "School timetable not found for this academic year".into() }),
         }
     }
 
@@ -148,74 +145,99 @@ impl SchoolTimetableService {
         filter: Option<String>,
         limit: Option<i64>,
         skip: Option<i64>,
-    ) -> Result<crate::domain::common_details::Paginated<SchoolTimetable>, AppError> {
-        let base = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
+    ) -> Result<Paginated<SchoolTimetable>, AppError> {
+        let limit = limit.unwrap_or(20).max(1);
+        let skip = skip.unwrap_or(0).max(0);
 
-        let searchable = ["academic_year"];
+        let mut cq = QueryBuilder::<Postgres>::new("SELECT count(*) FROM school_timetables WHERE 1=1");
+        if let Some(ref f) = filter {
+            if !f.trim().is_empty() {
+                let like = format!("%{}%", f.to_lowercase());
+                cq.push(" AND lower(school_id) LIKE ").push_bind(like);
+            }
+        }
+        let total: i64 = cq.build_query_scalar().fetch_one(&self.pool).await.map_err(Self::db_error)?;
 
-        let (data, total, total_pages, current_page) = base
-            .get_all::<SchoolTimetable>(filter, &searchable, limit, skip, None)
-            .await?;
+        let mut dq = QueryBuilder::<Postgres>::new(Self::select_sql());
+        if let Some(ref f) = filter {
+            if !f.trim().is_empty() {
+                let like = format!("%{}%", f.to_lowercase());
+                dq.push(" AND lower(school_id) LIKE ").push_bind(like);
+            }
+        }
+        dq.push(" ORDER BY updated_at DESC LIMIT ").push_bind(limit).push(" OFFSET ").push_bind(skip);
 
-        Ok(crate::domain::common_details::Paginated {
-            data,
-            total,
-            total_pages,
-            current_page,
-        })
+        let rows = dq.build().fetch_all(&self.pool).await.map_err(Self::db_error)?;
+        let data = rows.into_iter().map(Self::row_to_timetable).collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Paginated { data, total, total_pages: ((total as f64) / (limit as f64)).ceil() as i64, current_page: (skip / limit) + 1 })
     }
 
-    // -------------------------------------------------------------------------
-    // 3. UPDATE
-    // -------------------------------------------------------------------------
     pub async fn update_timetable(
         &self,
         id: &IdType,
         dto: &SchoolTimetablePartial,
     ) -> Result<SchoolTimetable, AppError> {
-        let obj_id = IdType::to_object_id(id)?;
+        let obj_id_str = Self::id_to_string(id)?;
 
-        // Conflict check logic stays the same...
+        // Uniqueness conflict check
         if let (Some(sid), Some(ayid)) = (dto.school_id.as_ref(), dto.academic_year_id.as_ref()) {
-            // sid: &ObjectId
-            // ayid: &ObjectId
-            if let Ok(existing) = self.find_by_school_and_academic_year(sid, ayid).await {
-                if existing.id != Some(obj_id) {
-                    return Err(AppError {
-                        message: "Timetable for this academic year already exists".into(),
-                    });
+            if let Some(existing_ay) = ayid {
+                let row = sqlx::query(
+                    "SELECT id FROM school_timetables WHERE school_id = $1 AND academic_year_id = $2 AND id <> $3 LIMIT 1"
+                )
+                .bind(sid.to_hex())
+                .bind(existing_ay.to_hex())
+                .bind(&obj_id_str)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(Self::db_error)?;
+                if row.is_some() {
+                    return Err(AppError { message: "Timetable for this academic year already exists".into() });
                 }
             }
         }
 
-        // -----------------------------------------
-        // Continue with update
-        // -----------------------------------------
-        let base = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let dto_clone = dto.clone();
-        let doc = bson::to_document(&dto_clone).map_err(|e| AppError {
-            message: format!("Serialize update error: {}", e),
-        })?;
+        let mut sql = QueryBuilder::<Postgres>::new("UPDATE school_timetables SET updated_at = now()");
+        let mut touched = false;
 
-        let update_doc = extract_valid_fields(doc);
+        if let Some(v) = &dto.school_id {
+            sql.push(", school_id = ").push_bind(v.to_hex()); touched = true;
+        }
+        if let Some(v) = &dto.academic_year_id {
+            sql.push(", academic_year_id = ").push_bind(v.map(|o| o.to_hex())); touched = true;
+        }
+        if let Some(ref v) = dto.default_weekly_schedule {
+            let j = serde_json::to_value(v).unwrap_or(serde_json::Value::Array(vec![]));
+            sql.push(", default_weekly_schedule = ").push_bind(j); touched = true;
+        }
+        if let Some(ref v) = dto.overrides {
+            let j = serde_json::to_value(v).unwrap_or(serde_json::Value::Array(vec![]));
+            sql.push(", overrides = ").push_bind(j); touched = true;
+        }
+        if let Some(ref v) = dto.events {
+            let j = serde_json::to_value(v).unwrap_or(serde_json::Value::Array(vec![]));
+            sql.push(", events = ").push_bind(j); touched = true;
+        }
 
-        base.update_one_and_fetch::<SchoolTimetable>(id, update_doc)
-            .await
+        if !touched { return Err(AppError { message: "No valid fields to update".into() }); }
+
+        sql.push(" WHERE id = ").push_bind(&obj_id_str);
+        sql.build().execute(&self.pool).await.map_err(Self::db_error)?;
+
+        self.find_one(Some(id), None).await
     }
 
-    // -------------------------------------------------------------------------
-    // 4. DELETE
-    // -------------------------------------------------------------------------
     pub async fn delete_timetable(&self, id: &IdType) -> Result<SchoolTimetable, AppError> {
-        let base = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let existing = self.find_one(Some(&id), None).await?;
-        base.delete_one(id).await?;
+        let existing = self.find_one(Some(id), None).await?;
+        sqlx::query("DELETE FROM school_timetables WHERE id = $1")
+            .bind(Self::id_to_string(id)?)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::db_error)?;
         Ok(existing)
     }
 
-    // -------------------------------------------------------------------------
-    // 5. OPTIONAL: AUTO-GENERATE DEFAULT SCHOOL WEEK
-    // -------------------------------------------------------------------------
     pub async fn generate_default(
         &self,
         school_id: &IdType,
@@ -224,49 +246,22 @@ impl SchoolTimetableService {
         let school_obj = IdType::to_object_id(school_id)?;
         let year_obj = IdType::to_object_id(academic_year)?;
 
-        // Example default Mon–Fri schedule
-        let days = vec![
-            Weekday::Mon,
-            Weekday::Tue,
-            Weekday::Wed,
-            Weekday::Thu,
-            Weekday::Fri,
-        ];
-
-        let mut weekly = vec![];
-
-        for d in days {
-            weekly.push(DailySchoolSchedule {
-                day: d,
-                is_school_day: true,
-                school_start_time: "08:30".into(),
-                school_end_time: "17:00".into(),
-                study_start_time: "09:00".into(),
-                study_end_time: "17:00".into(),
-                breaks: vec![
-                    TimeBlock {
-                        start_time: "10:20".into(),
-                        end_time: "10:40".into(),
-                        description: Some("Morning break".into()),
-                        title: "Break".into(),
-                    },
-                    TimeBlock {
-                        start_time: "15:20".into(),
-                        end_time: "15:40".into(),
-                        description: Some("Afternoon break".into()),
-                        title: "Break".into(),
-                    },
-                ],
-                lunch: Some(TimeBlock {
-                    start_time: "13:00".into(),
-                    end_time: "14:00".into(),
-                    description: Some("Time for lunch".into()),
-                    title: "Lunch".into(),
-                }),
-                activities: vec![],
-                special_type: crate::domain::school_timetable::DaySpecialType::Normal,
-            });
-        }
+        let days = [Weekday::Mon, Weekday::Tue, Weekday::Wed, Weekday::Thu, Weekday::Fri];
+        let weekly = days.iter().map(|&d| DailySchoolSchedule {
+            day: d,
+            is_school_day: true,
+            school_start_time: "08:30".into(),
+            school_end_time: "17:00".into(),
+            study_start_time: "09:00".into(),
+            study_end_time: "17:00".into(),
+            breaks: vec![
+                TimeBlock { start_time: "10:20".into(), end_time: "10:40".into(), description: Some("Morning break".into()), title: "Break".into() },
+                TimeBlock { start_time: "15:20".into(), end_time: "15:40".into(), description: Some("Afternoon break".into()), title: "Break".into() },
+            ],
+            lunch: Some(TimeBlock { start_time: "13:00".into(), end_time: "14:00".into(), description: Some("Time for lunch".into()), title: "Lunch".into() }),
+            activities: vec![],
+            special_type: DaySpecialType::Normal,
+        }).collect();
 
         let timetable = SchoolTimetable {
             id: None,

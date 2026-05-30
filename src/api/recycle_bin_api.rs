@@ -7,7 +7,7 @@ use crate::{
     domain::auth_user::AuthUserDto,
     guards::role_guard::check_admin,
     services::recycle_bin_service::RecycleBinService,
-    utils::{db_utils::get_database, object_id::parse_object_id_value},
+    utils::{object_id::parse_object_id_value, request_context::postgres_pool},
 };
 
 #[derive(Debug, Deserialize)]
@@ -21,58 +21,33 @@ struct RecycleBinQuery {
 
 #[get("")]
 async fn get_recycle_bin(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     query: web::Query<RecycleBinQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // Only ADMIN can access recycle bin
     if let Err(err_msg) = check_admin(&user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err_msg.to_string()
-        }));
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err_msg.to_string() }));
     }
 
-    // Get school_id from user context
     let school_id = match user.current_school_id.as_ref() {
         Some(id) => match parse_object_id_value(id) {
             Ok(oid) => oid,
             Err(err) => return HttpResponse::BadRequest().json(err),
         },
-        None => {
-            return HttpResponse::BadRequest().json(serde_json::json!({
-                "message": "School ID not found in user context"
-            }))
-        }
+        None => return HttpResponse::BadRequest().json(serde_json::json!({ "message": "School ID not found in user context" })),
     };
 
-    let db = get_database(&req, &state);
-    let service = RecycleBinService::new(db);
+    let service = RecycleBinService::new(postgres_pool(&state));
 
-    // Parse dates
-    let start_date = query
-        .start_date
-        .as_ref()
+    let start_date = query.start_date.as_ref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+    let end_date = query.end_date.as_ref()
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&Utc));
 
-    let end_date = query
-        .end_date
-        .as_ref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc));
-
-    match service
-        .get_deleted_entities(
-            query.entity_type.clone(),
-            start_date,
-            end_date,
-            school_id,
-            query.limit,
-            query.skip,
-        )
-        .await
-    {
+    match service.get_deleted_entities(query.entity_type.clone(), start_date, end_date, school_id, query.limit, query.skip).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -86,56 +61,36 @@ struct RestoreRequest {
 
 #[post("/restore")]
 async fn restore_entity(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     data: web::Json<RestoreRequest>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // Only ADMIN can restore entities
     if let Err(err_msg) = check_admin(&user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err_msg.to_string()
-        }));
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err_msg.to_string() }));
     }
 
-    let db = get_database(&req, &state);
-    let service = RecycleBinService::new(db);
-
-    match service
-        .restore_entity(&data.entity_type, &data.entity_id, &user, &state)
-        .await
-    {
-        Ok(_) => HttpResponse::Ok().json(serde_json::json!({
-            "message": "Entity restored successfully"
-        })),
+    let service = RecycleBinService::new(postgres_pool(&state));
+    match service.restore_entity(&data.entity_type, &data.entity_id, &user, &state).await {
+        Ok(_) => HttpResponse::Ok().json(serde_json::json!({ "message": "Entity restored successfully" })),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
 #[delete("/permanent")]
 async fn permanently_delete_entity(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     data: web::Json<RestoreRequest>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // Only ADMIN can permanently delete entities
     if let Err(err_msg) = check_admin(&user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err_msg.to_string()
-        }));
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err_msg.to_string() }));
     }
 
-    let db = get_database(&req, &state);
-    let service = RecycleBinService::new(db);
-
-    match service
-        .permanently_delete(&data.entity_type, &data.entity_id, &user, &state)
-        .await
-    {
-        Ok(_) => HttpResponse::Ok().json(serde_json::json!({
-            "message": "Entity permanently deleted"
-        })),
+    let service = RecycleBinService::new(postgres_pool(&state));
+    match service.permanently_delete(&data.entity_type, &data.entity_id, &user, &state).await {
+        Ok(_) => HttpResponse::Ok().json(serde_json::json!({ "message": "Entity permanently deleted" })),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }

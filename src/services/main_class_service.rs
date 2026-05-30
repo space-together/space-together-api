@@ -39,6 +39,10 @@ impl MainClassService {
         })
     }
 
+    pub fn row_to_main_class_pub(row: PgRow) -> Result<MainClass, AppError> {
+        Self::row_to_main_class(row)
+    }
+
     fn row_to_main_class(row: PgRow) -> Result<MainClass, AppError> {
         let id: String = row.try_get("id").map_err(Self::db_error)?;
         let trade_id_str: Option<String> = row.try_get("trade_id").ok().flatten();
