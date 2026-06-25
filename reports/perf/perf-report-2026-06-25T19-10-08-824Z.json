@@ -1,0 +1,1725 @@
+{
+  "generatedAt": "2026-06-25T19:10:08.813Z",
+  "baseUrl": "http://127.0.0.1:4646",
+  "config": {
+    "durationMs": 1000,
+    "endpointSamples": 5,
+    "warmupRequests": 10,
+    "concurrencyLevels": [
+      1,
+      10,
+      25,
+      50,
+      100
+    ],
+    "includeMutating": false,
+    "includeAuthMissing": false,
+    "includeSchoolRoutes": false,
+    "includeStreams": false,
+    "inventoryOnly": false,
+    "capacityOnly": true,
+    "targetMethod": "GET",
+    "targetPath": "/me",
+    "createTestUser": true,
+    "testUserEmail": "perf-1782414603256@example.com",
+    "requestTimeoutMs": 5000,
+    "hasAuthToken": true,
+    "hasSchoolToken": false,
+    "hasSchoolId": false
+  },
+  "totals": {
+    "operations": 488,
+    "eligible": 178,
+    "skipped": 310
+  },
+  "skipped": [
+    {
+      "method": "DELETE",
+      "path": "/announcements/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/assessment-categories/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/assignments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/backups/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/class-subjects/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/class-timetables/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/classes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/comments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/education-years/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/exams/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/join-school-requests/admin/cleanup-expired/{older_than_days}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/learning-materials/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/likes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/m/{conversation_id}/messages/{message_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/main-classes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/parents/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/recycle-bin/permanent",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/roles/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school-staff/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/announcements/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/assessment-categories/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/assignments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/backups/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/class-subjects/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/classes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/comments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/education-years/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/exams/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/learning-materials/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/likes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/parents/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/recycle-bin/permanent",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/roles/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/school-staff/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/scores/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/students/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/teachers/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/school/timetables/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/schools/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/scores/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/sectors/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/students/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/teachers/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/template-subjects/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/trades/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{user_id}/schools/{school_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/events/stream",
+      "reason": "stream/websocket endpoint"
+    },
+    {
+      "method": "GET",
+      "path": "/m/ws/{conversation_id}",
+      "reason": "stream/websocket endpoint"
+    },
+    {
+      "method": "GET",
+      "path": "/school/analytics/attendance-rate",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/analytics/enrollment-trends",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/analytics/fee-summary",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/analytics/pass-fail-distribution",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/analytics/teacher-workload",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/announcements/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assessment-categories",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assessment-categories/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assessment-categories/validate/{class_subject_id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assignments",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assignments/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assignments/{id}/submissions",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assignments/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/assignments/submissions/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/audit-logs/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/backups",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/backups/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/backups/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/backups/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/backups/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/class-subjects/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/classes/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/comments",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/comments/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/comments/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/comments/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/current",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/education-years/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/events/clients/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/events/stream",
+      "reason": "stream/websocket endpoint"
+    },
+    {
+      "method": "GET",
+      "path": "/school/exams",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/exams/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/exams/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/grading-scales",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/grading-scales/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/learning-materials",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/learning-materials/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/learning-materials/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/learning-materials/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/learning-materials/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/likes/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/{student_id}/attendance",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/{student_id}/finance",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/{student_id}/results",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/announcements",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/dashboard",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/parents/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/rankings/class/{class_id}/exam/{exam_id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/rankings/class/{class_id}/exam/{exam_id}/at-risk",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/rankings/class/{class_id}/exam/{exam_id}/top",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/recycle-bin",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/results/class/{class_id}/exam/{exam_id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/results/student/{student_id}/term/{term_id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/roles/permissions",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/school-staff",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/school-staff/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/school-staff/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/school-staff/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/scores",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/scores/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/scores/{id}/audit-logs",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/scores/student/{student_id}/exam/{exam_id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/students/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers/{id}/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers/count",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers/others",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/teachers/others/match",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/timetables",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/timetables/{id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/timetables/current",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/timetables/flied",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "GET",
+      "path": "/school/timetables/school/{school_id}/year/{academic_year_id}",
+      "reason": "school route disabled"
+    },
+    {
+      "method": "PATCH",
+      "path": "/auth/onboarding",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/announcements",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/assessment-categories",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/assignments",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/assignments/{id}/submit",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/backups/{id}/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/backups/manual",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/class-subjects",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/class-timetables",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/classes",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/{main_class_id}/subclasses/count/{count}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/comments",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/education-years",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/education-years/{id}/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/exams",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/exams/{id}/publish",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/grading-scales",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/grading-scales/{id}/activate",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/join-school-requests",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/join-school-requests/join-by-code",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/learning-materials",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/likes",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/login",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/m-conversations",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/m-users/public-key",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/m/{conversation_id}/messages",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/main-classes",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/parents",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/rankings/calculate/{exam_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/recycle-bin/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/register",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/results/calculate/{exam_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/roles",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/roles/assign",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school-staff",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/announcements",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/assessment-categories",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/assignments",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/assignments/{id}/submit",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/backups/{id}/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/backups/manual",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/class-subjects",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/class-timetables/generate/{class_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/classes",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/classes/{main_class_id}/subclasses/count/{count}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/comments",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/education-years",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/education-years/{id}/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/exams",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/exams/{id}/publish",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/grading-scales",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/grading-scales/{id}/activate",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/learning-materials",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/likes",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/parents",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/rankings/calculate/{exam_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/recycle-bin/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/results/calculate/{exam_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/roles",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/roles/assign",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/school-staff",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/scores",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/scores/bulk",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/students",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/students/{id}/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/teachers",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/timetables",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/school/timetables/generate",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/schools",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/schools/{id}/academics",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/schools/refresh-school-token",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/scores",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/scores/bulk",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/sectors",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/sectors/by-ids",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/students",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/students/{id}/restore",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/teachers",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/template-subjects",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/trades",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/trades/by-ids",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/users",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/users/{user_id}/schools/{school_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/announcements/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/assessment-categories/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/assignments/{assignment_id}/grade/{submission_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/assignments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/assignments/submissions/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/class-subjects/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/class-timetables/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/classes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/comments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/education-years/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/exams/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/grading-scales/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/join-school-requests/{id}/accept",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/join-school-requests/{id}/cancel",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/join-school-requests/{id}/reject",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/learning-materials/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/likes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/main-classes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/parents/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/roles/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school-staff/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/announcements/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/assessment-categories/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/assignments/{assignment_id}/grade/{submission_id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/assignments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/assignments/submissions/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/class-subjects/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/classes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/comments/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/education-years/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/exams/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/grading-scales/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/learning-materials/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/likes/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/parents/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/roles/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/school-staff/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/scores/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/students/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/teachers/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/school/timetables/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/schools/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/scores/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/sectors/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/students/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/teachers/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/template-subjects/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/trades/{id}",
+      "reason": "mutating method disabled"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/{id}",
+      "reason": "mutating method disabled"
+    }
+  ],
+  "endpointResults": [],
+  "loadResults": [
+    {
+      "concurrency": 1,
+      "durationMs": 1000,
+      "requests": 157,
+      "rps": 157,
+      "okRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 157
+      },
+      "avgMs": 6.36,
+      "p50Ms": 5.73,
+      "p95Ms": 7.5,
+      "p99Ms": 9.61,
+      "maxMs": 91.28,
+      "slowestOperations": [
+        {
+          "operation": "GET /me",
+          "requests": 157,
+          "p95Ms": 7.5,
+          "avgMs": 6.36,
+          "statusCounts": {
+            "200": 157
+          }
+        }
+      ]
+    },
+    {
+      "concurrency": 10,
+      "durationMs": 1000,
+      "requests": 519,
+      "rps": 519,
+      "okRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 519
+      },
+      "avgMs": 19.24,
+      "p50Ms": 16.09,
+      "p95Ms": 26.39,
+      "p99Ms": 152.58,
+      "maxMs": 266.22,
+      "slowestOperations": [
+        {
+          "operation": "GET /me",
+          "requests": 519,
+          "p95Ms": 26.39,
+          "avgMs": 19.24,
+          "statusCounts": {
+            "200": 519
+          }
+        }
+      ]
+    },
+    {
+      "concurrency": 25,
+      "durationMs": 1000,
+      "requests": 711,
+      "rps": 711,
+      "okRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 711
+      },
+      "avgMs": 35.23,
+      "p50Ms": 34.37,
+      "p95Ms": 43.57,
+      "p99Ms": 63.42,
+      "maxMs": 70.25,
+      "slowestOperations": [
+        {
+          "operation": "GET /me",
+          "requests": 711,
+          "p95Ms": 43.57,
+          "avgMs": 35.23,
+          "statusCounts": {
+            "200": 711
+          }
+        }
+      ]
+    },
+    {
+      "concurrency": 50,
+      "durationMs": 1000,
+      "requests": 666,
+      "rps": 666,
+      "okRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 666
+      },
+      "avgMs": 74.04,
+      "p50Ms": 70.32,
+      "p95Ms": 125.91,
+      "p99Ms": 136.59,
+      "maxMs": 141.33,
+      "slowestOperations": [
+        {
+          "operation": "GET /me",
+          "requests": 666,
+          "p95Ms": 125.91,
+          "avgMs": 74.04,
+          "statusCounts": {
+            "200": 666
+          }
+        }
+      ]
+    },
+    {
+      "concurrency": 100,
+      "durationMs": 1000,
+      "requests": 632,
+      "rps": 632,
+      "okRate": 1,
+      "errorRate": 0,
+      "statusCounts": {
+        "200": 632
+      },
+      "avgMs": 153.53,
+      "p50Ms": 151.74,
+      "p95Ms": 264.68,
+      "p99Ms": 291.81,
+      "maxMs": 294.81,
+      "slowestOperations": [
+        {
+          "operation": "GET /me",
+          "requests": 632,
+          "p95Ms": 264.68,
+          "avgMs": 153.53,
+          "statusCounts": {
+            "200": 632
+          }
+        }
+      ]
+    }
+  ]
+}

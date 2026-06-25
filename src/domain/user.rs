@@ -46,7 +46,7 @@ pub struct User {
     // =========================================================
     pub image_id: Option<String>,
     pub image: Option<String>,
-    pub background_images: Option<Vec<Image>>, // GPT added for profile customization which image is url and id all are string and not optional
+    pub background_images: Option<Vec<Image>>,
     pub bio: Option<String>,
     pub disable: Option<bool>,
 
