@@ -50,8 +50,34 @@ async fn main() -> anyhow::Result<()> {
     use sqlx::Executor;
     let mut conn = pool.acquire().await?;
     conn.execute(sql).await?;
+
+    // Set a shared default password on every seeded user. The hash is generated
+    // with the same Argon2id params the app uses (m=4096,t=2,p=1) so login and
+    // the rehash check both accept it.
+    let password = std::env::var("SEED_PASSWORD").unwrap_or_else(|_| "Demo@1234".to_string());
+    let hash = hash_password(&password);
+    let updated = sqlx::query("UPDATE users SET password_hash = $1 WHERE password_hash IS NULL")
+        .bind(&hash)
+        .execute(&pool)
+        .await?
+        .rows_affected();
+
     println!("Seed complete: all tables populated with default data.");
+    println!("Default password set on {updated} user(s): '{password}'");
     Ok(())
+}
+
+// Mirrors src/utils/hash.rs (this bin cannot import the app crate, which is bin-only).
+fn hash_password(password: &str) -> String {
+    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+    use argon2::{Algorithm, Argon2, Params, Version};
+    let params = Params::new(4_096, 2, 1, None).expect("valid Argon2 params");
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let salt = SaltString::generate(&mut OsRng);
+    argon2
+        .hash_password(password.as_bytes(), &salt)
+        .expect("hash password")
+        .to_string()
 }
 
 async fn verify_counts(pool: &sqlx::PgPool) -> anyhow::Result<()> {
