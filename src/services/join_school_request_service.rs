@@ -521,7 +521,6 @@ impl JoinSchoolRequestService {
                         let count = staff_service.count_staff(None, Some(SchoolStaffQuery { school_id: Some(school_id.to_hex()), field_values: vec![("type".to_string(), "HeadOfStudies".to_string())], ..Default::default() })).await?;
                         if count.count >= 5 { return Err(AppError { message: "This school already has 5 HeadOfStudies".into() }); }
                     }
-                    _ => {}
                 }
 
                 let staff = SchoolStaff {
