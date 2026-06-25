@@ -1,3 +1,7 @@
+// Many service/repository/guard helpers are defined ahead of being wired into
+// routes. Silence dead-code noise crate-wide instead of deleting future-use API.
+#![allow(dead_code)]
+
 mod api;
 mod config;
 mod controller;

@@ -9,7 +9,7 @@ use crate::{
     utils::{object_id::parse_object_id_value, request_context::postgres_pool},
 };
 
-fn school_id_from_state(state: &web::Data<AppState>, req: &HttpRequest) -> Option<String> {
+fn school_id_from_state(_state: &web::Data<AppState>, req: &HttpRequest) -> Option<String> {
     use actix_web::HttpMessage;
     use crate::models::school_token_model::SchoolToken;
     req.extensions().get::<SchoolToken>().map(|t| t.id.clone())
