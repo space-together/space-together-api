@@ -182,6 +182,9 @@
       "name": "Scores"
     },
     {
+      "name": "Locations"
+    },
+    {
       "name": "Sectors"
     },
     {
@@ -911,6 +914,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -922,9 +928,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -1120,6 +1123,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -1131,9 +1137,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -3056,6 +3059,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -3067,9 +3073,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -3265,6 +3268,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -3276,9 +3282,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -4155,6 +4158,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -4166,9 +4172,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -4364,6 +4367,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -4375,9 +4381,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -5086,6 +5089,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -5097,9 +5103,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -5148,6 +5151,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -5159,9 +5165,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -7714,6 +7717,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -7725,9 +7731,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -7762,6 +7765,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -7773,9 +7779,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -7930,6 +7933,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -7941,9 +7947,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -8931,6 +8934,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -8942,9 +8948,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -8974,6 +8977,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -8985,9 +8991,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -9036,6 +9039,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -9047,9 +9053,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -9088,6 +9091,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -9099,9 +9105,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -9622,6 +9625,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -9633,9 +9639,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -9831,6 +9834,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -9842,9 +9848,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -11624,6 +11627,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -11635,9 +11641,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -11685,6 +11688,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -11696,9 +11702,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -11899,6 +11902,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -11910,9 +11916,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -12108,6 +12111,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -12119,9 +12125,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -14049,6 +14052,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -14060,9 +14066,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -14452,6 +14455,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -14463,9 +14469,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -14661,6 +14664,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -14672,9 +14678,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -15695,6 +15698,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -15706,9 +15712,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -16204,6 +16207,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -16215,9 +16221,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -16413,6 +16416,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -16424,9 +16430,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -18282,6 +18285,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -18293,9 +18299,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -18334,6 +18337,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -18345,9 +18351,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -18728,6 +18731,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -18739,9 +18745,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -18937,6 +18940,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -18948,9 +18954,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -19339,6 +19342,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -19350,9 +19356,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -19391,6 +19394,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -19402,9 +19408,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -19925,6 +19928,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -19936,9 +19942,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -20134,6 +20137,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -20145,9 +20151,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -20432,6 +20435,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -20443,9 +20449,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -20484,6 +20487,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -20495,9 +20501,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -20703,6 +20706,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -20714,9 +20720,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -20991,6 +20994,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -21002,9 +21008,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -22061,6 +22064,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -22072,9 +22078,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -22284,6 +22287,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -22295,9 +22301,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -23643,6 +23646,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -23654,9 +23660,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -23852,6 +23855,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -23863,9 +23869,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -25793,6 +25796,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -25804,9 +25810,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -26770,6 +26773,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -26781,9 +26787,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -27115,6 +27118,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -27126,9 +27132,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -27395,6 +27398,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -27406,9 +27412,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -27605,6 +27608,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -27616,9 +27622,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -29865,6 +29868,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -29876,9 +29882,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -30034,6 +30037,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -30045,9 +30051,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -31096,6 +31099,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -31107,9 +31113,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -31149,6 +31152,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -31160,9 +31166,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -31449,6 +31452,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -31460,9 +31466,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -31618,6 +31621,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -31629,9 +31635,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -32536,6 +32539,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -32547,9 +32553,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -32745,6 +32748,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -32756,9 +32762,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -34606,6 +34609,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -34617,9 +34623,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -34659,6 +34662,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -34670,9 +34676,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -34888,6 +34891,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -34899,9 +34905,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -35640,6 +35643,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -35651,9 +35657,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -35701,6 +35704,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -35712,9 +35718,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -35763,6 +35766,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -35774,9 +35780,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -35962,6 +35965,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -35973,9 +35979,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -36423,6 +36426,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -36434,9 +36440,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -36636,6 +36639,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -36647,9 +36653,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -36845,6 +36848,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -36856,9 +36862,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -38039,6 +38042,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -38050,9 +38056,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -38248,6 +38251,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -38259,9 +38265,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -38862,6 +38865,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -38873,9 +38879,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -38918,6 +38921,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -38929,9 +38935,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -39150,6 +39153,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -39161,9 +39167,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -39727,6 +39730,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -39738,9 +39744,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -39950,6 +39953,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -39961,9 +39967,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -40159,6 +40162,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -40170,9 +40176,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -41623,6 +41626,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -41634,9 +41640,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -41675,6 +41678,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -41686,9 +41692,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -42209,6 +42212,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -42220,9 +42226,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -42418,6 +42421,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -42429,9 +42435,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -44359,6 +44362,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -44370,9 +44376,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -45391,6 +45394,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -45402,9 +45408,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -46193,6 +46196,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -46204,9 +46210,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -46588,6 +46591,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -46599,9 +46605,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "requestBody": {
@@ -46955,6 +46958,9 @@
               }
             }
           },
+          "201": {
+            "description": "Created"
+          },
           "400": {
             "description": "Bad request"
           },
@@ -46966,9 +46972,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "201": {
-            "description": "Created"
           }
         },
         "security": [
@@ -47073,6 +47076,276 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/locations/provinces": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "List location provinces",
+        "operationId": "get_location_provinces_get_locations_provinces",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Rwanda"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocationOption"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/locations/districts": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "List location districts for a province",
+        "operationId": "get_location_districts_get_locations_districts",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Rwanda"
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocationOption"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/locations/sectors": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "List location sectors for a district",
+        "operationId": "get_location_sectors_get_locations_sectors",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Rwanda"
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocationOption"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/locations/cells": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "List location cells for a sector",
+        "operationId": "get_location_cells_get_locations_cells",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Rwanda"
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sector",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocationOption"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/locations/villages": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "List location villages for a cell",
+        "operationId": "get_location_villages_get_locations_villages",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Rwanda"
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sector",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cell",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocationOption"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
           }
         }
       }
@@ -55001,7 +55274,7 @@
           },
           "availability_schedule": {
             "type": "object",
-            "description": "Rust type: Option<Vec<DailyAvailability>>, //GPT when you are creating make Default Availability schedule (e.g., \"Mon\u2013Fri 9am\u20135pm\", \"Weekends only\") for all days of week monday to friday"
+            "description": "Rust type: Option<Vec<DailyAvailability>>, //GPT when you are creating make Default Availability schedule (e.g., \"Mon–Fri 9am–5pm\", \"Weekends only\") for all days of week monday to friday"
           },
           "department": {
             "$ref": "#/components/schemas/Department",
@@ -55835,6 +56108,17 @@
       "UnknownJson": {
         "type": "object",
         "additionalProperties": true
+      },
+      "LocationOption": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
       }
     }
   }

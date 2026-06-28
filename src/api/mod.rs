@@ -20,6 +20,7 @@ mod grading_scale_api;
 mod join_school_request_api;
 mod learning_materials_api;
 mod like_api;
+mod location_api;
 mod main_class_api;
 mod messages_api;
 mod messaging_socket;
@@ -82,6 +83,7 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
     recycle_bin_api::init(cfg);
     learning_materials_api::init(cfg);
     analytics_api::init(cfg);
+    location_api::init(cfg);
 
     // Messaging routes with /m prefix
     messaging_users_api::init(cfg);

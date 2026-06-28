@@ -20,6 +20,7 @@ pub mod guardian;
 pub mod join_school_request;
 pub mod learning_material;
 pub mod like;
+pub mod location;
 pub mod main_class;
 pub mod message;
 pub mod parent;

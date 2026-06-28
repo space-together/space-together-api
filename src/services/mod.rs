@@ -22,6 +22,7 @@ pub mod grading_scale_service;
 pub mod join_school_request_service;
 pub mod learning_material_service;
 pub mod like_service;
+pub mod location_service;
 pub mod main_class_service;
 pub mod message_service;
 pub mod parent_service;
