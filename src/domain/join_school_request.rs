@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -9,6 +8,7 @@ use crate::{
         teacher::Teacher, user::User,
     },
     helpers::object_id_helpers,
+    utils::object_id::ObjectId,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

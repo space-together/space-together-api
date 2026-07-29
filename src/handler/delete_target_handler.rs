@@ -1,22 +1,17 @@
+use sqlx::PgPool;
+
 use crate::{
     errors::AppError,
-    services::{comment_service, like_service::LikeService},
-};
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    Database,
+    services::{comment_service::CommentService, like_service::LikeService},
+    utils::object_id::ObjectId,
 };
 
-pub async fn delete_target_handler(db: &Database, target_id: &ObjectId) -> Result<(), AppError> {
-    let like_service = LikeService::new(db);
-    let comment_service = comment_service::CommentService::new(db);
-
-    like_service
-        .delete_many(doc! {"target_id": target_id})
+pub async fn delete_target_handler(pool: &PgPool, target_id: &ObjectId) -> Result<(), AppError> {
+    LikeService::new(pool)
+        .delete_many_by_target(target_id)
         .await?;
-
-    comment_service
-        .delete_many(doc! {"target_id": target_id})
+    CommentService::new(pool)
+        .delete_many_by_target(target_id)
         .await?;
     Ok(())
 }

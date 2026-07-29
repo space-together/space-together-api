@@ -1,356 +1,166 @@
-use chrono::Utc;
-use dotenvy::dotenv;
-use mongodb::{
-    bson::{doc, Bson, DateTime, Document},
-    options::IndexOptions,
-    Client, Collection, IndexModel,
-};
-use std::env;
+// Database seeder: populates every table with default demo data.
+//
+// Usage:
+//   cargo run --bin seed            -> run migrations, then execute scripts/seed.sql
+//   cargo run --bin seed -- schema  -> print live schema (required columns + FKs) per table
+//
+// The seed SQL is idempotent (ON CONFLICT DO NOTHING), so it can be run repeatedly.
+use sqlx::postgres::PgPoolOptions;
+use sqlx::Row;
+use std::time::Duration;
 
-type SeedResult<T> = Result<T, Box<dyn std::error::Error>>;
-
-#[derive(Clone)]
-struct SeedItem {
-    filter_field: &'static str,
-    filter_value: &'static str,
-    extra_null_field: Option<&'static str>,
-    document: Document,
+fn database_url() -> anyhow::Result<String> {
+    let raw = std::env::var("DB_URL")?;
+    // The app stores a non-standard scheme (e.g. "localhost://"); normalize it so
+    // sqlx accepts the URL.
+    let normalized = if raw.starts_with("postgres://") || raw.starts_with("postgresql://") {
+        raw
+    } else if let Some(rest) = raw.split_once("://") {
+        format!("postgres://{}", rest.1)
+    } else {
+        raw
+    };
+    Ok(normalized)
 }
 
-#[tokio::main]
-async fn main() -> SeedResult<()> {
-    dotenv().ok();
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
+    let url = database_url()?;
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(10))
+        .connect(&url)
+        .await?;
 
-    let uri = env::var("MONGO_URI").expect("MONGO_URI not set in .env");
-    let db_name = env::var("SEED_DB_NAME")
-        .or_else(|_| env::var("MAIN_DB_NAME"))
-        .unwrap_or_else(|_| "space_together".to_string());
+    sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let client = Client::with_uri_str(uri).await?;
-    let db = client.database(&db_name);
+    if std::env::args().any(|a| a == "schema") {
+        dump_schema(&pool).await?;
+        return Ok(());
+    }
 
-    println!("Seeding database: {db_name}");
+    if std::env::args().any(|a| a == "verify") {
+        verify_counts(&pool).await?;
+        return Ok(());
+    }
 
-    seed_collection(
-        &db.collection::<Document>("sectors"),
-        "sectors",
-        &[unique_index("username"), unique_index("name")],
-        &sectors(),
-    )
-    .await?;
+    let sql = include_str!("../../scripts/seed.sql");
+    // Execute the whole script in one batch so statement ordering is preserved.
+    use sqlx::Executor;
+    let mut conn = pool.acquire().await?;
+    conn.execute(sql).await?;
 
-    seed_collection(
-        &db.collection::<Document>("main_classes"),
-        "main_classes",
-        &[unique_index("username"), unique_index("name")],
-        &main_classes(),
-    )
-    .await?;
+    // Set a shared default password on every seeded user. The hash is generated
+    // with the same Argon2id params the app uses (m=4096,t=2,p=1) so login and
+    // the rehash check both accept it.
+    let password = std::env::var("SEED_PASSWORD").unwrap_or_else(|_| "Demo@1234".to_string());
+    let hash = hash_password(&password);
+    let updated = sqlx::query("UPDATE users SET password_hash = $1 WHERE password_hash IS NULL")
+        .bind(&hash)
+        .execute(&pool)
+        .await?
+        .rows_affected();
 
-    seed_collection(
-        &db.collection::<Document>("template_subjects"),
-        "template_subjects",
-        &[unique_index("code")],
-        &template_subjects(),
-    )
-    .await?;
-
-    seed_collection(
-        &db.collection::<Document>("roles"),
-        "roles",
-        &[unique_compound_index(&[("school_id", 1), ("name", 1)])],
-        &system_roles(),
-    )
-    .await?;
-
-    println!("Seed completed.");
+    println!("Seed complete: all tables populated with default data.");
+    println!("Default password set on {updated} user(s): '{password}'");
     Ok(())
 }
 
-async fn seed_collection(
-    collection: &Collection<Document>,
-    label: &str,
-    indexes: &[IndexModel],
-    items: &[SeedItem],
-) -> SeedResult<()> {
-    for index in indexes {
-        collection.create_index(index.clone()).await?;
-    }
+// Mirrors src/utils/hash.rs (this bin cannot import the app crate, which is bin-only).
+fn hash_password(password: &str) -> String {
+    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+    use argon2::{Algorithm, Argon2, Params, Version};
+    let params = Params::new(4_096, 2, 1, None).expect("valid Argon2 params");
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let salt = SaltString::generate(&mut OsRng);
+    argon2
+        .hash_password(password.as_bytes(), &salt)
+        .expect("hash password")
+        .to_string()
+}
 
-    let mut inserted = 0;
-    let mut updated = 0;
+async fn verify_counts(pool: &sqlx::PgPool) -> anyhow::Result<()> {
+    let tables = sqlx::query(
+        "SELECT table_name FROM information_schema.tables \
+         WHERE table_schema='public' AND table_type='BASE TABLE' \
+         AND table_name <> '_sqlx_migrations' ORDER BY table_name",
+    )
+    .fetch_all(pool)
+    .await?;
 
-    for item in items {
-        let mut filter = doc! { item.filter_field: item.filter_value };
-        if let Some(field) = item.extra_null_field {
-            filter.insert(field, Bson::Null);
+    let mut empty = 0;
+    let total = tables.len();
+    for t in &tables {
+        let table: String = t.get("table_name");
+        let count: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM \"{table}\""))
+            .fetch_one(pool)
+            .await?;
+        if count == 0 {
+            empty += 1;
+            println!("EMPTY  {table}");
         }
-
-        let update = doc! {
-            "$set": item.document.clone(),
-            "$setOnInsert": {
-                "created_at": DateTime::now()
-            }
-        };
-        let result = collection.update_one(filter, update).upsert(true).await?;
-
-        if result.upserted_id.is_some() {
-            inserted += 1;
-        } else if result.modified_count > 0 {
-            updated += 1;
-        }
     }
-
-    println!(
-        "{label}: {} checked, {inserted} inserted, {updated} updated",
-        items.len()
-    );
+    println!("\n{} tables total, {} empty.", total, empty);
+    if empty == 0 {
+        println!("OK: every table has data.");
+    }
     Ok(())
 }
 
-fn unique_index(field: &str) -> IndexModel {
-    IndexModel::builder()
-        .keys(doc! { field: 1 })
-        .options(IndexOptions::builder().unique(true).build())
-        .build()
-}
+async fn dump_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
+    let tables = sqlx::query(
+        "SELECT table_name FROM information_schema.tables \
+         WHERE table_schema='public' AND table_type='BASE TABLE' \
+         AND table_name <> '_sqlx_migrations' ORDER BY table_name",
+    )
+    .fetch_all(pool)
+    .await?;
 
-fn unique_compound_index(fields: &[(&str, i32)]) -> IndexModel {
-    let mut keys = Document::new();
-    for (field, order) in fields {
-        keys.insert(*field, *order);
+    for t in &tables {
+        let table: String = t.get("table_name");
+        println!("\n== {table} ==");
+
+        let cols = sqlx::query(
+            "SELECT column_name, data_type, is_nullable, column_default \
+             FROM information_schema.columns \
+             WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position",
+        )
+        .bind(&table)
+        .fetch_all(pool)
+        .await?;
+
+        for c in &cols {
+            let name: String = c.get("column_name");
+            let dtype: String = c.get("data_type");
+            let nullable: String = c.get("is_nullable");
+            let default: Option<String> = c.get("column_default");
+            let required = nullable == "NO" && default.is_none();
+            println!(
+                "  {}{} {} {}",
+                if required { "* " } else { "  " },
+                name,
+                dtype,
+                if default.is_some() { "[has-default]" } else { "" }
+            );
+        }
+
+        let fks = sqlx::query(
+            "SELECT kcu.column_name, ccu.table_name AS ref_table \
+             FROM information_schema.table_constraints tc \
+             JOIN information_schema.key_column_usage kcu ON tc.constraint_name=kcu.constraint_name \
+             JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name=ccu.constraint_name \
+             WHERE tc.constraint_type='FOREIGN KEY' AND tc.table_name=$1",
+        )
+        .bind(&table)
+        .fetch_all(pool)
+        .await?;
+        for f in &fks {
+            let col: String = f.get("column_name");
+            let ref_table: String = f.get("ref_table");
+            println!("  FK {col} -> {ref_table}");
+        }
     }
-
-    IndexModel::builder()
-        .keys(keys)
-        .options(IndexOptions::builder().unique(true).build())
-        .build()
-}
-
-fn timestamps(mut doc: Document) -> Document {
-    doc.insert(
-        "updated_at",
-        DateTime::from_millis(Utc::now().timestamp_millis()),
-    );
-    doc.insert("disable", false);
-    doc
-}
-
-fn sectors() -> Vec<SeedItem> {
-    vec![
-        SeedItem {
-            filter_field: "username",
-            filter_value: "rwanda-basic-education",
-            extra_null_field: None,
-            document: {
-                timestamps(doc! {
-                    "name": "Rwanda Basic Education",
-                    "username": "rwanda-basic-education",
-                    "description": "Default Rwanda primary and secondary education sector.",
-                    "country": "Rwanda",
-                    "type": "local",
-                    "curriculum": Bson::Array(vec![Bson::Int32(1), Bson::Int32(12)]),
-                    "logo": Bson::Null,
-                    "logo_id": Bson::Null,
-                })
-            },
-        },
-        SeedItem {
-            filter_field: "username",
-            filter_value: "tvet",
-            extra_null_field: None,
-            document: {
-                timestamps(doc! {
-                    "name": "TVET",
-                    "username": "tvet",
-                    "description": "Technical and vocational education and training.",
-                    "country": "Rwanda",
-                    "type": "local",
-                    "curriculum": Bson::Array(vec![Bson::Int32(10), Bson::Int32(12)]),
-                    "logo": Bson::Null,
-                    "logo_id": Bson::Null,
-                })
-            },
-        },
-    ]
-}
-
-fn main_classes() -> Vec<SeedItem> {
-    vec![
-        main_class("Primary 1", "primary-1", 1),
-        main_class("Primary 2", "primary-2", 2),
-        main_class("Primary 3", "primary-3", 3),
-        main_class("Primary 4", "primary-4", 4),
-        main_class("Primary 5", "primary-5", 5),
-        main_class("Primary 6", "primary-6", 6),
-        main_class("Senior 1", "senior-1", 7),
-        main_class("Senior 2", "senior-2", 8),
-        main_class("Senior 3", "senior-3", 9),
-        main_class("Senior 4", "senior-4", 10),
-        main_class("Senior 5", "senior-5", 11),
-        main_class("Senior 6", "senior-6", 12),
-    ]
-}
-
-fn main_class(name: &'static str, username: &'static str, level: i32) -> SeedItem {
-    SeedItem {
-        filter_field: "username",
-        filter_value: username,
-        extra_null_field: None,
-        document: {
-            timestamps(doc! {
-                "name": name,
-                "username": username,
-                "level": level,
-                "description": format!("Default class level {level}."),
-                "trade_id": Bson::Null,
-            })
-        },
-    }
-}
-
-fn template_subjects() -> Vec<SeedItem> {
-    vec![
-        subject(
-            "Mathematics",
-            "MATH",
-            "Core mathematics subject.",
-            "Mathematics",
-            120,
-        ),
-        subject(
-            "English",
-            "ENG",
-            "English language subject.",
-            "Language",
-            120,
-        ),
-        subject(
-            "Kinyarwanda",
-            "KIN",
-            "Kinyarwanda language subject.",
-            "Language",
-            120,
-        ),
-        subject("Science", "SCI", "General science subject.", "Science", 120),
-        subject(
-            "Social Studies",
-            "SST",
-            "Social studies and citizenship subject.",
-            "SocialScience",
-            90,
-        ),
-        subject(
-            "Computer Science",
-            "CS",
-            "Digital literacy and computer science subject.",
-            "Technology",
-            90,
-        ),
-    ]
-}
-
-fn subject(
-    name: &'static str,
-    code: &'static str,
-    description: &'static str,
-    category: &'static str,
-    estimated_hours: i32,
-) -> SeedItem {
-    SeedItem {
-        filter_field: "code",
-        filter_value: code,
-        extra_null_field: None,
-        document: {
-            timestamps(doc! {
-                "name": name,
-                "code": code,
-                "description": description,
-                "category": category,
-                "estimated_hours": estimated_hours,
-                "credits": Bson::Null,
-                "prerequisites": Bson::Array(vec![]),
-                "topics": Bson::Array(vec![]),
-                "created_by": Bson::Null,
-            })
-        },
-    }
-}
-
-fn system_roles() -> Vec<SeedItem> {
-    vec![
-        role(
-            "Admin",
-            "System administrator with all seeded permissions.",
-            &[
-                "assignment.create",
-                "assignment.read.school",
-                "assignment.update",
-                "assignment.delete",
-                "submission.grade",
-                "submission.read.school",
-                "role.assign",
-                "role.create",
-                "role.update",
-                "role.delete",
-                "feature.toggle",
-            ],
-        ),
-        role(
-            "Teacher",
-            "Teacher role for class and assignment work.",
-            &[
-                "assignment.create",
-                "assignment.read.class",
-                "assignment.update",
-                "submission.grade",
-                "submission.read.class",
-            ],
-        ),
-        role(
-            "Student",
-            "Student role for personal assignments and submissions.",
-            &["assignment.read.own", "submission.read.own"],
-        ),
-        role(
-            "Parent",
-            "Parent role for child assignment and submission visibility.",
-            &[
-                "parent.read.child.assignment",
-                "parent.read.child.submission",
-            ],
-        ),
-        role(
-            "School Staff",
-            "School staff role for school-level assignment visibility.",
-            &["assignment.read.school", "submission.read.school"],
-        ),
-    ]
-}
-
-fn role(
-    name: &'static str,
-    description: &'static str,
-    permissions: &'static [&'static str],
-) -> SeedItem {
-    SeedItem {
-        filter_field: "name",
-        filter_value: name,
-        extra_null_field: Some("school_id"),
-        document: {
-            let permissions = permissions
-                .iter()
-                .map(|permission| Bson::String((*permission).to_string()))
-                .collect::<Vec<_>>();
-
-            timestamps(doc! {
-                "school_id": Bson::Null,
-                "name": name,
-                "description": description,
-                "role_type": "System",
-                "permissions": Bson::Array(permissions),
-                "is_active": true,
-            })
-        },
-    }
+    println!("\nLegend: '*' = required (NOT NULL, no default)");
+    Ok(())
 }

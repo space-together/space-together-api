@@ -5,12 +5,12 @@ use crate::{
     domain::auth_user::AuthUserDto,
     models::api_request_model::RequestQuery,
     services::ranking_service::RankingService,
-    utils::{db_utils::get_database, object_id::parse_object_id_value},
+    utils::{object_id::parse_object_id_value, request_context::postgres_pool},
 };
 
 #[post("/calculate/{exam_id}")]
 async fn calculate_rankings(
-    req: HttpRequest,
+    _req: HttpRequest,
     _user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     query: web::Query<RequestQuery>,
@@ -33,8 +33,7 @@ async fn calculate_rankings(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = RankingService::new(&db);
+    let service = RankingService::new(postgres_pool(&state));
 
     match service.calculate_rankings(&class_id, &exam_id).await {
         Ok(rankings) => HttpResponse::Ok().json(serde_json::json!({
@@ -48,7 +47,7 @@ async fn calculate_rankings(
 
 #[get("/class/{class_id}/exam/{exam_id}")]
 async fn get_class_rankings(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<(String, String)>,
     state: web::Data<AppState>,
 ) -> impl Responder {
@@ -64,8 +63,7 @@ async fn get_class_rankings(
         Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    let db = get_database(&req, &state);
-    let service = RankingService::new(&db);
+    let service = RankingService::new(postgres_pool(&state));
 
     match service.get_class_rankings(&class_id, &exam_id).await {
         Ok(rankings) => HttpResponse::Ok().json(rankings),
@@ -75,7 +73,7 @@ async fn get_class_rankings(
 
 #[get("/class/{class_id}/exam/{exam_id}/top")]
 async fn get_top_students(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<(String, String)>,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
@@ -94,8 +92,7 @@ async fn get_top_students(
 
     let limit = query.limit.unwrap_or(10);
 
-    let db = get_database(&req, &state);
-    let service = RankingService::new(&db);
+    let service = RankingService::new(postgres_pool(&state));
 
     match service.get_top_students(&class_id, &exam_id, limit).await {
         Ok(students) => HttpResponse::Ok().json(students),
@@ -105,7 +102,7 @@ async fn get_top_students(
 
 #[get("/class/{class_id}/exam/{exam_id}/at-risk")]
 async fn get_at_risk_students(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<(String, String)>,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
@@ -125,8 +122,7 @@ async fn get_at_risk_students(
     // Default threshold is 2.0 GPA
     let threshold = query.gpa_threshold.unwrap_or(2.0);
 
-    let db = get_database(&req, &state);
-    let service = RankingService::new(&db);
+    let service = RankingService::new(postgres_pool(&state));
 
     match service
         .get_at_risk_students(&class_id, &exam_id, threshold)

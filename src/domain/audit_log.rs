@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 
-use crate::{domain::common_details::UserRole, helpers::object_id_helpers};
+use crate::{
+    domain::common_details::UserRole, helpers::object_id_helpers, utils::object_id::ObjectId,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AuditSeverity {
@@ -52,7 +53,7 @@ pub struct AuditLog {
     pub entity_id: ObjectId,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<Document>,
+    pub metadata: Option<serde_json::Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,

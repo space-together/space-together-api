@@ -50,10 +50,8 @@ actix-rt = "2.11.0"
 dashmap = "6.1.0"
 anyhow = "1.0.100"
 rsa = "0.9.6"
-
-[dependencies.mongodb]
-version = "3.4.1"
-features = ["sync"]
+sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "migrate"] }
+bson = "2"
 
 [[bin]]
 name = "space-together-api"

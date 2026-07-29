@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
-use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -16,7 +15,7 @@ use crate::{
     models::{id_model::IdType, school_token_model::SchoolToken},
     schema::common_schema::ActorRef,
     services::conversation_service::ConversationService,
-    utils::db_utils::get_database,
+    utils::{object_id::ObjectId, request_context::postgres_pool},
 };
 
 #[derive(Debug, Deserialize, Clone)]
@@ -182,20 +181,14 @@ async fn create_conversation(
         }
     }
 
-    let db = get_database(&req, &state);
-    let service = ConversationService::new(&db);
+    let service = ConversationService::new(postgres_pool(&state));
 
     // Check for duplicate 1-on-1 conversations
     if !body.is_group {
-        let participant_ids: Vec<ObjectId> = participants.iter().map(|p| p.id).collect();
-
-        let existing_filter = doc! {
-            "is_group": false,
-            "participants.id": { "$all": participant_ids.clone() },
-            "$expr": { "$eq": [{ "$size": "$participants" }, 2] }
-        };
-
-        if let Ok(existing) = service.find_one(None, Some(existing_filter)).await {
+        if let Ok(Some(existing)) = service
+            .find_direct_conversation(&participants, school_id)
+            .await
+        {
             return HttpResponse::Conflict().json(serde_json::json!({
                 "message": "Conversation already exists",
                 "existing_conversation_id": existing.id.unwrap().to_hex()
@@ -280,23 +273,10 @@ async fn get_conversations(
     let limit = query.limit.unwrap_or(20);
     let skip = (page - 1) * limit;
 
-    let db = get_database(&req, &state);
-    let service = ConversationService::new(&db);
-
-    let mut extra_match = doc! {
-        "participants.id": auth_user_id
-    };
-
-    // Filter by school_id if present, otherwise get main database conversations
-    if let Some(school_id) = school_id {
-        extra_match.insert("school_id", school_id);
-    } else {
-        // Fetch conversations without school_id (main database conversations)
-        extra_match.insert("school_id", doc! { "$exists": false });
-    }
+    let service = ConversationService::new(postgres_pool(&state));
 
     let result = match service
-        .get_all_with_relations(Some(limit), Some(skip), Some(extra_match))
+        .get_all_with_relations(Some(limit), Some(skip), auth_user_id, school_id)
         .await
     {
         Ok(data) => data,
@@ -308,7 +288,7 @@ async fn get_conversations(
 
 #[get("/{id}")]
 async fn get_conversation(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     state: web::Data<AppState>,
     path: web::Path<String>,
@@ -316,8 +296,7 @@ async fn get_conversation(
     let auth_user = user.into_inner();
 
     let id = path.into_inner();
-    let db = get_database(&req, &state);
-    let service = ConversationService::new(&db);
+    let service = ConversationService::new(postgres_pool(&state));
 
     let auth_user_id = match ObjectId::parse_str(&auth_user.id) {
         Ok(id) => id,
@@ -328,13 +307,8 @@ async fn get_conversation(
         }
     };
 
-    // Fetch conversation with participant check in one query
-    let extra_match = doc! {
-        "participants.id": auth_user_id
-    };
-
     let conversation = match service
-        .find_one_with_relations(Some(&IdType::String(id)), Some(extra_match))
+        .find_one_with_relations(&IdType::String(id), auth_user_id)
         .await
     {
         Ok(conv) => conv,
@@ -353,7 +327,7 @@ async fn get_conversation(
 
 #[get("/{id}/key")]
 async fn get_conversation_key(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     state: web::Data<AppState>,
     path: web::Path<String>,
@@ -378,8 +352,7 @@ async fn get_conversation_key(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = ConversationService::new(&db);
+    let service = ConversationService::new(postgres_pool(&state));
 
     // Get key directly - if it doesn't exist, user is not a participant
     let key = match service

@@ -5,8 +5,11 @@ use crate::{
     domain::class_subject::{ClassSubject, ClassSubjectPartial},
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{class_subject_service::ClassSubjectService, event_service::EventService},
-    utils::{api_utils::build_extra_match, db_utils::get_database},
+    services::{
+        class_subject_service::{ClassSubjectQuery, ClassSubjectService},
+        event_service::EventService,
+    },
+    utils::request_context::{postgres_pool, request_context},
 };
 
 #[get("")]
@@ -15,16 +18,15 @@ async fn get_all_class_subjects(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let subject_query = match ClassSubjectQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, subject_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -34,24 +36,21 @@ async fn get_all_class_subjects(
 
 #[get("/others")]
 async fn get_all_class_subjects_with_others(
+    req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
-    req: HttpRequest,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
-    // Build extra match only once
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let subject_query = match ClassSubjectQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    let req_result = service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
-        .await;
-
-    match req_result {
+    match service
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, subject_query)
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -59,15 +58,21 @@ async fn get_all_class_subjects_with_others(
 
 #[get("/{id}")]
 async fn get_class_subject_by_id(
+    req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
-    req: HttpRequest,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
     let id = IdType::from_string(path.into_inner());
-    match service.find_one(Some(&id), None).await {
+
+    match service
+        .find_one(
+            Some(&id),
+            Some(ClassSubjectQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(subject) => HttpResponse::Ok().json(subject),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -79,14 +84,14 @@ async fn get_class_subject_by_match(
     state: web::Data<AppState>,
     query: web::Query<RequestQuery>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let subject_query = match ClassSubjectQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one(None, extra_match).await {
+    match service.find_one(None, subject_query).await {
         Ok(subject) => HttpResponse::Ok().json(subject),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -98,11 +103,17 @@ async fn get_class_subject_by_id_others(
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
     let id = IdType::from_string(path.into_inner());
-    match service.find_one_with_relations(Some(&id), None).await {
+
+    match service
+        .find_one_with_relations(
+            Some(&id),
+            Some(ClassSubjectQuery::from_school_context(context.school_id)),
+        )
+        .await
+    {
         Ok(subject) => HttpResponse::Ok().json(subject),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -114,35 +125,34 @@ async fn get_class_subject_by_match_others(
     state: web::Data<AppState>,
     query: web::Query<RequestQuery>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let subject_query = match ClassSubjectQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one_with_relations(None, extra_match).await {
+    match service.find_one_with_relations(None, subject_query).await {
         Ok(subject) => HttpResponse::Ok().json(subject),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
 #[get("/count")]
-async fn count_students(
+async fn count_subjects(
     req: HttpRequest,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let subject_query = match ClassSubjectQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .count_subject(query.filter.clone(), extra_match)
+        .count_subject(query.filter.clone(), subject_query)
         .await
     {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
@@ -156,13 +166,20 @@ async fn create_class_subject(
     state: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
+    let service = ClassSubjectService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let mut subject = data.into_inner();
+    if subject.school_id.is_none() {
+        if let Some(school_id) = context.school_id {
+            subject.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
+    }
 
-    let service = ClassSubjectService::new(&db);
-
-    match service.create(data.into_inner()).await {
+    match service.create(subject).await {
         Ok(subject) => {
-            // Broadcast event
             let clone = subject.clone();
             let state_clone = state.clone();
 
@@ -192,13 +209,11 @@ async fn update_class_subject(
     state: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
+    let service = ClassSubjectService::new(postgres_pool(&state));
     let id = IdType::from_string(path.into_inner());
+
     match service.update_subject(&id, &data.into_inner()).await {
         Ok(subject) => {
-            // event
             let clone = subject.clone();
             let state_clone = state.clone();
             actix_rt::spawn(async move {
@@ -226,9 +241,7 @@ async fn delete_class_subject(
     state: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = ClassSubjectService::new(&db);
-
+    let service = ClassSubjectService::new(postgres_pool(&state));
     let id = IdType::from_string(path.into_inner());
 
     match service.delete_subject(&id).await {
@@ -259,10 +272,9 @@ fn blueprint(cfg: &mut web::ServiceConfig) {
         .service(get_all_class_subjects_with_others)
         .service(get_class_subject_by_match)
         .service(get_class_subject_by_match_others)
-        .service(count_students)
+        .service(count_subjects)
         .service(get_class_subject_by_id)
         .service(get_class_subject_by_id_others)
-        // Add all other services here...
         .service(
             web::scope("")
                 .wrap(crate::middleware::jwt_middleware::JwtMiddleware)

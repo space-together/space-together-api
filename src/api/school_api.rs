@@ -12,7 +12,6 @@ use crate::{
     services::{
         event_service::EventService, school_service::SchoolService, user_service::UserService,
     },
-    utils::api_utils::build_extra_match,
 };
 
 #[get("")]
@@ -20,17 +19,9 @@ async fn get_all_schools(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
-        .await
-    {
+    match service.get_all_for_query(&query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -39,7 +30,7 @@ async fn get_all_schools(
 #[get("/{id}")]
 async fn get_school_by_id(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
     match service.find_one(Some(&id), None).await {
         Ok(school) => HttpResponse::Ok().json(school),
@@ -52,14 +43,9 @@ async fn get_school_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.find_one(None, extra_match).await {
+    match service.find_by_request_query(&query).await {
         Ok(school) => HttpResponse::Ok().json(school),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -79,7 +65,7 @@ async fn create_school(
         }));
     }
 
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
     match service.create(data.into_inner()).await {
         Ok(school) => {
@@ -108,7 +94,7 @@ async fn create_school(
                 }
             };
 
-            let user_repo = UserRepo::new(&state.db.main_db());
+            let user_repo = UserRepo::new(&state.pg.pool);
             let user_service = UserService::new(&user_repo);
 
             let user_id = IdType::from_string(&logged_user.id);
@@ -150,7 +136,7 @@ async fn update_school(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
     match service.update(&id, &data.into_inner()).await {
         Ok(school) => {
@@ -183,7 +169,7 @@ async fn delete_school(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
     match service.delete(&id).await {
         Ok(school) => {
@@ -214,14 +200,9 @@ async fn count_schools(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
 
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.count(query.filter.clone(), extra_match).await {
+    match service.count_for_query(&query).await {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -237,8 +218,8 @@ async fn search_school_members(
     let school_id = path.into_inner();
 
     // Get school to verify it exists and get database name
-    let school_service = SchoolService::new(&state.db.main_db());
-    let school = match school_service
+    let school_service = SchoolService::new(&state.pg.pool);
+    let _school = match school_service
         .find_one(Some(&IdType::from_string(&school_id)), None)
         .await
     {
@@ -246,30 +227,8 @@ async fn search_school_members(
         Err(err) => return HttpResponse::NotFound().json(err),
     };
 
-    let school_db_name = match school.database_name {
-        Some(name) => name,
-        None => {
-            return HttpResponse::BadRequest().json(AppError {
-                message: "School database not configured".to_string(),
-            })
-        }
-    };
-
-    let db = state.db.get_db(&school_db_name);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
     match school_service
-        .search_members(
-            &db,
-            query.filter.clone(),
-            query.limit,
-            query.skip,
-            extra_match,
-        )
+        .search_members(&school_id, query.filter.clone(), query.limit, query.skip)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -279,7 +238,7 @@ async fn search_school_members(
 
 #[post("/refresh-school-token")]
 async fn refresh_school_token(req: HttpRequest, state: web::Data<AppState>) -> impl Responder {
-    let school_service = SchoolService::new(&state.db.main_db());
+    let school_service = SchoolService::new(&state.pg.pool);
 
     // Extract raw School-Token header
     let token = match req.headers().get("School-Token") {
@@ -325,7 +284,7 @@ async fn setup_school_academics(
         }));
     }
 
-    let service = SchoolService::new(&state.db.main_db());
+    let service = SchoolService::new(&state.pg.pool);
     let target_school_id = IdType::from_string(target_school_id_str);
 
     match service

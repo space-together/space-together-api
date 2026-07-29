@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -14,6 +13,7 @@ use crate::{
         guardian::GuardianInfo,
     },
     helpers::object_id_helpers,
+    utils::object_id::ObjectId,
 };
 
 use super::common_details::Address;
@@ -46,7 +46,7 @@ pub struct User {
     // =========================================================
     pub image_id: Option<String>,
     pub image: Option<String>,
-    pub background_images: Option<Vec<Image>>, // GPT added for profile customization which image is url and id all are string and not optional
+    pub background_images: Option<Vec<Image>>,
     pub bio: Option<String>,
     pub disable: Option<bool>,
 

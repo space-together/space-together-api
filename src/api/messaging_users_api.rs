@@ -1,5 +1,4 @@
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -8,6 +7,7 @@ use crate::{
     errors::AppError,
     middleware::school_token_middleware::OptionalSchoolTokenMiddleware,
     services::user_public_key_service::UserPublicKeyService,
+    utils::{object_id::ObjectId, request_context::postgres_pool},
 };
 
 #[derive(Debug, Deserialize)]
@@ -39,20 +39,13 @@ async fn upload_public_key(
     let user_id = match ObjectId::parse_str(&auth_user.id) {
         Ok(id) => id,
         Err(_) => {
-            return HttpResponse::BadRequest().json(AppError {
-                message: "Invalid user ID".to_string(),
-            })
+            return HttpResponse::BadRequest().json(AppError { message: "Invalid user ID".to_string() })
         }
     };
 
-    // Use main database for public keys (not school-specific)
-    let db = &state.db.main_db();
-    let service = UserPublicKeyService::new(db);
+    let service = UserPublicKeyService::new(postgres_pool(&state));
 
-    match service
-        .upsert_public_key(user_id, body.public_key.clone(), body.key_algorithm.clone())
-        .await
-    {
+    match service.upsert_public_key(user_id, body.public_key.clone(), body.key_algorithm.clone()).await {
         Ok(_) => HttpResponse::Ok().json(UploadPublicKeyResponse {
             message: "Public key uploaded successfully".to_string(),
             user_id: auth_user.id,
@@ -71,36 +64,26 @@ async fn get_public_keys(
     let user_ids_str = match query.get("user_ids") {
         Some(ids) => ids,
         None => {
-            return HttpResponse::BadRequest().json(AppError {
-                message: "user_ids parameter is required".to_string(),
-            })
+            return HttpResponse::BadRequest().json(AppError { message: "user_ids parameter is required".to_string() })
         }
     };
 
-    // Parse comma-separated user IDs
     let user_ids: Vec<ObjectId> = user_ids_str
         .split(',')
         .filter_map(|id| ObjectId::parse_str(id.trim()).ok())
         .collect();
 
     if user_ids.is_empty() {
-        return HttpResponse::BadRequest().json(AppError {
-            message: "At least one valid user ID is required".to_string(),
-        });
+        return HttpResponse::BadRequest().json(AppError { message: "At least one valid user ID is required".to_string() });
     }
 
     if user_ids.len() > 50 {
-        return HttpResponse::BadRequest().json(AppError {
-            message: "Maximum 50 user IDs allowed per request".to_string(),
-        });
+        return HttpResponse::BadRequest().json(AppError { message: "Maximum 50 user IDs allowed per request".to_string() });
     }
 
-    // Use main database for public keys (not school-specific)
-    let db = &state.db.main_db();
-    let service = UserPublicKeyService::new(db);
+    let service = UserPublicKeyService::new(postgres_pool(&state));
 
-    // Automatically generate keys for users who don't have them
-    match service.get_or_create_public_keys(user_ids.clone()).await {
+    match service.get_or_create_public_keys(user_ids).await {
         Ok(public_keys) => HttpResponse::Ok().json(GetPublicKeysResponse { public_keys }),
         Err(err) => HttpResponse::BadRequest().json(err),
     }

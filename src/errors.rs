@@ -1,5 +1,4 @@
 use actix_web::{HttpResponse, ResponseError};
-use mongodb::error::Error as MongoError;
 use serde::Serialize;
 use std::fmt;
 
@@ -14,20 +13,10 @@ impl fmt::Display for AppError {
     }
 }
 
-// Implement ResponseError for actix_web
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         HttpResponse::InternalServerError().json(serde_json::json!({
             "error": self.message
         }))
-    }
-}
-
-// ✅ Implement From<MongoError> separately
-impl From<MongoError> for AppError {
-    fn from(err: MongoError) -> Self {
-        AppError {
-            message: format!("MongoDB Error: {}", err),
-        }
     }
 }

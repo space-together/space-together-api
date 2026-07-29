@@ -5,15 +5,11 @@ use actix_web::{
 use futures::future::{ok, LocalBoxFuture, Ready};
 use std::rc::Rc;
 
-use crate::config::mongo_manager::MongoManager;
-
-pub struct TenantMiddleware {
-    pub mongo: MongoManager,
-}
+pub struct TenantMiddleware;
 
 impl TenantMiddleware {
-    pub fn new(mongo: MongoManager) -> Self {
-        Self { mongo }
+    pub fn new() -> Self {
+        Self
     }
 }
 
@@ -31,14 +27,12 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         ok(TenantMiddlewareService {
             service: Rc::new(service),
-            mongo: self.mongo.clone(),
         })
     }
 }
 
 pub struct TenantMiddlewareService<S> {
     service: Rc<S>,
-    mongo: MongoManager,
 }
 
 impl<S, B> Service<ServiceRequest> for TenantMiddlewareService<S>
@@ -54,7 +48,6 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let srv = Rc::clone(&self.service);
-        let mongo = self.mongo.clone();
 
         Box::pin(async move {
             // 1) Try header X-School-ID
@@ -78,11 +71,7 @@ where
 
             // if school_id is empty or equals "localhost", skip and continue (global endpoints)
             if !school_id.is_empty() && school_id != "localhost" {
-                // compute db name
-                let db_name = mongo.school_db_name_from_id(&school_id);
-                let db_handle = mongo.get_db(&db_name);
-                // attach db_handle and school_id to request extensions
-                req.extensions_mut().insert(db_handle);
+                // Attach only school context. PostgreSQL uses one database for all schools.
                 req.extensions_mut().insert(school_id);
             }
 

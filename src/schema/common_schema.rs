@@ -1,7 +1,8 @@
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{domain::common_details::UserRole, helpers::object_id_helpers};
+use crate::{
+    domain::common_details::UserRole, helpers::object_id_helpers, utils::object_id::ObjectId,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActorRef<R = UserRole> {

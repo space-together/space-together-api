@@ -8,7 +8,7 @@ pub struct CollectionStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DatabaseStats {
+pub struct DbStats {
     pub total_documents: u64,
     pub total_size_bytes: String,
     pub total_collection: usize,

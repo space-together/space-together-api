@@ -1,3 +1,7 @@
+// Many service/repository/guard helpers are defined ahead of being wired into
+// routes. Silence dead-code noise crate-wide instead of deleting future-use API.
+#![allow(dead_code)]
+
 mod api;
 mod config;
 mod controller;
@@ -28,8 +32,14 @@ async fn main() -> std::io::Result<()> {
     let port = env::var("PORT").unwrap_or_else(|_| "4646".to_string());
     let address = format!("0.0.0.0:{port}");
 
-    let mongo_manager = config::db::init_mongo_manager().await;
-    let state = web::Data::new(config::state::AppState::new(mongo_manager.clone()));
+    let pg_manager = config::db::init_postgres_manager()
+        .await
+        .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))?;
+    pg_manager
+        .run_migrations()
+        .await
+        .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))?;
+    let state = web::Data::new(config::state::AppState::new(pg_manager.clone()));
 
     println!("🚀 Space-Together backend starting on {address}");
 
@@ -44,9 +54,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(crate::middleware::logging::RequestLoggingMiddleware)
             .wrap(cors)
-            .wrap(crate::middleware::tenant_middleware::TenantMiddleware::new(
-                mongo_manager.clone(),
-            ))
+            .wrap(crate::middleware::tenant_middleware::TenantMiddleware::new())
             .app_data(state.clone())
             .configure(api::init_routes)
     })

@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -12,6 +11,7 @@ use crate::{
     },
     helpers::object_id_helpers,
     make_partial,
+    utils::object_id::ObjectId,
 };
 
 // this line

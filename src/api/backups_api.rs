@@ -6,10 +6,14 @@ use crate::{
     guards::role_guard::check_admin,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::backup_service::BackupService,
-    utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
-    },
+    utils::{object_id::parse_object_id_value, request_context::postgres_pool},
 };
+
+fn school_id_from_state(_state: &web::Data<AppState>, req: &HttpRequest) -> Option<String> {
+    use actix_web::HttpMessage;
+    use crate::models::school_token_model::SchoolToken;
+    req.extensions().get::<SchoolToken>().map(|t| t.id.clone())
+}
 
 #[get("")]
 async fn get_all_backups(
@@ -17,18 +21,9 @@ async fn get_all_backups(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
-        .await
-    {
+    let service = BackupService::new(postgres_pool(&state));
+    let school_id = school_id_from_state(&state, &req);
+    match service.get_all(query.filter.clone(), query.limit, query.skip, school_id.as_deref()).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -40,18 +35,9 @@ async fn get_all_backups_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
-        .await
-    {
+    let service = BackupService::new(postgres_pool(&state));
+    let school_id = school_id_from_state(&state, &req);
+    match service.get_all_with_relations(query.filter.clone(), query.limit, query.skip, school_id.as_deref()).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -59,14 +45,11 @@ async fn get_all_backups_with_relations(
 
 #[get("/{id}")]
 async fn get_backup_by_id(
-    req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
+    let service = BackupService::new(postgres_pool(&state));
     match service.find_one(Some(&id), None).await {
         Ok(backup) => HttpResponse::Ok().json(backup),
         Err(err) => HttpResponse::NotFound().json(err),
@@ -75,14 +58,11 @@ async fn get_backup_by_id(
 
 #[get("/{id}/others")]
 async fn get_backup_by_id_with_relations(
-    req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
+    let service = BackupService::new(postgres_pool(&state));
     match service.find_one_with_relations(Some(&id), None).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
@@ -91,33 +71,22 @@ async fn get_backup_by_id_with_relations(
 
 #[post("/manual")]
 async fn create_manual_backup(
-    req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // Only ADMIN can create manual backups
     if let Err(err_msg) = check_admin(&user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err_msg.to_string()
-        }));
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err_msg.to_string() }));
     }
 
-    // Get school_id from user context
     let school_id = match user.current_school_id.as_ref() {
         Some(id) => match parse_object_id_value(id) {
             Ok(oid) => oid,
             Err(err) => return HttpResponse::BadRequest().json(err),
         },
-        None => {
-            return HttpResponse::BadRequest().json(serde_json::json!({
-                "message": "School ID not found in user context"
-            }))
-        }
+        None => return HttpResponse::BadRequest().json(serde_json::json!({ "message": "School ID not found in user context" })),
     };
 
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
+    let service = BackupService::new(postgres_pool(&state));
     match service.create_manual_backup(school_id, &user, &state).await {
         Ok(backup) => HttpResponse::Created().json(backup),
         Err(err) => HttpResponse::BadRequest().json(err),
@@ -126,30 +95,22 @@ async fn create_manual_backup(
 
 #[post("/{id}/restore")]
 async fn restore_backup(
-    req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // Only ADMIN can restore backups
     if let Err(err_msg) = check_admin(&user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err_msg.to_string()
-        }));
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err_msg.to_string() }));
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
+    let service = BackupService::new(postgres_pool(&state));
 
-    // Verify backup belongs to user's school
     match service.find_one(Some(&id), None).await {
         Ok(backup) => {
             let backup_school_id = backup.school_id.map(|oid| oid.to_hex());
             if backup_school_id != user.current_school_id {
-                return HttpResponse::Forbidden().json(serde_json::json!({
-                    "message": "Cannot restore backup from another school"
-                }));
+                return HttpResponse::Forbidden().json(serde_json::json!({ "message": "Cannot restore backup from another school" }));
             }
         }
         Err(err) => return HttpResponse::NotFound().json(err),
@@ -163,22 +124,16 @@ async fn restore_backup(
 
 #[delete("/{id}")]
 async fn delete_backup(
-    req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    // Only ADMIN can delete backups
     if let Err(err) = check_admin(&user) {
-        return HttpResponse::Forbidden().json(serde_json::json!({
-            "message": err.to_string()
-        }));
+        return HttpResponse::Forbidden().json(serde_json::json!({ "message": err.to_string() }));
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
+    let service = BackupService::new(postgres_pool(&state));
     match service.delete(&id).await {
         Ok(backup) => HttpResponse::Ok().json(backup),
         Err(err) => HttpResponse::BadRequest().json(err),
@@ -191,18 +146,9 @@ async fn count_backups(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = BackupService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service
-        .count_backups(query.filter.clone(), extra_match)
-        .await
-    {
+    let service = BackupService::new(postgres_pool(&state));
+    let school_id = school_id_from_state(&state, &req);
+    match service.count_backups(query.filter.clone(), school_id.as_deref()).await {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
         Err(err) => HttpResponse::BadRequest().json(err),
     }

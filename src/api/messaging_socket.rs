@@ -1,10 +1,9 @@
 use actix_web::{get, web, Error, HttpMessage, HttpRequest, HttpResponse};
 use actix_ws::Message;
 use futures_util::StreamExt;
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::config::state::AppState;
+use crate::{config::state::AppState, utils::object_id::ObjectId};
 
 // WebSocket message types
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -57,10 +56,10 @@ async fn websocket_handler(
 
     let conversation_id = path.into_inner();
 
-    // Verify user is participant in conversation
-    let db = state.db.get_db(&format!("school_{}", school_id.to_hex()));
+    let _school_id = school_id;
 
-    let conv_service = crate::services::conversation_service::ConversationService::new(&db);
+    let conv_service =
+        crate::services::conversation_service::ConversationService::new(&state.pg.pool);
     let conversation_oid = ObjectId::parse_str(&conversation_id)
         .map_err(|_| actix_web::error::ErrorBadRequest("Invalid conversation ID"))?;
 

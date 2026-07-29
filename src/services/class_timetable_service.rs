@@ -1,9 +1,6 @@
 use actix_web::web;
 use chrono::Weekday;
-use mongodb::{
-    bson::{self, doc, oid::ObjectId, Document},
-    Collection, Database,
-};
+use sqlx::{postgres::PgRow, PgPool, Postgres, QueryBuilder, Row};
 
 use crate::{
     config::state::AppState,
@@ -14,33 +11,65 @@ use crate::{
     errors::AppError,
     handler::class_timetable_handler::auto_generate_schedule,
     models::{id_model::IdType, school_token_model::SchoolToken},
-    repositories::base_repo::BaseRepository,
     services::{
-        class_subject_service::ClassSubjectService, education_year_service::EducationYearService,
+        class_subject_service::{ClassSubjectQuery, ClassSubjectService},
+        education_year_service::{EducationYearQuery, EducationYearService},
     },
-    utils::mongo_utils::extract_valid_fields,
+    utils::object_id::ObjectId,
 };
 
 pub struct ClassTimetableService {
-    pub collection: Collection<ClassTimetable>,
+    pub pool: PgPool,
 }
 
 impl ClassTimetableService {
-    pub fn new(db: &Database) -> Self {
-        Self {
-            collection: db.collection::<ClassTimetable>("class_timetables"),
-        }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
-    // -------------------------------------------------------------------------
-    // 1. Create (Standard)
-    // -------------------------------------------------------------------------
+    fn db_error(err: sqlx::Error) -> AppError {
+        AppError { message: format!("PostgreSQL Error: {}", err) }
+    }
+
+    fn new_id() -> String {
+        ObjectId::new().to_hex()
+    }
+
+    fn id_to_string(id: &IdType) -> Result<String, AppError> {
+        Ok(IdType::to_object_id(id)?.to_hex())
+    }
+
+    fn parse_oid(raw: &str, field: &str) -> Result<ObjectId, AppError> {
+        ObjectId::parse_str(raw).map_err(|e| AppError {
+            message: format!("Invalid {} ObjectId-compatible ID: {}", field, e),
+        })
+    }
+
+    fn row_to_timetable(row: PgRow) -> Result<ClassTimetable, AppError> {
+        let id: String = row.try_get("id").map_err(Self::db_error)?;
+        let class_id_str: String = row.try_get("class_id").map_err(Self::db_error)?;
+        let edu_year_str: String = row.try_get("education_year_id").map_err(Self::db_error)?;
+        let weekly_json: serde_json::Value = row.try_get("weekly_schedule").unwrap_or(serde_json::Value::Array(vec![]));
+
+        Ok(ClassTimetable {
+            id: Some(Self::parse_oid(&id, "id")?),
+            class_id: Self::parse_oid(&class_id_str, "class_id")?,
+            education_year_id: Self::parse_oid(&edu_year_str, "education_year_id")?,
+            term_order: row.try_get("term_order").unwrap_or(1),
+            weekly_schedule: serde_json::from_value(weekly_json).unwrap_or_default(),
+            disabled: row.try_get("disabled").ok(),
+            created_at: row.try_get("created_at").ok(),
+            updated_at: row.try_get("updated_at").ok(),
+        })
+    }
+
+    fn select_sql() -> &'static str {
+        "SELECT id, class_id, education_year_id, term_order, weekly_schedule, disabled, \
+         created_at, updated_at FROM class_timetables WHERE 1=1"
+    }
+
     pub async fn create(&self, dto: ClassTimetable) -> Result<ClassTimetable, AppError> {
-        // 1. Check if a timetable already exists for this class and year
-        if let Ok(_) = self
-            .find_by_class_and_year(&dto.class_id, &dto.education_year_id)
-            .await
-        {
+        if self.find_by_class_and_year(&dto.class_id, &dto.education_year_id).await.is_ok() {
             return Err(AppError {
                 message: format!(
                     "Timetable for class {} in year {} already exists",
@@ -49,41 +78,44 @@ impl ClassTimetableService {
             });
         }
 
-        // 2. Validate the schedule structure (overlaps, start times)
         for week_schedule in &dto.weekly_schedule {
             if let Err(e) = week_schedule.validate() {
-                return Err(AppError {
-                    message: format!("Validation error on {}: {}", week_schedule.day, e),
-                });
+                return Err(AppError { message: format!("Validation error on {}: {}", week_schedule.day, e) });
             }
         }
 
-        // 3. Prepare document
-        let new_timetable = dto.to_partial();
+        let id = Self::new_id();
+        let class_id_str = dto.class_id.to_hex();
+        let edu_year_str = dto.education_year_id.to_hex();
+        let weekly_json = serde_json::to_value(&dto.weekly_schedule).unwrap_or(serde_json::Value::Array(vec![]));
 
-        let full_doc = bson::to_document(&new_timetable).map_err(|e| AppError {
-            message: format!("Failed to serialize create: {}", e),
-        })?;
+        sqlx::query(
+            r#"INSERT INTO class_timetables (id, class_id, education_year_id, term_order, weekly_schedule, disabled, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,now(),now())"#,
+        )
+        .bind(&id)
+        .bind(&class_id_str)
+        .bind(&edu_year_str)
+        .bind(dto.term_order)
+        .bind(&weekly_json)
+        .bind(dto.disabled.unwrap_or(false))
+        .execute(&self.pool)
+        .await
+        .map_err(Self::db_error)?;
 
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        repo.create::<ClassTimetable>(full_doc, None).await
+        self.find_one_by_id(&IdType::from_string(id)).await
     }
 
-    // -------------------------------------------------------------------------
-    // 2. Read (Find One, Find All, Find by Class)
-    // -------------------------------------------------------------------------
     pub async fn find_one_by_id(&self, id: &IdType) -> Result<ClassTimetable, AppError> {
-        let obj = IdType::to_object_id(id)?;
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-
-        let filter = doc! { "_id": obj };
-        let item = repo.find_one::<ClassTimetable>(filter, None).await?;
-
-        match item {
-            Some(s) => Ok(s),
-            None => Err(AppError {
-                message: "Class timetable not found".to_string(),
-            }),
+        let id_str = Self::id_to_string(id)?;
+        let row = sqlx::query(&format!("{} AND id = $1", Self::select_sql()))
+            .bind(&id_str)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::db_error)?;
+        match row {
+            Some(r) => Self::row_to_timetable(r),
+            None => Err(AppError { message: "Class timetable not found".to_string() }),
         }
     }
 
@@ -92,20 +124,15 @@ impl ClassTimetableService {
         class_id: &ObjectId,
         education_year_id: &ObjectId,
     ) -> Result<ClassTimetable, AppError> {
-        let repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-
-        let filter = doc! {
-            "class_id": class_id,
-            "education_year_id": education_year_id
-        };
-
-        let item = repo.find_one::<ClassTimetable>(filter, None).await?;
-
-        match item {
-            Some(s) => Ok(s),
-            None => Err(AppError {
-                message: "Class timetable not found for this class/year".to_string(),
-            }),
+        let row = sqlx::query(&format!("{} AND class_id = $1 AND education_year_id = $2 LIMIT 1", Self::select_sql()))
+            .bind(class_id.to_hex())
+            .bind(education_year_id.to_hex())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(Self::db_error)?;
+        match row {
+            Some(r) => Self::row_to_timetable(r),
+            None => Err(AppError { message: "Class timetable not found for this class/year".to_string() }),
         }
     }
 
@@ -115,79 +142,67 @@ impl ClassTimetableService {
         limit: Option<i64>,
         skip: Option<i64>,
     ) -> Result<Paginated<ClassTimetable>, AppError> {
-        let base_repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
+        let limit = limit.unwrap_or(20).max(1);
+        let skip = skip.unwrap_or(0).max(0);
 
-        // Fields to search against string filter
-        let searchable = ["academic_year"];
+        let mut cq = QueryBuilder::<Postgres>::new("SELECT count(*) FROM class_timetables WHERE 1=1");
+        if let Some(ref f) = filter {
+            if !f.trim().is_empty() {
+                let like = format!("%{}%", f.to_lowercase());
+                cq.push(" AND lower(class_id) LIKE ").push_bind(like);
+            }
+        }
+        let total: i64 = cq.build_query_scalar().fetch_one(&self.pool).await.map_err(Self::db_error)?;
 
-        let (data, total, total_pages, current_page) = base_repo
-            .get_all::<ClassTimetable>(filter, &searchable, limit, skip, None)
-            .await?;
+        let mut dq = QueryBuilder::<Postgres>::new(Self::select_sql());
+        if let Some(ref f) = filter {
+            if !f.trim().is_empty() {
+                let like = format!("%{}%", f.to_lowercase());
+                dq.push(" AND lower(class_id) LIKE ").push_bind(like);
+            }
+        }
+        dq.push(" ORDER BY updated_at DESC LIMIT ").push_bind(limit).push(" OFFSET ").push_bind(skip);
 
-        Ok(Paginated {
-            data,
-            total,
-            total_pages,
-            current_page,
-        })
+        let rows = dq.build().fetch_all(&self.pool).await.map_err(Self::db_error)?;
+        let data = rows.into_iter().map(Self::row_to_timetable).collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Paginated { data, total, total_pages: ((total as f64) / (limit as f64)).ceil() as i64, current_page: (skip / limit) + 1 })
     }
 
-    // -------------------------------------------------------------------------
-    // 3. Update
-    // -------------------------------------------------------------------------
     pub async fn update_timetable(
         &self,
         id: &IdType,
-        update: &ClassTimetablePartial,
+        dto: &ClassTimetablePartial,
     ) -> Result<ClassTimetable, AppError> {
-        let obj_id = IdType::to_object_id(id)?;
+        let id_str = Self::id_to_string(id)?;
+        let mut sql = QueryBuilder::<Postgres>::new("UPDATE class_timetables SET updated_at = now()");
+        let mut touched = false;
 
-        // Ensure we aren't updating to a class/year combo that already exists elsewhere
-        if let (Some(cid), Some(year)) = (update.class_id, &update.education_year_id) {
-            if let Ok(existing) = self.find_by_class_and_year(&cid, year).await {
-                if existing.id != Some(obj_id) {
-                    return Err(AppError {
-                        message: "Timetable for this class/year already exists".into(),
-                    });
-                }
-            }
+        if let Some(v) = &dto.class_id { sql.push(", class_id = ").push_bind(v.to_hex()); touched = true; }
+        if let Some(v) = &dto.education_year_id { sql.push(", education_year_id = ").push_bind(v.to_hex()); touched = true; }
+        if let Some(v) = dto.term_order { sql.push(", term_order = ").push_bind(v); touched = true; }
+        if let Some(v) = dto.disabled { sql.push(", disabled = ").push_bind(v); touched = true; }
+        if let Some(ref v) = dto.weekly_schedule {
+            let j = serde_json::to_value(v).unwrap_or(serde_json::Value::Array(vec![]));
+            sql.push(", weekly_schedule = ").push_bind(j); touched = true;
         }
 
-        // Validate nested periods if they are being updated
-        if let Some(schedule) = &update.weekly_schedule {
-            for day_sched in schedule {
-                if let Err(e) = day_sched.validate() {
-                    return Err(AppError {
-                        message: format!("Invalid schedule update: {}", e),
-                    });
-                }
-            }
-        }
+        if !touched { return Err(AppError { message: "No valid fields to update".into() }); }
 
-        let base_repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
+        sql.push(" WHERE id = ").push_bind(&id_str);
+        sql.build().execute(&self.pool).await.map_err(Self::db_error)?;
 
-        // Add updated_at
-        let update_clone = update.clone();
-
-        let full_doc = bson::to_document(&update_clone).map_err(|e| AppError {
-            message: format!("Failed to serialize update: {}", e),
-        })?;
-
-        let update_doc = extract_valid_fields(full_doc);
-
-        base_repo
-            .update_one_and_fetch::<ClassTimetable>(id, update_doc)
-            .await
+        self.find_one_by_id(id).await
     }
 
-    // -------------------------------------------------------------------------
-    // 4. Delete
-    // -------------------------------------------------------------------------
     pub async fn delete_timetable(&self, id: &IdType) -> Result<ClassTimetable, AppError> {
-        let base_repo = BaseRepository::new(self.collection.clone().clone_with_type::<Document>());
-        let item = self.find_one_by_id(id).await?; // Fetch first to return it
-        base_repo.delete_one(id).await?;
-        Ok(item)
+        let existing = self.find_one_by_id(id).await?;
+        sqlx::query("DELETE FROM class_timetables WHERE id = $1")
+            .bind(Self::id_to_string(id)?)
+            .execute(&self.pool)
+            .await
+            .map_err(Self::db_error)?;
+        Ok(existing)
     }
 
     pub async fn generate_timetable(
@@ -196,60 +211,39 @@ impl ClassTimetableService {
         state: &web::Data<AppState>,
         school_claims: &Option<SchoolToken>,
     ) -> Result<ClassTimetable, AppError> {
-        let main_db = state.db.main_db();
-        let mut school_db = state.db.main_db();
+        let education_service = EducationYearService::new(&state.pg.pool);
+        let subject_service = ClassSubjectService::new(&state.pg.pool);
 
-        if let Some(claims) = school_claims {
-            school_db = state.db.get_db(&claims.database_name);
-        }
+        let (education_year, term_info) = education_service
+            .get_current_year_and_term(None, Some(EducationYearQuery::from_school_context(school_claims.as_ref().map(|c| c.id.clone()))))
+            .await?;
 
-        let education_service = EducationYearService::new(&main_db);
-        let subject_service = ClassSubjectService::new(&school_db);
-
-        let (education_year, term_info) = education_service.get_current_year_and_term(None).await?;
-        let education_year_id = education_year.id;
-
-        let mut term_order = 1;
-        if let Some(term) = term_info {
-            term_order = term.order;
-        }
+        let term_order = term_info.map(|t| t.order).unwrap_or(1);
 
         let class_subjects = subject_service
-            .get_all(
-                None,
-                None,
-                None,
-                Some(doc! {"class_id" : IdType::to_object_id(class_id)?}),
-            )
+            .get_all(None, None, None, Some(ClassSubjectQuery {
+                school_id: school_claims.as_ref().map(|c| c.id.clone()),
+                class_id: Some(IdType::to_object_id(class_id)?.to_hex()),
+                ..ClassSubjectQuery::default()
+            }))
             .await?;
 
         let class_id_obj = IdType::to_object_id(class_id)?;
-
-        let start_time_str = "08:00".to_string();
-        let days_to_schedule = vec![
-            Weekday::Mon,
-            Weekday::Tue,
-            Weekday::Wed,
-            Weekday::Thu,
-            Weekday::Fri,
-        ];
-
+        let education_year_id = education_year.id.unwrap();
+        let days = vec![Weekday::Mon, Weekday::Tue, Weekday::Wed, Weekday::Thu, Weekday::Fri];
         let day_template = DayStructureConfig::standard_day();
 
         let timetable = auto_generate_schedule(
             class_id_obj,
-            education_year_id.unwrap(),
+            education_year_id,
             term_order,
             class_subjects.data,
-            start_time_str,
-            days_to_schedule,
+            "08:00".to_string(),
+            days,
             day_template,
         )
-        .map_err(|err| AppError {
-            message: err.into(),
-        })?;
+        .map_err(|err| AppError { message: err })?;
 
-        let saved = self.create(timetable).await?;
-        Ok(saved)
+        self.create(timetable).await
     }
 }

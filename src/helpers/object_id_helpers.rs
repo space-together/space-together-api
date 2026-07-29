@@ -1,19 +1,14 @@
-use mongodb::bson::{self, oid::ObjectId};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
-use crate::models::id_model::IdType;
+use crate::{models::id_model::IdType, utils::object_id::ObjectId};
 
-// ----------------------------
-// Option<ObjectId>
-// ----------------------------
 pub fn serialize<S>(oid: &Option<ObjectId>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     match oid {
-        Some(oid) if serializer.is_human_readable() => serializer.serialize_str(&oid.to_hex()),
-        Some(oid) => oid.serialize(serializer),
+        Some(oid) => serializer.serialize_str(&oid.to_hex()),
         None => serializer.serialize_none(),
     }
 }
@@ -22,81 +17,32 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<ObjectId>, D::Error
 where
     D: Deserializer<'de>,
 {
-    let v = Value::deserialize(deserializer)?;
-
-    match v {
-        Value::String(s) => Ok(Some(
-            ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?,
-        )),
-        Value::Object(mut map) => {
-            if let Some(Value::String(s)) = map.remove("$oid") {
-                Ok(Some(
-                    ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?,
-                ))
-            } else {
-                Ok(None)
-            }
-        }
-        Value::Null => Ok(None),
-        other => bson::from_bson(bson::to_bson(&other).unwrap())
-            .map(Some)
-            .map_err(serde::de::Error::custom),
-    }
+    let value = Value::deserialize(deserializer)?;
+    parse_optional_object_id_value(value).map_err(serde::de::Error::custom)
 }
 
-// ----------------------------
-// Vec<ObjectId>
-// ----------------------------
-pub fn serialize_vec<S>(oids: &Vec<ObjectId>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize_vec<S>(oids: &[ObjectId], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    if serializer.is_human_readable() {
-        let hex_vec: Vec<String> = oids.iter().map(|oid| oid.to_hex()).collect();
-        hex_vec.serialize(serializer)
-    } else {
-        oids.serialize(serializer)
-    }
+    let ids: Vec<String> = oids.iter().map(|oid| oid.to_hex()).collect();
+    ids.serialize(serializer)
 }
 
 pub fn deserialize_vec<'de, D>(deserializer: D) -> Result<Vec<ObjectId>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let v = Value::deserialize(deserializer)?;
-
-    match v {
-        Value::Array(arr) => {
-            let mut result = Vec::new();
-            for item in arr {
-                match item {
-                    Value::String(s) => {
-                        result.push(ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?)
-                    }
-                    Value::Object(mut map) => {
-                        if let Some(Value::String(s)) = map.remove("$oid") {
-                            result.push(ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            Ok(result)
-        }
-        Value::Null => Ok(vec![]),
-        other => bson::from_bson(bson::to_bson(&other).unwrap()).map_err(serde::de::Error::custom),
-    }
+    let value = Value::deserialize(deserializer)?;
+    parse_object_id_array_value(value).map_err(serde::de::Error::custom)
 }
 
-// ----------------------------
-// Option<Vec<ObjectId>>
-// ----------------------------
 pub fn serialize_opt_vec<S>(oids: &Option<Vec<ObjectId>>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     match oids {
-        Some(vec) => serialize_vec(vec, serializer),
+        Some(ids) => serialize_vec(ids, serializer),
         None => serializer.serialize_none(),
     }
 }
@@ -105,130 +51,76 @@ pub fn deserialize_opt_vec<'de, D>(deserializer: D) -> Result<Option<Vec<ObjectI
 where
     D: Deserializer<'de>,
 {
-    let v = Value::deserialize(deserializer)?;
-
-    match v {
-        Value::Array(arr) => {
-            let mut result = Vec::new();
-            for item in arr {
-                match item {
-                    Value::String(s) => {
-                        result.push(ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?)
-                    }
-                    Value::Object(mut map) => {
-                        if let Some(Value::String(s)) = map.remove("$oid") {
-                            result.push(ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            Ok(Some(result))
-        }
+    let value = Value::deserialize(deserializer)?;
+    match value {
         Value::Null => Ok(None),
-        other => {
-            let parsed: Vec<ObjectId> = bson::from_bson(bson::to_bson(&other).unwrap())
-                .map_err(serde::de::Error::custom)?;
-            Ok(Some(parsed))
-        }
+        other => parse_object_id_array_value(other)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
     }
 }
 
-// ----------------------------
-// ObjectId (non-option)
-// ----------------------------
 pub fn serialize_oid<S>(oid: &ObjectId, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    if serializer.is_human_readable() {
-        serializer.serialize_str(&oid.to_hex())
-    } else {
-        oid.serialize(serializer)
-    }
+    serializer.serialize_str(&oid.to_hex())
 }
 
 pub fn deserialize_oid<'de, D>(deserializer: D) -> Result<ObjectId, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let v = Value::deserialize(deserializer)?;
-
-    match v {
-        // When data comes as string
-        Value::String(s) => ObjectId::parse_str(&s).map_err(serde::de::Error::custom),
-
-        // When data comes as { "$oid": "..." }
-        Value::Object(mut map) => {
-            if let Some(Value::String(s)) = map.remove("$oid") {
-                ObjectId::parse_str(&s).map_err(serde::de::Error::custom)
-            } else {
-                Err(serde::de::Error::custom("Missing $oid field"))
-            }
-        }
-
-        // Handle BSON format
-        other => bson::from_bson(bson::to_bson(&other).unwrap()).map_err(serde::de::Error::custom),
-    }
+    let value = Value::deserialize(deserializer)?;
+    parse_required_object_id_value(value).map_err(serde::de::Error::custom)
 }
 
-// ----------------------------
-///Vec<ObjectId> (non-option)
-// ----------------------------
-
-pub fn serialize_vec_oid<S>(oids: &Vec<ObjectId>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize_vec_oid<S>(oids: &[ObjectId], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    if serializer.is_human_readable() {
-        // Convert each ObjectId to hex string
-        let hex_vec: Vec<String> = oids.iter().map(|oid| oid.to_hex()).collect();
-        hex_vec.serialize(serializer)
-    } else {
-        oids.serialize(serializer)
-    }
+    serialize_vec(oids, serializer)
 }
 
 pub fn deserialize_vec_oid<'de, D>(deserializer: D) -> Result<Vec<ObjectId>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let v = Value::deserialize(deserializer)?;
-
-    match v {
-        // JSON array of IDs
-        Value::Array(arr) => {
-            let mut result = Vec::new();
-            for item in arr {
-                match item {
-                    // Plain string: "6567e9d6..."
-                    Value::String(s) => {
-                        result.push(ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?);
-                    }
-                    // BSON-style: { "$oid": "..." }
-                    Value::Object(mut map) => {
-                        if let Some(Value::String(s)) = map.remove("$oid") {
-                            result.push(ObjectId::parse_str(&s).map_err(serde::de::Error::custom)?);
-                        }
-                    }
-                    _ => {
-                        return Err(serde::de::Error::custom("Invalid ObjectId array element"));
-                    }
-                }
-            }
-            Ok(result)
-        }
-        Value::Null => Ok(vec![]),
-        // Fallback for BSON representation
-        other => bson::from_bson(bson::to_bson(&other).unwrap()).map_err(serde::de::Error::custom),
-    }
+    deserialize_vec(deserializer)
 }
 
 pub fn parse_object_id(id: &IdType) -> Result<ObjectId, String> {
     match id {
-        IdType::String(id_str) => {
-            ObjectId::parse_str(id_str).map_err(|e| format!("Invalid object ID: {}", e))
-        }
-        IdType::ObjectId(oid) => Ok(*oid),
+        IdType::String(id_str) => ObjectId::parse_str(id_str).map_err(|err| err.to_string()),
+        IdType::ObjectId(oid) => Ok(oid.clone()),
+    }
+}
+
+fn parse_optional_object_id_value(value: Value) -> Result<Option<ObjectId>, String> {
+    match value {
+        Value::Null => Ok(None),
+        other => parse_required_object_id_value(other).map(Some),
+    }
+}
+
+fn parse_required_object_id_value(value: Value) -> Result<ObjectId, String> {
+    match value {
+        Value::String(id) => ObjectId::parse_str(&id).map_err(|err| err.to_string()),
+        Value::Object(mut map) => match map.remove("$oid") {
+            Some(Value::String(id)) => ObjectId::parse_str(&id).map_err(|err| err.to_string()),
+            _ => Err("Missing $oid field".to_string()),
+        },
+        _ => Err("Expected ObjectId-compatible string".to_string()),
+    }
+}
+
+fn parse_object_id_array_value(value: Value) -> Result<Vec<ObjectId>, String> {
+    match value {
+        Value::Array(items) => items
+            .into_iter()
+            .map(parse_required_object_id_value)
+            .collect(),
+        Value::Null => Ok(vec![]),
+        _ => Err("Expected ObjectId-compatible array".to_string()),
     }
 }

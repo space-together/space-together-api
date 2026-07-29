@@ -1,9 +1,8 @@
 use crate::{
     helpers::object_id_helpers, make_partial, models::default_model::default_true,
-    utils::time_utils::is_valid_hhmm,
+    utils::{object_id::ObjectId, time_utils::is_valid_hhmm},
 };
 use chrono::{DateTime, Utc, Weekday};
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 make_partial! {

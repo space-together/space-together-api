@@ -10,10 +10,11 @@ use crate::{
     guards::role_guard::{check_admin_or_staff, require_parent_child_access},
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{event_service::EventService, parent_service::ParentService},
-    utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    services::{
+        event_service::EventService,
+        parent_service::{ParentQuery, ParentService},
     },
+    utils::request_context::{postgres_pool, request_context},
 };
 
 // =========================
@@ -31,16 +32,15 @@ async fn get_all_parents(
         return HttpResponse::Forbidden().json(serde_json::json!({ "error": e }));
     }
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ParentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let parent_query = match ParentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, parent_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -59,16 +59,15 @@ async fn get_all_parents_with_relations(
         return HttpResponse::Forbidden().json(serde_json::json!({ "error": e }));
     }
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ParentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let parent_query = match ParentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, parent_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -88,10 +87,11 @@ async fn get_parent_by_id(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let parent_query = Some(ParentQuery::from_school_context(context.school_id));
 
-    match service.find_one(Some(&id), None).await {
+    match service.find_one(Some(&id), parent_query).await {
         Ok(parent) => HttpResponse::Ok().json(parent),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -109,10 +109,14 @@ async fn get_parent_by_id_with_relations(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let parent_query = Some(ParentQuery::from_school_context(context.school_id));
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service
+        .find_one_with_relations(Some(&id), parent_query)
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -129,10 +133,18 @@ async fn create_parent(
         return HttpResponse::Forbidden().json(serde_json::json!({ "error": e }));
     }
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    let parent = data.into_inner();
+    let mut parent = data.into_inner();
+    if parent.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            parent.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
+    }
 
     match service.create(parent).await {
         Ok(parent) => {
@@ -170,8 +182,7 @@ async fn update_parent(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(parent) => {
@@ -208,8 +219,7 @@ async fn delete_parent(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
     match service.delete(&id).await {
         Ok(parent) => {
@@ -245,16 +255,15 @@ async fn count_parents(
         return HttpResponse::Forbidden().json(serde_json::json!({ "error": e }));
     }
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = ParentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let parent_query = match ParentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .count_parents(query.filter.clone(), extra_match)
+        .count_parents(query.filter.clone(), parent_query)
         .await
     {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
@@ -286,19 +295,9 @@ async fn get_parent_dashboard(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
-    // Find parent by user_id
-    let user_oid = match parse_object_id_value(&user.id) {
-        Ok(id) => id,
-        Err(err) => return HttpResponse::BadRequest().json(err),
-    };
-
-    let parent = match service
-        .find_one(None, Some(mongodb::bson::doc! { "user_id": user_oid }))
-        .await
-    {
+    let parent = match service.find_by_user_id(&user.id, Some(&school_id)).await {
         Ok(p) => p,
         Err(err) => return HttpResponse::NotFound().json(err),
     };
@@ -334,8 +333,7 @@ async fn get_student_attendance(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
     // Validate parent-child access using new guard
     if let Err(e) = require_parent_child_access(&user, &student_id, &service).await {
@@ -369,8 +367,7 @@ async fn get_student_results(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
     // Validate parent-child access using new guard
     if let Err(e) = require_parent_child_access(&user, &student_id, &service).await {
@@ -406,8 +403,7 @@ async fn get_student_finance(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
     // Validate parent-child access using new guard
     if let Err(e) = require_parent_child_access(&user, &student_id, &service).await {
@@ -444,19 +440,9 @@ async fn get_parent_announcements(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = ParentService::new(&db);
+    let service = ParentService::new(postgres_pool(&state));
 
-    // Find parent by user_id
-    let user_oid = match parse_object_id_value(&user.id) {
-        Ok(id) => id,
-        Err(err) => return HttpResponse::BadRequest().json(err),
-    };
-
-    let parent = match service
-        .find_one(None, Some(mongodb::bson::doc! { "user_id": user_oid }))
-        .await
-    {
+    let parent = match service.find_by_user_id(&user.id, Some(&school_id)).await {
         Ok(p) => p,
         Err(err) => return HttpResponse::NotFound().json(err),
     };

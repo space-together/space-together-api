@@ -9,8 +9,11 @@ use crate::{
     guards::role_guard::check_admin,
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{event_service::EventService, role_service::RoleService},
-    utils::{api_utils::build_extra_match, db_utils::get_database},
+    services::{
+        event_service::EventService,
+        role_service::{RoleQuery, RoleService},
+    },
+    utils::request_context::{postgres_pool, request_context},
 };
 
 #[get("")]
@@ -19,16 +22,15 @@ async fn get_all_roles(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = match RoleQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, role_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -42,16 +44,15 @@ async fn get_all_roles_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = match RoleQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, role_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -66,10 +67,11 @@ async fn get_role_by_id_with_relations(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = Some(RoleQuery::from_school_context(context.school_id));
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service.find_one_with_relations(Some(&id), role_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -82,10 +84,11 @@ async fn get_role_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = Some(RoleQuery::from_school_context(context.school_id));
 
-    match service.find_one(Some(&id), None).await {
+    match service.find_one(Some(&id), role_query).await {
         Ok(role) => HttpResponse::Ok().json(role),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -97,15 +100,14 @@ async fn get_role_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = match RoleQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one(None, extra_match).await {
+    match service.find_one(None, role_query).await {
         Ok(role) => HttpResponse::Ok().json(role),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -117,14 +119,14 @@ async fn get_role_by_other_match(
     state: web::Data<AppState>,
     query: web::Query<RequestQuery>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = match RoleQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one_with_relations(None, extra_match).await {
+    match service.find_one_with_relations(None, role_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -144,10 +146,19 @@ async fn create_role(
         }));
     }
 
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let mut role = data.into_inner();
+    if role.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            role.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
+    }
 
-    match service.create_role(data.into_inner()).await {
+    match service.create_role(role).await {
         Ok(role) => {
             let role_clone = role.clone();
             let state_clone = state.clone();
@@ -186,8 +197,7 @@ async fn update_role(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
+    let service = RoleService::new(postgres_pool(&state));
 
     match service.update_role(&id, &data.into_inner()).await {
         Ok(role) => {
@@ -227,8 +237,7 @@ async fn delete_role(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
+    let service = RoleService::new(postgres_pool(&state));
 
     match service.delete_role(&id).await {
         Ok(role) => {
@@ -259,15 +268,14 @@ async fn count_roles(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = RoleService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let role_query = match RoleQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.count_roles(query.filter.clone(), extra_match).await {
+    match service.count_roles(query.filter.clone(), role_query).await {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
@@ -288,7 +296,7 @@ struct AssignRoleRequest {
 
 #[post("/assign")]
 async fn assign_role(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     data: web::Json<AssignRoleRequest>,
     state: web::Data<AppState>,
@@ -300,8 +308,7 @@ async fn assign_role(
         }));
     }
 
-    let db = get_database(&req, &state);
-    let service = RoleService::new(&db);
+    let service = RoleService::new(postgres_pool(&state));
 
     let user_id = IdType::from_string(data.user_id.clone());
     let role_id = IdType::from_string(data.role_id.clone());

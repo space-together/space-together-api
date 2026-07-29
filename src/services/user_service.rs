@@ -14,7 +14,8 @@ use crate::{
     },
 };
 use chrono::Utc;
-use mongodb::bson::oid::ObjectId;
+
+use crate::utils::object_id::ObjectId;
 
 pub struct UserService<'a> {
     repo: &'a UserRepo,

@@ -12,8 +12,7 @@ pub fn init() {
     if env::var("RUST_LOG").is_err() {
         env::set_var(
             "RUST_LOG",
-            // debug everything + actix-web requests + mongodb queries
-            "debug,actix_web=debug,mongodb=info",
+            "debug,actix_web=debug",
         );
     }
 

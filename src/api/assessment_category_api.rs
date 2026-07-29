@@ -9,10 +9,12 @@ use crate::{
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
     services::{
-        assessment_category_service::AssessmentCategoryService, event_service::EventService,
+        assessment_category_service::{AssessmentCategoryQuery, AssessmentCategoryService},
+        event_service::EventService,
     },
     utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+        object_id::parse_object_id_value,
+        request_context::{postgres_pool, request_context},
     },
 };
 
@@ -22,16 +24,20 @@ async fn get_all_categories(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = AssessmentCategoryService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = AssessmentCategoryService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let category_query = match AssessmentCategoryQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(
+            query.filter.clone(),
+            query.limit,
+            query.skip,
+            category_query,
+        )
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -46,10 +52,18 @@ async fn get_category_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = AssessmentCategoryService::new(&db);
+    let service = AssessmentCategoryService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
-    match service.find_one(&id).await {
+    match service
+        .find_one(
+            &id,
+            Some(AssessmentCategoryQuery::from_school_context(
+                context.school_id,
+            )),
+        )
+        .await
+    {
         Ok(category) => HttpResponse::Ok().json(category),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -57,7 +71,7 @@ async fn get_category_by_id(
 
 #[get("/validate/{class_subject_id}")]
 async fn validate_weight(
-    req: HttpRequest,
+    _req: HttpRequest,
     path: web::Path<String>,
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
@@ -79,8 +93,7 @@ async fn validate_weight(
         }
     };
 
-    let db = get_database(&req, &state);
-    let service = AssessmentCategoryService::new(&db);
+    let service = AssessmentCategoryService::new(postgres_pool(&state));
 
     match service
         .get_total_weight(&class_subject_id, &education_year_id)
@@ -101,17 +114,24 @@ async fn create_category(
     data: web::Json<AssessmentCategory>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = AssessmentCategoryService::new(&db);
-
+    let service = AssessmentCategoryService::new(postgres_pool(&state));
+    let context = request_context(&req);
     let mut category = data.clone();
 
     if category.created_by.is_none() {
-        let user_id = match parse_object_id_value(&user.id) {
+        let user_id = match IdType::from_string(&user.id).to_object_id() {
             Ok(id) => id,
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
         category.created_by = Some(user_id);
+    }
+    if category.school_id.is_none() {
+        if let Some(school_id) = context.school_id.or_else(|| user.current_school_id.clone()) {
+            category.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(category).await {
@@ -146,8 +166,7 @@ async fn update_category(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = AssessmentCategoryService::new(&db);
+    let service = AssessmentCategoryService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(category) => {
@@ -180,8 +199,7 @@ async fn delete_category(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = AssessmentCategoryService::new(&db);
+    let service = AssessmentCategoryService::new(postgres_pool(&state));
 
     match service.delete(&id).await {
         Ok(category) => {

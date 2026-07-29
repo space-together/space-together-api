@@ -9,10 +9,11 @@ use crate::{
     guards::role_guard::check_admin_staff_or_teacher,
     helpers::event_helpers::get_school_id_from_request,
     models::{api_request_model::RequestQuery, id_model::IdType},
-    services::{event_service::EventService, student_service::StudentService},
-    utils::{
-        api_utils::build_extra_match, db_utils::get_database, object_id::parse_object_id_value,
+    services::{
+        event_service::EventService,
+        student_service::{StudentQuery, StudentService},
     },
+    utils::request_context::{postgres_pool, request_context},
 };
 
 #[get("")]
@@ -21,16 +22,15 @@ async fn get_all_students(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = match StudentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all(query.filter.clone(), query.limit, query.skip, student_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -44,16 +44,15 @@ async fn get_all_students_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = match StudentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, student_query)
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -68,10 +67,14 @@ async fn get_student_by_id_with_relations(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = Some(StudentQuery::from_school_context(context.school_id));
 
-    match service.find_one_with_relations(Some(&id), None).await {
+    match service
+        .find_one_with_relations(Some(&id), student_query)
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -84,10 +87,11 @@ async fn get_student_by_id(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = Some(StudentQuery::from_school_context(context.school_id));
 
-    match service.find_one(Some(&id), None).await {
+    match service.find_one(Some(&id), student_query).await {
         Ok(student) => HttpResponse::Ok().json(student),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -99,15 +103,14 @@ async fn get_student_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = match StudentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one(None, extra_match).await {
+    match service.find_one(None, student_query).await {
         Ok(student) => HttpResponse::Ok().json(student),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -119,14 +122,14 @@ async fn get_student_by_other_match(
     state: web::Data<AppState>,
     query: web::Query<RequestQuery>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = match StudentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
-    match service.find_one_with_relations(None, extra_match).await {
+    match service.find_one_with_relations(None, student_query).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -146,17 +149,26 @@ async fn create_student(
         }));
     }
 
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
 
     let mut student = data.clone();
 
     if data.creator_id.is_none() {
-        let user_id = match parse_object_id_value(&user.id) {
-            Ok(id) => id,
+        student.creator_id = match IdType::from_string(&user.id).to_object_id() {
+            Ok(id) => Some(id),
             Err(err) => return HttpResponse::BadRequest().json(err),
         };
-        student.creator_id = Some(user_id);
+    }
+
+    if student.school_id.is_none() {
+        let school_id = context.school_id.or_else(|| user.current_school_id.clone());
+        if let Some(school_id) = school_id {
+            student.school_id = match IdType::from_string(school_id).to_object_id() {
+                Ok(id) => Some(id),
+                Err(err) => return HttpResponse::BadRequest().json(err),
+            };
+        }
     }
 
     match service.create(student, Some(&state)).await {
@@ -198,8 +210,7 @@ async fn update_student(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
+    let service = StudentService::new(postgres_pool(&state));
 
     match service.update(&id, &data.into_inner()).await {
         Ok(student) => {
@@ -239,15 +250,10 @@ async fn delete_student(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
+    let service = StudentService::new(postgres_pool(&state));
+    let user_id = IdType::from_string(&user.id);
 
-    let user_id = match parse_object_id_value(&user.id) {
-        Ok(id) => id,
-        Err(err) => return HttpResponse::BadRequest().json(err),
-    };
-
-    match service.delete(&id, user_id).await {
+    match service.delete(&id, &user_id).await {
         Ok(student) => {
             let student_clone = student.clone();
             let state_clone = state.clone();
@@ -272,7 +278,7 @@ async fn delete_student(
 
 #[post("/{id}/restore")]
 async fn restore_student(
-    req: HttpRequest,
+    _req: HttpRequest,
     user: web::ReqData<AuthUserDto>,
     path: web::Path<String>,
     state: web::Data<AppState>,
@@ -285,8 +291,7 @@ async fn restore_student(
     }
 
     let id = IdType::from_string(path.into_inner());
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
+    let service = StudentService::new(postgres_pool(&state));
 
     match service.restore(&id).await {
         Ok(student) => HttpResponse::Ok().json(student),
@@ -300,16 +305,15 @@ async fn count_students(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let db = get_database(&req, &state);
-    let service = StudentService::new(&db);
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
+    let service = StudentService::new(postgres_pool(&state));
+    let context = request_context(&req);
+    let student_query = match StudentQuery::from_request(&query, context.school_id) {
+        Ok(query) => Some(query),
+        Err(err) => return HttpResponse::BadRequest().json(err),
     };
 
     match service
-        .count_students(query.filter.clone(), extra_match)
+        .count_students(query.filter.clone(), student_query)
         .await
     {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),

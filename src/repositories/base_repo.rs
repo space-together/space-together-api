@@ -1,117 +1,360 @@
 use crate::{
     domain::common_details::Paginated,
     errors::AppError,
-    helpers::repo_helpers::debug_deserialize_error,
-    models::{
-        id_model::IdType,
-        mongo_model::{CountDoc, IndexDef},
+    models::{id_model::IdType, mongo_model::CountDoc},
+};
+use chrono::{DateTime, Utc};
+use serde::Serialize;
+use sqlx::{postgres::PgRow, FromRow, PgPool, Postgres, QueryBuilder};
+
+#[derive(Clone, Debug)]
+pub enum SqlValue {
+    Text(String),
+    I64(i64),
+    F64(f64),
+    Bool(bool),
+    Timestamp(DateTime<Utc>),
+    Null,
+}
+
+impl From<&str> for SqlValue {
+    fn from(value: &str) -> Self {
+        Self::Text(value.to_string())
+    }
+}
+
+impl From<String> for SqlValue {
+    fn from(value: String) -> Self {
+        Self::Text(value)
+    }
+}
+
+impl From<bool> for SqlValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+
+impl From<i64> for SqlValue {
+    fn from(value: i64) -> Self {
+        Self::I64(value)
+    }
+}
+
+impl From<i32> for SqlValue {
+    fn from(value: i32) -> Self {
+        Self::I64(value as i64)
+    }
+}
+
+impl From<f64> for SqlValue {
+    fn from(value: f64) -> Self {
+        Self::F64(value)
+    }
+}
+
+impl From<DateTime<Utc>> for SqlValue {
+    fn from(value: DateTime<Utc>) -> Self {
+        Self::Timestamp(value)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum SqlClause {
+    EqText {
+        column: &'static str,
+        value: String,
     },
-    utils::mongo_utils::build_search_filter,
-};
-use futures::TryStreamExt;
-use mongodb::{
-    bson::{self, doc, Document},
-    options::IndexOptions,
-    Collection, IndexModel,
-};
-use serde::de::DeserializeOwned;
+    InText {
+        column: &'static str,
+        values: Vec<String>,
+    },
+    IsNull {
+        column: &'static str,
+    },
+    IsNotNull {
+        column: &'static str,
+    },
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct SqlFilter {
+    clauses: Vec<SqlClause>,
+}
+
+impl SqlFilter {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn by_id(id: &IdType) -> Result<Self, AppError> {
+        Ok(Self::new().eq_text("id", id.as_string()))
+    }
+
+    pub fn eq_text(mut self, column: &'static str, value: impl Into<String>) -> Self {
+        self.clauses.push(SqlClause::EqText {
+            column,
+            value: value.into(),
+        });
+        self
+    }
+
+    pub fn in_text(mut self, column: &'static str, values: Vec<String>) -> Self {
+        self.clauses.push(SqlClause::InText { column, values });
+        self
+    }
+
+    pub fn is_null(mut self, column: &'static str) -> Self {
+        self.clauses.push(SqlClause::IsNull { column });
+        self
+    }
+
+    pub fn is_not_null(mut self, column: &'static str) -> Self {
+        self.clauses.push(SqlClause::IsNotNull { column });
+        self
+    }
+
+    fn is_empty(&self) -> bool {
+        self.clauses.is_empty()
+    }
+}
 
 pub struct BaseRepository {
-    pub collection: Collection<Document>,
+    pub pool: PgPool,
+    table: &'static str,
+    has_deleted_at: bool,
 }
 
 impl BaseRepository {
-    pub fn new(collection: Collection<Document>) -> Self {
-        Self { collection }
+    pub fn new(pool: &PgPool, table: &'static str) -> Self {
+        Self {
+            pool: pool.clone(),
+            table,
+            has_deleted_at: true,
+        }
     }
 
-    /// Generic fetch-all function with filtering, pagination, and deserialization
-    pub async fn get_all<T: DeserializeOwned>(
-        &self,
-        filter: Option<String>,
-        searchable_fields: &[&str],
-        limit: Option<i64>,
-        skip: Option<i64>,
-        extra_match: Option<Document>,
-    ) -> Result<(Vec<T>, i64, i64, i64), AppError> {
-        let mut pipeline = vec![];
+    pub fn without_soft_delete(mut self) -> Self {
+        self.has_deleted_at = false;
+        self
+    }
 
-        // ===== BUILD MATCH STAGE =====
-        let mut match_stage = build_search_filter(filter.clone(), &searchable_fields);
+    fn db_error(error: sqlx::Error) -> AppError {
+        AppError {
+            message: format!("PostgreSQL Error: {}", error),
+        }
+    }
 
-        // ===== MERGE EXTRA MATCH =====
-        if let Some(extra) = extra_match {
-            if !extra.is_empty() {
-                if !match_stage.is_empty() {
-                    match_stage = doc! { "$and": [match_stage, extra] };
-                } else {
-                    match_stage = extra;
+    fn push_value<'a>(query: &mut QueryBuilder<'a, Postgres>, value: &'a SqlValue) {
+        match value {
+            SqlValue::Text(value) => {
+                query.push_bind(value);
+            }
+            SqlValue::I64(value) => {
+                query.push_bind(*value);
+            }
+            SqlValue::F64(value) => {
+                query.push_bind(*value);
+            }
+            SqlValue::Bool(value) => {
+                query.push_bind(*value);
+            }
+            SqlValue::Timestamp(value) => {
+                query.push_bind(*value);
+            }
+            SqlValue::Null => {
+                query.push("NULL");
+            }
+        }
+    }
+
+    fn push_filter<'a>(query: &mut QueryBuilder<'a, Postgres>, filter: &'a SqlFilter) {
+        for clause in &filter.clauses {
+            match clause {
+                SqlClause::EqText { column, value } => {
+                    query
+                        .push(" AND ")
+                        .push(*column)
+                        .push(" = ")
+                        .push_bind(value);
+                }
+                SqlClause::InText { column, values } => {
+                    if values.is_empty() {
+                        query.push(" AND false");
+                    } else {
+                        query.push(" AND ").push(*column).push(" IN (");
+                        let mut separated = query.separated(", ");
+                        for value in values {
+                            separated.push_bind(value);
+                        }
+                        separated.push_unseparated(")");
+                    }
+                }
+                SqlClause::IsNull { column } => {
+                    query.push(" AND ").push(*column).push(" IS NULL");
+                }
+                SqlClause::IsNotNull { column } => {
+                    query.push(" AND ").push(*column).push(" IS NOT NULL");
                 }
             }
         }
+    }
 
-        // Add match to pipeline if not empty
-        if !match_stage.is_empty() {
-            pipeline.push(doc! { "$match": &match_stage });
+    fn push_search<'a>(
+        query: &mut QueryBuilder<'a, Postgres>,
+        filter: Option<&'a str>,
+        searchable_fields: &[&'static str],
+    ) {
+        let Some(filter) = filter else {
+            return;
+        };
+        if filter.trim().is_empty() || searchable_fields.is_empty() {
+            return;
         }
 
-        // ===== COUNT TOTAL DOCUMENTS =====
-        let mut count_pipeline = vec![];
-        if !match_stage.is_empty() {
-            count_pipeline.push(doc! { "$match": &match_stage });
+        let search = format!("%{}%", filter.to_lowercase());
+        query.push(" AND (");
+        let mut separated = query.separated(" OR ");
+        for field in searchable_fields {
+            separated
+                .push("lower(coalesce(")
+                .push(*field)
+                .push("::text, '')) LIKE ")
+                .push_bind(search.clone());
         }
-        count_pipeline.push(doc! { "$count": "total" });
+        separated.push_unseparated(")");
+    }
 
-        let total_cursor = self
-            .collection
-            .aggregate(count_pipeline)
+    fn base_select(&self) -> String {
+        format!("SELECT * FROM {} WHERE true", self.table)
+    }
+
+    fn base_count(&self) -> String {
+        format!("SELECT count(*) FROM {} WHERE true", self.table)
+    }
+
+    fn base_delete(&self) -> String {
+        format!("DELETE FROM {} WHERE true", self.table)
+    }
+
+    fn push_soft_delete_guard(&self, query: &mut QueryBuilder<'_, Postgres>) {
+        if self.has_deleted_at {
+            query.push(" AND deleted_at IS NULL");
+        }
+    }
+
+    pub async fn create<T>(&self, values: &[(&'static str, SqlValue)]) -> Result<T, AppError>
+    where
+        for<'r> T: FromRow<'r, PgRow> + Send + Unpin,
+    {
+        if values.is_empty() {
+            return Err(AppError {
+                message: "No valid fields to create".into(),
+            });
+        }
+
+        let mut query = QueryBuilder::<Postgres>::new("INSERT INTO ");
+        query.push(self.table).push(" (");
+        let mut columns = query.separated(", ");
+        for (column, _) in values {
+            columns.push(*column);
+        }
+        columns.push_unseparated(") VALUES (");
+        let mut bind_values = query.separated(", ");
+        for (_, value) in values {
+            match value {
+                SqlValue::Text(value) => {
+                    bind_values.push_bind(value);
+                }
+                SqlValue::I64(value) => {
+                    bind_values.push_bind(*value);
+                }
+                SqlValue::F64(value) => {
+                    bind_values.push_bind(*value);
+                }
+                SqlValue::Bool(value) => {
+                    bind_values.push_bind(*value);
+                }
+                SqlValue::Timestamp(value) => {
+                    bind_values.push_bind(*value);
+                }
+                SqlValue::Null => {
+                    bind_values.push("NULL");
+                }
+            }
+        }
+        bind_values.push_unseparated(") RETURNING *");
+
+        query
+            .build_query_as::<T>()
+            .fetch_one(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Failed to count documents: {}", e),
-            })?;
+            .map_err(Self::db_error)
+    }
 
-        let results: Vec<Document> = total_cursor.try_collect().await.unwrap_or_default();
+    pub async fn find_one<T>(&self, filter: SqlFilter) -> Result<Option<T>, AppError>
+    where
+        for<'r> T: FromRow<'r, PgRow> + Send + Unpin,
+    {
+        let mut query = QueryBuilder::<Postgres>::new(self.base_select());
+        self.push_soft_delete_guard(&mut query);
+        Self::push_filter(&mut query, &filter);
+        query.push(" LIMIT 1");
 
-        let total = results
-            .first()
-            .and_then(|doc| {
-                doc.get_i32("total")
-                    .ok()
-                    .map(|v| v as i64)
-                    .or_else(|| doc.get_i64("total").ok())
-            })
-            .unwrap_or(0);
-
-        // ===== PAGINATION SETUP =====
-        let limit_value = limit.unwrap_or(50).max(1); // Avoid 0 or negative limit
-        let skip_value = skip.unwrap_or(0);
-
-        pipeline.push(doc! { "$sort": { "updated_at": -1 } });
-        if skip_value > 0 {
-            pipeline.push(doc! { "$skip": skip_value });
-        }
-        pipeline.push(doc! { "$limit": limit_value });
-
-        // ===== FETCH DOCUMENTS =====
-        let mut cursor = self
-            .collection
-            .aggregate(pipeline)
+        query
+            .build_query_as::<T>()
+            .fetch_optional(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Failed to fetch documents: {}", e),
-            })?;
+            .map_err(Self::db_error)
+    }
 
-        let mut items = Vec::new();
-        while let Some(result) = cursor.try_next().await.map_err(|e| AppError {
-            message: format!("Failed to iterate documents: {}", e),
-        })? {
-            let item: T = bson::from_document(result).map_err(|e| AppError {
-                message: format!("Failed to deserialize document: {}", e),
-            })?;
-            items.push(item);
+    pub async fn get_all<T>(
+        &self,
+        filter: Option<String>,
+        searchable_fields: &[&'static str],
+        limit: Option<i64>,
+        skip: Option<i64>,
+        extra_filter: Option<SqlFilter>,
+    ) -> Result<(Vec<T>, i64, i64, i64), AppError>
+    where
+        for<'r> T: FromRow<'r, PgRow> + Send + Unpin,
+    {
+        let limit_value = limit.unwrap_or(50).max(1);
+        let skip_value = skip.unwrap_or(0).max(0);
+        let empty_filter = SqlFilter::new();
+        let extra_filter = extra_filter.as_ref().unwrap_or(&empty_filter);
+
+        let mut count_query = QueryBuilder::<Postgres>::new(self.base_count());
+        self.push_soft_delete_guard(&mut count_query);
+        Self::push_search(&mut count_query, filter.as_deref(), searchable_fields);
+        if !extra_filter.is_empty() {
+            Self::push_filter(&mut count_query, extra_filter);
         }
 
-        // ===== COMPUTE PAGINATION INFO =====
+        let total: i64 = count_query
+            .build_query_scalar()
+            .fetch_one(&self.pool)
+            .await
+            .map_err(Self::db_error)?;
+
+        let mut query = QueryBuilder::<Postgres>::new(self.base_select());
+        self.push_soft_delete_guard(&mut query);
+        Self::push_search(&mut query, filter.as_deref(), searchable_fields);
+        if !extra_filter.is_empty() {
+            Self::push_filter(&mut query, extra_filter);
+        }
+        query
+            .push(" ORDER BY updated_at DESC LIMIT ")
+            .push_bind(limit_value)
+            .push(" OFFSET ")
+            .push_bind(skip_value);
+
+        let data = query
+            .build_query_as::<T>()
+            .fetch_all(&self.pool)
+            .await
+            .map_err(Self::db_error)?;
+
         let current_page = skip_value / limit_value + 1;
         let total_pages = if total > 0 {
             ((total as f64) / (limit_value as f64)).ceil() as i64
@@ -119,544 +362,167 @@ impl BaseRepository {
             1
         };
 
-        Ok((items, total, total_pages, current_page))
+        Ok((data, total, total_pages, current_page))
     }
 
-    /// Find a single document and deserialize it into type T
-    pub async fn find_one<T: DeserializeOwned>(
-        &self,
-        filter: Document,
-        extra_match: Option<Document>,
-    ) -> Result<Option<T>, AppError> {
-        // Merge filter + extra_match if provided
-        let final_filter = if let Some(extra) = extra_match {
-            if !extra.is_empty() {
-                doc! { "$and": [filter, extra] }
-            } else {
-                filter
-            }
-        } else {
-            filter
-        };
-
-        let result = self
-            .collection
-            .find_one(final_filter)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to fetch document: {}", e),
-            })?;
-
-        // If no doc found → return Ok(None)
-        let Some(doc) = result else {
-            return Ok(None);
-        };
-
-        let item: T = bson::from_document(doc).map_err(|e| AppError {
-            message: format!("Failed to deserialize document: {}", e),
-        })?;
-
-        Ok(Some(item))
-    }
-
-    /// Update a document and return the updated version
-    pub async fn update_one_and_fetch<T: DeserializeOwned>(
+    pub async fn update_one_and_fetch<T>(
         &self,
         id: &IdType,
-        update_data: Document,
-    ) -> Result<T, AppError> {
-        let obj_id = IdType::to_object_id(id)?;
-
-        if update_data.is_empty() {
+        values: &[(&'static str, SqlValue)],
+    ) -> Result<T, AppError>
+    where
+        for<'r> T: FromRow<'r, PgRow> + Send + Unpin,
+    {
+        if values.is_empty() {
             return Err(AppError {
                 message: "No valid fields to update".into(),
             });
         }
 
-        // Always update timestamp
-        let mut update_doc = update_data;
-        update_doc.insert("updated_at", bson::to_bson(&chrono::Utc::now()).unwrap());
+        let mut query = QueryBuilder::<Postgres>::new("UPDATE ");
+        query.push(self.table).push(" SET updated_at = now()");
+        for (column, value) in values {
+            query.push(", ").push(*column).push(" = ");
+            Self::push_value(&mut query, value);
+        }
+        query.push(" WHERE id = ").push_bind(id.as_string());
+        self.push_soft_delete_guard(&mut query);
+        query.push(" RETURNING *");
 
-        let updated = self
-            .collection
-            .find_one_and_update(
-                doc! { "_id": obj_id },
-                doc! { "$set": update_doc },
-                // options,
-            )
+        query
+            .build_query_as::<T>()
+            .fetch_optional(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Failed to update document: {}", e),
-            })?
+            .map_err(Self::db_error)?
             .ok_or(AppError {
-                message: "Document not found".into(),
-            })?;
-
-        let item: T = bson::from_document(updated).map_err(|e| AppError {
-            message: format!("Failed to deserialize updated document: {}", e),
-        })?;
-
-        Ok(item)
+                message: "Record not found".into(),
+            })
     }
 
-    /// Update a document with raw update document (no automatic updated_at)
-    pub async fn update_one_raw(&self, id: &IdType, update_doc: Document) -> Result<(), AppError> {
-        let obj_id = IdType::to_object_id(id)?;
-
-        if update_doc.is_empty() {
-            return Err(AppError {
-                message: "No valid fields to update".into(),
-            });
-        }
-
-        let result = self
-            .collection
-            .update_one(doc! { "_id": obj_id }, update_doc)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to update document: {}", e),
-            })?;
-
-        if result.matched_count == 0 {
-            return Err(AppError {
-                message: "Document not found".into(),
-            });
-        }
-
-        Ok(())
-    }
-
-    /// Fast bulk update that returns updated documents using a batch marker
-    /// - Uses a temporary `__batch_id` field
-    /// - Requires non-empty filter
-    /// - Automatically updates `updated_at`
-    /// - Cleans up batch marker after fetch
     pub async fn update_many_and_fetch<T>(
         &self,
-        filter: Document,
-        update_data: Document,
+        filter: SqlFilter,
+        values: &[(&'static str, SqlValue)],
     ) -> Result<Vec<T>, AppError>
     where
-        T: DeserializeOwned,
+        for<'r> T: FromRow<'r, PgRow> + Send + Unpin,
     {
         if filter.is_empty() {
             return Err(AppError {
                 message: "Update filter cannot be empty".into(),
             });
         }
-
-        if update_data.is_empty() {
+        if values.is_empty() {
             return Err(AppError {
                 message: "No valid fields to update".into(),
             });
         }
 
-        // ===== PREPARE UPDATE =====
-        let now = chrono::Utc::now();
+        let mut query = QueryBuilder::<Postgres>::new("UPDATE ");
+        query.push(self.table).push(" SET updated_at = now()");
+        for (column, value) in values {
+            query.push(", ").push(*column).push(" = ");
+            Self::push_value(&mut query, value);
+        }
+        query.push(" WHERE true");
+        self.push_soft_delete_guard(&mut query);
+        Self::push_filter(&mut query, &filter);
+        query.push(" RETURNING *");
 
-        let mut update_doc = update_data;
-        update_doc.insert("updated_at", bson::to_bson(&now).unwrap());
-
-        // ===== UPDATE MANY =====
-        let result = self
-            .collection
-            .update_many(filter.clone(), doc! { "$set": update_doc })
+        query
+            .build_query_as::<T>()
+            .fetch_all(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Failed to update documents: {}", e),
-            })?;
-
-        if result.matched_count == 0 {
-            return Ok(vec![]);
-        }
-
-        // ===== FETCH UPDATED DOCUMENTS =====
-        let mut cursor = self.collection.find(filter).await.map_err(|e| AppError {
-            message: format!("Failed to fetch updated documents: {}", e),
-        })?;
-
-        let mut items = Vec::new();
-        while let Some(doc) = cursor.try_next().await.map_err(|e| AppError {
-            message: format!("Iteration error: {}", e),
-        })? {
-            let item: T = bson::from_document(doc).map_err(|e| AppError {
-                message: format!("Deserialize error: {}", e),
-            })?;
-            items.push(item);
-        }
-
-        Ok(items)
+            .map_err(Self::db_error)
     }
 
-    /// Delete one document by ID
     pub async fn delete_one(&self, id: &IdType) -> Result<(), AppError> {
-        let obj_id = IdType::to_object_id(id)?;
+        let mut query = QueryBuilder::<Postgres>::new(self.base_delete());
+        query.push(" AND id = ").push_bind(id.as_string());
 
-        let res = self
-            .collection
-            .delete_one(doc! { "_id": obj_id })
+        let result = query
+            .build()
+            .execute(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Failed to delete document: {}", e),
-            })?;
-
-        if res.deleted_count == 0 {
+            .map_err(Self::db_error)?;
+        if result.rows_affected() == 0 {
             Err(AppError {
-                message: "Document not found".into(),
+                message: "Record not found".into(),
             })
         } else {
             Ok(())
         }
     }
 
-    /// Delete many documents
-    pub async fn delete_many(&self, filter: Document) -> Result<(), AppError> {
-        let _res = self
-            .collection
-            .delete_many(filter)
+    pub async fn delete_many(&self, filter: SqlFilter) -> Result<(), AppError> {
+        if filter.is_empty() {
+            return Err(AppError {
+                message: "Delete filter cannot be empty".into(),
+            });
+        }
+
+        let mut query = QueryBuilder::<Postgres>::new(self.base_delete());
+        Self::push_filter(&mut query, &filter);
+
+        query
+            .build()
+            .execute(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Failed to delete documents: {}", e),
-            })?;
+            .map_err(Self::db_error)?;
 
         Ok(())
     }
 
-    pub async fn create<T>(
+    pub async fn count(
         &self,
-        mut doc: Document,
-        unique_fields: Option<&[&str]>,
-    ) -> Result<T, AppError>
-    where
-        T: DeserializeOwned,
-    {
-        // ===== CREATE UNIQUE INDEXES =====
-        if let Some(fields) = unique_fields {
-            for field in fields {
-                let index = IndexModel::builder()
-                    .keys(doc! { *field: 1 })
-                    .options(IndexOptions::builder().unique(true).build())
-                    .build();
-
-                self.collection
-                    .create_index(index)
-                    .await
-                    .map_err(|e| AppError {
-                        message: format!("Failed to create unique index '{}': {}", field, e),
-                    })?;
-            }
+        filter: Option<String>,
+        searchable_fields: &[&'static str],
+        extra_filter: Option<SqlFilter>,
+    ) -> Result<CountDoc, AppError> {
+        let mut query = QueryBuilder::<Postgres>::new(self.base_count());
+        self.push_soft_delete_guard(&mut query);
+        Self::push_search(&mut query, filter.as_deref(), searchable_fields);
+        if let Some(extra_filter) = &extra_filter {
+            Self::push_filter(&mut query, extra_filter);
         }
 
-        // ===== PREPARE DOCUMENT =====
-        doc.remove("_id");
-
-        let now = chrono::Utc::now();
-        doc.insert("created_at", bson::to_bson(&now).unwrap());
-        doc.insert("updated_at", bson::to_bson(&now).unwrap());
-
-        // ===== INSERT DOCUMENT =====
-        let result = self
-            .collection
-            .insert_one(doc)
+        let count: i64 = query
+            .build_query_scalar()
+            .fetch_one(&self.pool)
             .await
-            .map_err(|e| AppError {
-                message: format!("Insert failed: {}", e),
-            })?;
+            .map_err(Self::db_error)?;
 
-        let inserted_id = result.inserted_id.as_object_id().ok_or_else(|| AppError {
-            message: "Insert returned no object_id".into(),
-        })?;
-
-        // ===== FETCH INSERTED DOCUMENT =====
-        let fetched = self
-            .collection
-            .find_one(doc! { "_id": inserted_id })
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to fetch inserted record: {}", e),
-            })?
-            .ok_or(AppError {
-                message: "Inserted record not found".into(),
-            })?;
-
-        // ===== DESERIALIZE TO T =====
-        let item: T = bson::from_document(fetched).map_err(|e| AppError {
-            message: format!("Deserialize inserted record failed: {}", e),
-        })?;
-
-        Ok(item)
+        Ok(CountDoc {
+            count: count.max(0) as u64,
+        })
     }
 
-    /// Create many documents fast and safely.
-    /// - Ensures optional unique indexes
-    /// - Auto adds timestamps
-    /// - Inserts everything in one batch
-    /// - Returns Vec<T> (fully deserialized)
-    pub async fn create_many<T>(
+    pub async fn get_all_paginated<T>(
         &self,
-        docs: Vec<Document>,
-        unique_fields: Option<&[&str]>,
-    ) -> Result<Vec<T>, AppError>
-    where
-        T: DeserializeOwned,
-    {
-        // ===== ENSURE UNIQUE INDEXES (run once, fast) =====
-        if let Some(fields) = unique_fields {
-            for field in fields {
-                let index = IndexModel::builder()
-                    .keys(doc! { *field: 1 })
-                    .options(IndexOptions::builder().unique(true).build())
-                    .build();
-
-                self.collection
-                    .create_index(index)
-                    .await
-                    .map_err(|e| AppError {
-                        message: format!("Failed to create unique index '{}': {}", field, e),
-                    })?;
-            }
-        }
-
-        let insert_result = self
-            .collection
-            .insert_many(docs)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Insert many failed: {}", e),
-            })?;
-
-        // Collect all ObjectIds
-        let ids: Vec<_> = insert_result
-            .inserted_ids
-            .values()
-            .filter_map(|id| id.as_object_id())
-            .collect();
-
-        if ids.is_empty() {
-            return Ok(vec![]);
-        }
-
-        // ===== FETCH ALL INSERTED DOCUMENTS =====
-        let mut cursor = self
-            .collection
-            .find(doc! { "_id": { "$in": &ids } })
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to fetch inserted documents: {}", e),
-            })?;
-
-        let mut items = Vec::new();
-        while let Some(doc) = cursor.try_next().await.map_err(|e| AppError {
-            message: format!("Iteration error: {}", e),
-        })? {
-            let item: T = bson::from_document(doc).map_err(|e| AppError {
-                message: format!("Deserialize error: {}", e),
-            })?;
-            items.push(item);
-        }
-
-        Ok(items)
-    }
-
-    pub async fn ensure_indexes(&self, indexes: &[IndexDef]) -> Result<(), AppError> {
-        for idx in indexes {
-            let mut keys_doc = Document::new();
-            for (field, order) in &idx.fields {
-                keys_doc.insert(field, *order);
-            }
-
-            let mut options = IndexOptions::builder().unique(idx.unique).build();
-
-            // APPLY partialFilterExpression
-            if let Some(partial) = &idx.partial {
-                options.partial_filter_expression = Some(partial.clone());
-            }
-
-            // APPLY index name
-            if let Some(name) = &idx.name {
-                options.name = Some(name.clone());
-            }
-
-            let index = IndexModel::builder()
-                .keys(keys_doc)
-                .options(options)
-                .build();
-
-            self.collection
-                .create_index(index)
-                .await
-                .map_err(|e| AppError {
-                    message: format!("Failed to create index on {:?}: {}", idx.fields, e),
-                })?;
-        }
-
-        Ok(())
-    }
-
-    pub async fn aggregate_with_paginate<T>(
-        &self,
-        mut pipeline: Vec<Document>,
+        filter: Option<String>,
+        searchable_fields: &[&'static str],
         limit: Option<i64>,
         skip: Option<i64>,
+        extra_filter: Option<SqlFilter>,
     ) -> Result<Paginated<T>, AppError>
     where
-        T: DeserializeOwned,
+        for<'r> T: FromRow<'r, PgRow> + Send + Unpin,
     {
-        let limit_value = limit.unwrap_or(50).max(1);
-        let skip_value = skip.unwrap_or(0);
-
-        // Add pagination stages at end of pipeline
-        pipeline.push(doc! { "$skip": skip_value });
-        pipeline.push(doc! { "$limit": limit_value });
-
-        let mut cursor = self
-            .collection
-            .aggregate(pipeline.clone())
-            .await
-            .map_err(|e| AppError {
-                message: format!("Aggregation failed: {}", e),
-            })?;
-
-        let mut items: Vec<T> = Vec::new();
-        while let Some(doc) = cursor.try_next().await.map_err(|e| AppError {
-            message: format!("Failed to read aggregate cursor: {}", e),
-        })? {
-            let item: T = bson::from_document(doc.clone()).map_err(|e| {
-                // Convert BSON Document → JSON string
-                let raw_json = serde_json::to_string_pretty(&doc)
-                    .unwrap_or("<json encode failed>".to_string());
-
-                // Debug the error
-                debug_deserialize_error::<T>(&raw_json);
-
-                AppError {
-                    message: format!("Deserialize failed: {}", e),
-                }
-            })?;
-
-            items.push(item);
-        }
-
-        let mut count_pipeline = pipeline.clone();
-        count_pipeline
-            .retain(|stage| !stage.contains_key("$skip") && !stage.contains_key("$limit"));
-
-        count_pipeline.push(doc! { "$count": "total" });
-
-        let mut count_cursor = self
-            .collection
-            .aggregate(count_pipeline)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Count aggregation failed: {}", e),
-            })?;
-
-        let total = if let Some(doc) = count_cursor.try_next().await.map_err(|e| AppError {
-            message: format!("Failed reading count cursor: {}", e),
-        })? {
-            doc.get_i32("total")
-                .ok()
-                .map(|x| x as i64)
-                .or_else(|| doc.get_i64("total").ok())
-                .unwrap_or(0)
-        } else {
-            0
-        };
-
-        let current_page = skip_value / limit_value + 1;
-        let total_pages = if total > 0 {
-            ((total as f64) / (limit_value as f64)).ceil() as i64
-        } else {
-            1
-        };
+        let (data, total, total_pages, current_page) = self
+            .get_all(filter, searchable_fields, limit, skip, extra_filter)
+            .await?;
 
         Ok(Paginated {
-            data: items,
+            data,
             total,
             total_pages,
             current_page,
         })
     }
-    /// Aggregate a pipeline and return a single deserialized document (with relationships).
-    /// Aggregate a single document with lookup (relations) and deserialize into T.
-    pub async fn aggregate_one<T>(
-        &self,
-        mut pipeline: Vec<Document>,
-        extra_match: Option<Document>,
-    ) -> Result<Option<T>, AppError>
-    where
-        T: DeserializeOwned,
-    {
-        // Optional extra $match merging
-        if let Some(extra) = extra_match {
-            if !extra.is_empty() {
-                pipeline.insert(0, doc! { "$match": extra });
-            }
-        }
 
-        // Force limit to 1 to ensure only one doc is returned
-        pipeline.push(doc! { "$limit": 1 });
-
-        let mut cursor = self
-            .collection
-            .aggregate(pipeline)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Aggregation failed: {}", e),
-            })?;
-
-        // Return first doc if exists
-        if let Some(doc) = cursor.try_next().await.map_err(|e| AppError {
-            message: format!("Failed reading aggregate cursor: {}", e),
-        })? {
-            let item: T = bson::from_document(doc.clone()).map_err(|e| {
-                let raw_json = serde_json::to_string_pretty(&doc)
-                    .unwrap_or("<json encode failed>".to_string());
-
-                // Debug the error
-                debug_deserialize_error::<T>(&raw_json);
-
-                AppError {
-                    message: format!("Deserialize failed: {}", e),
-                }
-            })?;
-
-            Ok(Some(item))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Count total documents matching filters
-    pub async fn count(
-        &self,
-        filter: Option<String>,
-        searchable_fields: &[&str],
-        extra_match: Option<Document>,
-    ) -> Result<CountDoc, AppError> {
-        // ===== BUILD MATCH =====
-        let mut match_stage = build_search_filter(filter.clone(), &searchable_fields);
-
-        // ===== MERGE EXTRA MATCH =====
-        if let Some(extra) = extra_match {
-            if !extra.is_empty() {
-                match_stage = if match_stage.is_empty() {
-                    extra
-                } else {
-                    doc! { "$and": [match_stage, extra] }
-                };
-            }
-        }
-
-        // ===== EXECUTE COUNT =====
-        let total = self
-            .collection
-            .count_documents(match_stage)
-            .await
-            .map_err(|e| AppError {
-                message: format!("Failed to count documents: {}", e),
-            })?;
-
-        Ok(CountDoc { count: total })
+    pub fn serialize_for_response<T: Serialize>(value: &T) -> Result<serde_json::Value, AppError> {
+        serde_json::to_value(value).map_err(|e| AppError {
+            message: format!("Failed to serialize response: {}", e),
+        })
     }
 }

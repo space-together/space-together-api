@@ -1,5 +1,4 @@
 use actix_web::{delete, get, post, web, HttpMessage, HttpRequest, HttpResponse};
-use mongodb::bson::{doc, oid::ObjectId};
 use serde::Deserialize;
 
 use crate::{
@@ -13,7 +12,7 @@ use crate::{
     models::id_model::IdType,
     schema::common_schema::ActorRef,
     services::{conversation_service::ConversationService, message_service::MessageService},
-    utils::db_utils::get_database,
+    utils::{object_id::ObjectId, request_context::postgres_pool},
 };
 
 #[derive(Debug, Deserialize)]
@@ -52,9 +51,8 @@ async fn create_message(
         message: "Invalid conversation ID".to_string(),
     })?;
 
-    let db = get_database(&req, &state);
-    let conv_service = ConversationService::new(&db);
-    let msg_service = MessageService::new(&db);
+    let conv_service = ConversationService::new(postgres_pool(&state));
+    let msg_service = MessageService::new(postgres_pool(&state));
 
     let auth_user_id = ObjectId::parse_str(&auth_user.id).map_err(|_| AppError {
         message: "Invalid user ID".to_string(),
@@ -67,10 +65,7 @@ async fn create_message(
 
     // Verify conversation exists and user is participant
     let conversation = conv_service
-        .find_one(
-            Some(&IdType::ObjectId(conversation_id)),
-            Some(doc! { "participants.id": auth_user_id }),
-        )
+        .find_one(Some(&IdType::ObjectId(conversation_id)), Some(auth_user_id))
         .await
         .map_err(|_| AppError {
             message: "You are not a participant in this conversation".to_string(),
@@ -126,9 +121,8 @@ async fn get_messages(
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(50).min(100);
 
-    let db = get_database(&req, &state);
-    let conv_service = ConversationService::new(&db);
-    let msg_service = MessageService::new(&db);
+    let conv_service = ConversationService::new(postgres_pool(&state));
+    let msg_service = MessageService::new(postgres_pool(&state));
 
     let auth_user_id = ObjectId::parse_str(&auth_user.id).map_err(|_| AppError {
         message: "Invalid user ID".to_string(),
@@ -136,10 +130,7 @@ async fn get_messages(
 
     // Verify user is participant (single query)
     conv_service
-        .find_one(
-            Some(&IdType::ObjectId(conversation_id)),
-            Some(doc! { "participants.id": auth_user_id }),
-        )
+        .find_one(Some(&IdType::ObjectId(conversation_id)), Some(auth_user_id))
         .await
         .map_err(|_| AppError {
             message: "You are not a participant in this conversation".to_string(),
@@ -183,9 +174,8 @@ async fn get_files(
     let page = query.page.unwrap_or(1);
     let limit = query.limit.unwrap_or(20);
 
-    let db = get_database(&req, &state);
-    let conv_service = ConversationService::new(&db);
-    let msg_service = MessageService::new(&db);
+    let conv_service = ConversationService::new(postgres_pool(&state));
+    let msg_service = MessageService::new(postgres_pool(&state));
 
     let auth_user_id = ObjectId::parse_str(&auth_user.id).map_err(|_| AppError {
         message: "Invalid user ID".to_string(),
@@ -193,10 +183,7 @@ async fn get_files(
 
     // Verify user is participant (single query)
     conv_service
-        .find_one(
-            Some(&IdType::ObjectId(conversation_id)),
-            Some(doc! { "participants.id": auth_user_id }),
-        )
+        .find_one(Some(&IdType::ObjectId(conversation_id)), Some(auth_user_id))
         .await
         .map_err(|_| AppError {
             message: "You are not a participant in this conversation".to_string(),
@@ -237,9 +224,8 @@ async fn delete_message(
         message: "Invalid conversation ID".to_string(),
     })?;
 
-    let db = get_database(&req, &state);
-    let conv_service = ConversationService::new(&db);
-    let msg_service = MessageService::new(&db);
+    let conv_service = ConversationService::new(postgres_pool(&state));
+    let msg_service = MessageService::new(postgres_pool(&state));
 
     let auth_user_id = ObjectId::parse_str(&auth_user.id).map_err(|_| AppError {
         message: "Invalid user ID".to_string(),
@@ -247,10 +233,7 @@ async fn delete_message(
 
     // Verify user is participant (single query)
     conv_service
-        .find_one(
-            Some(&IdType::ObjectId(conversation_id)),
-            Some(doc! { "participants.id": auth_user_id }),
-        )
+        .find_one(Some(&IdType::ObjectId(conversation_id)), Some(auth_user_id))
         .await
         .map_err(|_| AppError {
             message: "You are not a participant in this conversation".to_string(),

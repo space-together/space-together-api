@@ -1,84 +1,93 @@
-use std::env;
-
-use futures::TryStreamExt;
-use mongodb::{bson::doc, options::ClientOptions, Client};
-use serde_json::to_string;
+use sqlx::{PgPool, Row};
 
 use crate::{
-    domain::database_status::{CollectionStats, DatabaseStats},
+    domain::database_status::{CollectionStats, DbStats},
     utils::bytes::format_bytes,
 };
 
-pub async fn get_database_stats(db_name: &str) -> Result<DatabaseStats, String> {
-    let uri = env::var("MONGO_URI").expect("❌ MONGO_URI not set in .env");
-    let options = ClientOptions::parse(uri.clone())
+pub async fn get_postgres_stats(pool: &PgPool, school_id: Option<&str>) -> Result<DbStats, String> {
+    let tables = sqlx::query(
+        r#"
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|err| err.to_string())?;
+
+    let mut total_documents = 0_u64;
+    let mut total_size_bytes = 0_usize;
+    let mut collections = Vec::new();
+
+    for table in tables {
+        let table_name: String = table.try_get("table_name").map_err(|err| err.to_string())?;
+        let qualified_name = format!("public.{}", table_name);
+
+        let has_school_id: bool = sqlx::query_scalar(
+            r#"
+            SELECT EXISTS (
+              SELECT 1
+              FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = $1
+                AND column_name = 'school_id'
+            )
+            "#,
+        )
+        .bind(&table_name)
+        .fetch_one(pool)
         .await
-        .map_err(|e| e.to_string())?;
-    let client = Client::with_options(options).map_err(|e| e.to_string())?;
+        .map_err(|err| err.to_string())?;
 
-    let database = client.database(db_name);
-    let mut total_documents = 0;
-    let mut total_size_bytes = 0;
-    let mut collections_stats = Vec::new();
-
-    let collection_names = database
-        .list_collection_names()
-        .await
-        .map_err(|err| format!("Can not get tables in database bcs: {}", err))?;
-
-    for name in &collection_names {
-        let collection = database.collection::<mongodb::bson::Document>(name);
-
-        let mut cursor = match collection.find(doc! {}).await {
-            Ok(c) => c,
-            Err(err) => {
-                eprintln!(
-                    "Error fetching documents from collection '{}': {:?}",
-                    name, err
-                );
-                continue;
-            }
+        let count_sql = if school_id.is_some() && has_school_id {
+            format!(
+                "SELECT count(*)::BIGINT FROM \"{}\" WHERE school_id = $1",
+                table_name
+            )
+        } else {
+            format!("SELECT count(*)::BIGINT FROM \"{}\"", table_name)
         };
 
-        let mut document_count = 0;
-        let mut collection_size = 0;
+        let document_count: i64 = if let Some(school_id) = school_id.filter(|_| has_school_id) {
+            sqlx::query_scalar(&count_sql)
+                .bind(school_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|err| err.to_string())?
+        } else {
+            sqlx::query_scalar(&count_sql)
+                .fetch_one(pool)
+                .await
+                .map_err(|err| err.to_string())?
+        };
 
-        while let Some(doc) = cursor.try_next().await.unwrap_or_else(|err| {
-            eprintln!(
-                "Error reading document from collection '{}': {:?}",
-                name, err
-            );
-            None
-        }) {
-            document_count += 1;
-            let doc_json = match to_string(&doc) {
-                Ok(json) => json,
-                Err(err) => {
-                    eprintln!(
-                        "Error serializing document from collection '{}': {:?}",
-                        name, err
-                    );
-                    continue;
-                }
-            };
-            collection_size += doc_json.len();
-        }
+        let size_bytes: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(pg_total_relation_size(to_regclass($1)), 0)::BIGINT",
+        )
+        .bind(&qualified_name)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| err.to_string())?;
 
-        // Aggregate results
+        let document_count = document_count.max(0) as u64;
+        let size_bytes = size_bytes.max(0) as usize;
         total_documents += document_count;
-        total_size_bytes += collection_size;
-
-        collections_stats.push(CollectionStats {
-            name: name.clone(),
+        total_size_bytes += size_bytes;
+        collections.push(CollectionStats {
+            name: table_name,
             document_count,
-            size_bytes: format_bytes(collection_size),
+            size_bytes: format_bytes(size_bytes),
         });
     }
 
-    Ok(DatabaseStats {
+    Ok(DbStats {
         total_documents,
-        total_collection: collection_names.len(),
         total_size_bytes: format_bytes(total_size_bytes),
-        collections: collections_stats,
+        total_collection: collections.len(),
+        collections,
     })
 }

@@ -11,50 +11,29 @@ use crate::{
         id_model::IdType,
     },
     services::{event_service::EventService, trade_service::TradeService},
-    utils::api_utils::build_extra_match,
+    utils::request_context::postgres_pool,
 };
 
-/// ------------------------------------------------------
-/// GET /trades
-/// ------------------------------------------------------
 #[get("")]
 async fn get_all_trades(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service
-        .get_all(query.filter.clone(), query.limit, query.skip, extra_match)
-        .await
-    {
+    let service = TradeService::new(postgres_pool(&state));
+    match service.get_all(query.filter.clone(), query.limit, query.skip, Some(&query)).await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /trades/others
-/// ------------------------------------------------------
 #[get("/others")]
 async fn get_all_trades_with_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
+    let service = TradeService::new(postgres_pool(&state));
     match service
-        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, extra_match)
+        .get_all_with_relations(query.filter.clone(), query.limit, query.skip, Some(&query))
         .await
     {
         Ok(data) => HttpResponse::Ok().json(data),
@@ -62,31 +41,23 @@ async fn get_all_trades_with_relations(
     }
 }
 
-/// ------------------------------------------------------
-/// GET /trades/{id}
-/// ------------------------------------------------------
 #[get("/{id}")]
 async fn get_trade_by_id(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = TradeService::new(&state.db.main_db());
-
+    let service = TradeService::new(postgres_pool(&state));
     match service.find_one(Some(&id), None).await {
         Ok(trade) => HttpResponse::Ok().json(trade),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /trades/{id}/others
-/// ------------------------------------------------------
 #[get("/{id}/others")]
 async fn get_trade_by_id_with_relations(
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = TradeService::new(&state.db.main_db());
-
+    let service = TradeService::new(postgres_pool(&state));
     match service.find_one_with_relations(Some(&id), None).await {
         Ok(trade) => HttpResponse::Ok().json(trade),
         Err(err) => HttpResponse::NotFound().json(err),
@@ -98,35 +69,20 @@ async fn get_trade_by_others_relations(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.find_one_with_relations(None, extra_match).await {
+    let service = TradeService::new(postgres_pool(&state));
+    match service.find_one_with_relations(None, Some(&query)).await {
         Ok(trade) => HttpResponse::Ok().json(trade),
         Err(err) => HttpResponse::NotFound().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /trades/match
-/// ------------------------------------------------------
 #[get("/match")]
 async fn get_trade_by_match(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.find_one(None, extra_match).await {
+    let service = TradeService::new(postgres_pool(&state));
+    match service.find_one(None, Some(&query)).await {
         Ok(trade) => HttpResponse::Ok().json(trade),
         Err(err) => HttpResponse::NotFound().json(err),
     }
@@ -134,59 +90,38 @@ async fn get_trade_by_match(
 
 #[post("/by-ids")]
 async fn get_by_ids(body: web::Json<GetByIdsBody>, state: web::Data<AppState>) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    // Convert the string IDs into IdType
-    let ids: Vec<IdType> = body
-        .ids
-        .iter()
-        .map(|id| IdType::from_string(id.clone()))
-        .collect();
-
+    let service = TradeService::new(postgres_pool(&state));
+    let ids: Vec<IdType> = body.ids.iter().map(|id| IdType::from_string(id.clone())).collect();
     match service.find_by_ids(ids).await {
-        Ok(sectors) => HttpResponse::Ok().json(sectors),
+        Ok(trades) => HttpResponse::Ok().json(trades),
         Err(error) => HttpResponse::NotFound().json(error),
     }
 }
 
-/// ------------------------------------------------------
-/// POST /trades
-/// ------------------------------------------------------
 #[post("")]
 async fn create_trade(
     _user: web::ReqData<AuthUserDto>,
     data: web::Json<Trade>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    match service.create(data.into_inner(), Some(&state)).await {
+    let service = TradeService::new(postgres_pool(&state));
+    match service.create(data.into_inner()).await {
         Ok(trade) => {
             let trade_clone = trade.clone();
             let state_clone = state.clone();
-
             actix_rt::spawn(async move {
                 if let Some(id) = trade_clone.id {
                     EventService::broadcast_created(
-                        &state_clone,
-                        "trade",
-                        &id.to_hex(),
-                        None,
-                        &trade_clone,
-                    )
-                    .await;
+                        &state_clone, "trade", &id.to_hex(), None, &trade_clone,
+                    ).await;
                 }
             });
-
             HttpResponse::Created().json(trade)
         }
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// PUT /trades/{id}
-/// ------------------------------------------------------
 #[put("/{id}")]
 async fn update_trade(
     _user: web::ReqData<AuthUserDto>,
@@ -195,35 +130,24 @@ async fn update_trade(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = TradeService::new(&state.db.main_db());
-
+    let service = TradeService::new(postgres_pool(&state));
     match service.update(&id, &data.into_inner()).await {
         Ok(trade) => {
             let trade_clone = trade.clone();
             let state_clone = state.clone();
-
             actix_rt::spawn(async move {
                 if let Some(id) = trade_clone.id {
                     EventService::broadcast_updated(
-                        &state_clone,
-                        "trade",
-                        &id.to_hex(),
-                        None,
-                        &trade_clone,
-                    )
-                    .await;
+                        &state_clone, "trade", &id.to_hex(), None, &trade_clone,
+                    ).await;
                 }
             });
-
             HttpResponse::Ok().json(trade)
         }
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// DELETE /trades/{id}
-/// ------------------------------------------------------
 #[delete("/{id}")]
 async fn delete_trade(
     _user: web::ReqData<AuthUserDto>,
@@ -231,56 +155,36 @@ async fn delete_trade(
     state: web::Data<AppState>,
 ) -> impl Responder {
     let id = IdType::from_string(path.into_inner());
-    let service = TradeService::new(&state.db.main_db());
-
+    let service = TradeService::new(postgres_pool(&state));
     match service.delete(&id).await {
         Ok(trade) => {
             let trade_clone = trade.clone();
             let state_clone = state.clone();
-
             actix_rt::spawn(async move {
                 if let Some(id) = trade_clone.id {
                     EventService::broadcast_deleted(
-                        &state_clone,
-                        "trade",
-                        &id.to_hex(),
-                        None,
-                        &trade_clone,
-                    )
-                    .await;
+                        &state_clone, "trade", &id.to_hex(), None, &trade_clone,
+                    ).await;
                 }
             });
-
             HttpResponse::Ok().json(trade)
         }
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// GET /trades/count
-/// ------------------------------------------------------
 #[get("/count")]
 async fn count_trades(
     query: web::Query<RequestQuery>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-    let service = TradeService::new(&state.db.main_db());
-
-    let extra_match = match build_extra_match(&query) {
-        Ok(doc) => doc,
-        Err(err) => return err,
-    };
-
-    match service.count(query.filter.clone(), extra_match).await {
+    let service = TradeService::new(postgres_pool(&state));
+    match service.count(query.filter.clone(), Some(&query)).await {
         Ok(count) => HttpResponse::Ok().json(serde_json::json!(count)),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
 }
 
-/// ------------------------------------------------------
-/// INIT
-/// ------------------------------------------------------
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/trades")
