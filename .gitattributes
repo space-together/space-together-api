@@ -1,0 +1,5 @@
+* text=auto
+
+# sqlx checksums migration files byte-for-byte, so they must always
+# check out with LF regardless of platform or core.autocrlf.
+*.sql text eol=lf
